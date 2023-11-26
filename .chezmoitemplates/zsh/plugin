@@ -1,0 +1,26 @@
+{{- $exports := (default (list) (get . "exports")) -}}
+{{- $commands := (default (list) (get . "commands")) -}}
+{{- if (hasKey . "export") }}{{ $exports = prepend $exports .export -}}{{- end -}}
+{{- if hasKey . "command" }}{{ $commands = prepend $commands .command -}}{{- end -}}
+{{- if (hasKey . "ice") -}}
+zinit ice {{ join " " .ice }}
+{{- end }}
+zinit{{ range .args }} {{ . }}{{ end -}}
+{{- if (hasKey . "for") }} for
+  {{- range $plugin := .for }} \
+  {{ if (hasKey $plugin "export") }}{{ $exports = append $exports $plugin.export }}{{ end -}}
+  {{ if (hasKey $plugin "exports") }}{{ $exports = concat $exports $plugin.exports }}{{ end -}}
+  {{ if hasKey $plugin "command" }}{{ $commands = append $commands $plugin.command }}{{ end -}}
+  {{ if (hasKey $plugin "ice") }}{{ range $plugin.ice }}{{.}} {{ end }}\
+  {{ end -}}
+    {{ print "  " $plugin.url }}
+  {{- end }}
+{{- else if (hasKey . "url") }} {{ .url }}
+{{- end }}
+
+{{ range $exports -}}
+  {{- includeTemplate "zsh/export" . }}
+{{ end }}
+{{- range $commands }}
+{{ . }}
+{{ end -}}

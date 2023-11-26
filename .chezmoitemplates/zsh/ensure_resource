@@ -1,0 +1,13 @@
+{{- $path := .path | trimSuffix "\"" | trimPrefix "\"" | trimSuffix "'" | trimPrefix "'" -}}
+{{- if eq .type "file" }}
+mkdir -p {{ dir $path | quote }} && touch {{ $path | quote }}
+{{- else if eq .type "parent_dir" }}
+mkdir -p {{ dir $path | quote }}
+{{- else if eq .type "directory" }}
+mkdir -p {{ $path | quote }}
+{{- else if eq .type "git-repo" }}
+if ! [ -d {{ $path | quote }} ]; then
+	mkdir -p {{ dir $path | quote }} &&
+		git clone {{ .url }} {{ $path | quote }}
+fi
+{{- end }}

@@ -1,0 +1,6 @@
+{{- if hasKey . "set" }}{{ range default (list) .set -}}
+setopt {{ . }}
+{{ end }}{{ end }}
+{{- if hasKey . "unset" }}{{ range default (list) .unset -}}
+unsetopt {{ . }}
+{{ end }}{{ end }}

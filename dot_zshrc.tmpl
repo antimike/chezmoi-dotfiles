@@ -1,0 +1,139 @@
+{{- $zsh_tmpls := joinPath .chezmoi.sourceDir ".chezmoitemplates" "zsh" -}}
+{{- $data := . -}}
+#!usr/bin/env zsh
+
+{{ $exports := list -}}
+{{- if hasKey . "export" }}{{ $exports = concat $exports .export }}{{ end -}}
+{{- range $toplevel_file := joinPath $zsh_tmpls "exports.{yml,yaml}" | glob -}}
+  {{- $exports = includeTemplate $toplevel_file $data | fromYaml | jq ".export[]" | concat $exports -}}
+{{- end -}}
+{{- range $file := joinPath $zsh_tmpls "exports.d" "**" "*.{yml,yaml}" | glob | sortAlpha -}}
+  {{- $exports = includeTemplate $file $data | fromYaml | jq ".export[]" | concat $exports -}}
+{{- end -}}
+{{- range $export := $exports -}}
+  {{- includeTemplate "zsh/export" $export }}
+{{- end }}
+
+source "${ZINIT_HOME}/zinit.zsh"
+
+{{ if default false .zsh.profile_startup -}}
+# - - - - - - - - - - - - - - - - - - - -
+# Profiling Tools
+# - - - - - - - - - - - - - - - - - - - -
+
+zmodload zsh/zprof
+# http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html
+PS4=$'%D{%M%S%.} %N:%i> '
+exec 3>&2 2>${HOME}/.cache/logs/zinit.$$.log
+setopt xtrace prompt_subst
+{{- end }}
+# - - - - - - - - - - - - - - - - - - - -
+# Zsh Core Configuration
+# - - - - - - - - - - - - - - - - - - - -
+
+# Load The Prompt System And Completion System And Initilize Them.
+autoload -Uz compinit promptinit
+
+# Load And Initialize The Completion System Ignoring Insecure Directories With A
+# Cache Time Of 20 Hours, So It Should Almost Always Regenerate The First Time A
+# Shell Is Opened Each Day.
+# See: https://gist.github.com/ctechols/ca1035271ad134841284
+_comp_files=({{ joinPath "${ZCOMP_CACHE}" ".zcompdump(Nm-20)" }})
+if (( $#_comp_files )); then
+    compinit -i -C
+else
+    compinit -i
+fi
+unset _comp_files
+promptinit
+setopt prompt_subst
+
+# - - - - - - - - - - - - - - - - - - - -
+# ZSH Settings
+# - - - - - - - - - - - - - - - - - - - -
+
+{{ includeTemplate "zsh/set_options.zsh" $data }}
+
+{{ includeTemplate "zsh/zstyle.zsh" $data }}
+
+# History.
+HISTFILE={{ .zsh.histfile.path | quote }}
+HISTSIZE={{ .zsh.histfile.size }}
+SAVEHIST={{ .zsh.histfile.savehist }}
+HISTCONTROL={{ .zsh.histfile.histcontrol }}
+
+{{ includeTemplate "zsh/opts" .zsh.histfile.opts }}
+
+{{- if (hasKey .zsh "theme") }}
+# - - - - - - - - - - - - - - - - - - - -
+# Theme
+# - - - - - - - - - - - - - - - - - - - -
+
+{{ includeTemplate "zsh/opts" .zsh.theme.opts }}
+{{ includeTemplate (joinPath "zsh/themes" .zsh.theme.name) }}
+{{ end }}
+
+{{ if .zsh.use_old_annexes }}
+# - - - - - - - - - - - - - - - - - - - -
+# Annexes
+# - - - - - - - - - - - - - - - - - - - -
+
+# These provide the following functionality:
+#       * bin-gem-node: can create and manage executable shims
+#       * submods: allows zinit to clone into submodules
+#       * declare-zsh: allows CLI parsing and modification of .zshrc
+zinit light-mode for \
+    zdharma-continuum/declare-zsh
+    zinit-zsh/zinit-annex-bin-gem-node \
+    zinit-zsh/zinit-annex-submods \
+{{ end }}
+
+# - - - - - - - - - - - - - - - - - - - -
+# Plugins
+# - - - - - - - - - - - - - - - - - - - -
+
+{{- $plugin_files := joinPath $zsh_tmpls "plugins.{yml,yaml}" | glob -}}
+{{- $plugin_files = concat $plugin_files (joinPath $zsh_tmpls "plugins.d" "**" "*.{yaml,yml}" | glob | sortAlpha) -}}
+{{- range $file := $plugin_files -}}
+  {{- $plugins := includeTemplate $file $data | fromYaml | jq ".plugins[]" -}}
+  {{- range $plugins -}}
+    {{- includeTemplate "zsh/plugin" . -}}
+  {{- end -}}
+{{- end -}}
+
+# - - - - - - - - - - - - - - - - - - - -
+# User Configuration
+# - - - - - - - - - - - - - - - - - - - -
+
+{{ if eq .chezmoi.hostname "voidmobile" }}
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
+export ZDOTDIR="${XDG_CONFIG_HOME}/zsh"
+export CACHEDIR="$HOME/.local/share"
+[[ -d "$CACHEDIR" ]] || mkdir -p "$CACHEDIR"
+
+
+zinit wait lucid light-mode as"null" multisrc'*.zsh' for \
+    ${ZDOTDIR}/snippets
+
+# Load in light-mode: no reporting (this speeds up the process considerably)
+zinit wait lucid light-mode for \
+    multisrc'{env,alias,widgets}/*.zsh' \
+        _local/config
+
+alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+{{ end }}
+
+setopt no_beep
+
+{{ if .zsh.profile_startup }}
+# - - - - - - - - - - - - - - - - - - - -
+# End Profiling Script
+# - - - - - - - - - - - - - - - - - - - -
+
+if [[ "$PROFILE_STARTUP" == true ]]; then
+    unsetopt xtrace
+    exec 2>&3 3>&-
+    zprof > ~/zshprofile$(date +'%s')
+fi
+{{ end }}
+
