@@ -1,0 +1,10 @@
+export:
+  - name: ZINIT_HOME
+    value: {{ joinPath .filesystem.appData "zinit" "zinit.git" }}
+    resource:
+      type: git-repo
+      url: "https://github.com/zdharma-continuum/zinit.git"
+  - name: ZCOMP_CACHE
+    value: {{ joinPath .filesystem.cacheDir "zcomp" }}
+    resource:
+      type: directory

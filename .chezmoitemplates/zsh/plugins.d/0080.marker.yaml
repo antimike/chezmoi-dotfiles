@@ -1,0 +1,13 @@
+plugins:
+  - args:
+      - light
+    ice:
+      - lucid
+      - wait
+      - as"program"
+      - pick"bin/marker"
+      - src"bin/marker.sh"
+    url: antimike/marker.git
+    export:
+      name: MARKER_DATA_HOME
+      value: {{ joinPath .filesystem.appData "marker" | quote }}

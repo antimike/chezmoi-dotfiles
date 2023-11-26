@@ -1,0 +1,19 @@
+plugins:
+  - args:
+      - snippet
+    ice:
+      - wait
+      - lucid
+      - light-mode
+    url: "$ASDF_DIR/asdf.sh"
+    export:
+      name: ASDF_DIR
+      value: {{ joinPath .chezmoi.homeDir ".asdf" | quote }}
+  - args:
+      - snippet
+    ice:
+      - wait
+      - lucid
+      - light-mode
+      - as"completion"
+    url: {{ joinPath "$ASDF_DIR" "completions" "_asdf" }}
