@@ -1,0 +1,34 @@
+zsh:
+  histdb:
+    use: false
+    strategy: "top"
+  histfile:
+    path: "$HOME/.zsh_history"
+    size: 100000
+    savehist: 5000
+    histcontrol: ignoreboth
+    opts:
+      set:
+        - appendhistory
+        - notify
+        - bang_hist
+        - bang_hist                # Treat The '!' Character Specially During Expansion.
+        - inc_append_history       # Write To The History File Immediately, Not When The Shell Exits.
+        - share_history            # Share History Between All Sessions.
+        - hist_expire_dups_first   # Expire A Duplicate Event First When Trimming History.
+        - hist_ignore_dups         # Do Not Record An Event That Was Just Recorded Again.
+        - hist_ignore_all_dups     # Delete An Old Recorded Event If A New Event Is A Duplicate.
+        - hist_find_no_dups        # Do Not Display A Previously Found Event.
+        - hist_ignore_space        # Do Not Record An Event Starting With A Space.
+        - hist_save_no_dups        # Do Not Write A Duplicate Event To The History File.
+        - hist_verify              # Do Not Execute Immediately Upon History Expansion.
+        - extended_history         # Show Timestamp In History.
+      unset:
+        - beep
+        - nomatch
+  profile_startup: false
+  theme:
+    name: powerlevel10k
+    opts:
+      set: [promptsubst]
+  use_old_annexes: false
