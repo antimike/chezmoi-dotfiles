@@ -1,0 +1,12 @@
+{{ if eq .rofi.theme "i3-mbp" -}}
+{{ includeTemplate "rofi/i3-mbp.rasi" }}
+{{- else }}
+configuration {
+	modi: {{ join "," .rofi.modi | quote }};
+}
+{{ if eq .rofi.theme "pywal" -}}
+@import {{ fail "PyWal is not yet configured!" }}
+{{- else -}}
+@import {{ list .rofi.theme ".rasi" | join "" | joinPath "/usr/share" "rofi" "themes" | quote }}
+{{- end }}
+{{- end }}

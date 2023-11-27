@@ -1,0 +1,14 @@
+rofi:
+  modi:
+    - window
+    - run
+    - ssh
+    - drun
+    - keys
+  install:
+    - dnf: rofi
+    - dnf: rofi-themes
+  theme: fancy
+  # Other values: murz, Arc-Dark, docu, onedark...
+  # can also specify "pywal" for wal-generated colors
+  # finally, "i3-mbp" imports the theme from the i3-mbp repo
