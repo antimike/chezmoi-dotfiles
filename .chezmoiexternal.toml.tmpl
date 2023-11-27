@@ -1,29 +1,30 @@
-{{- $kitty_dir := joinPath .chezmoi.homeDir ".config" "kitty" -}}
-{{- $i3_dir := joinPath .chezmoi.homeDir ".config" "i3" -}}
-[{{- joinPath .chezmoi.homeDir ".pyenv" | quote -}}]
+{{- $zsh_exports := includeTemplate "zsh/exports.yaml" . | fromYaml | jq ".export | from_entries" | first }}
+{{- $kitty_dir := joinPath ".config" "kitty" -}}
+{{- $i3_dir := joinPath ".config" "i3" -}}
+[".pyenv"]
   type = "git-repo"
   url = "https://github.com/pyenv/pyenv.git"
-[{{- joinPath .chezmoi.homeDir ".asdf" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/asdf-vm/asdf.git"
-[{{- joinPath .sourceDir "getnf" | quote -}}]
+[".asdf"]
+  type = "archive"
+  url = "https://github.com/asdf-vm/asdf/archive/refs/tags/v0.13.1.tar.gz"
+[{{- joinPath .filesystem.sourceDir "getnf" | trimPrefix .chezmoi.homeDir | trimPrefix "/" | quote -}}]
   type = "git-repo"
   url = "https://github.com/ronniedroid/getnf.git"
-[{{- .zsh.zinit_home_relative | quote -}}]
-	type = "git-repo"
-	url = "https://github.com/zdharma-continuum/zinit.git"
+[{{- $zsh_exports.ZINIT_HOME | trimPrefix .chezmoi.homeDir | trimPrefix "/" | quote -}}]
+  type = "git-repo"
+  url = "https://github.com/zdharma-continuum/zinit.git"
 [{{- joinPath $i3_dir "betterlockscreen" | quote -}}]
   type = "git-repo"
   url = "https://github.com/betterlockscreen/betterlockscreen"
 [{{- joinPath $i3_dir "i3-wpd" | quote -}}]
   type = "git-repo"
-  url = "git@github.com:antimike/i3-wpd"
-[{{- joinPath $i3_dir i3altlayout | quote -}}]
+  url = "https://github.com/antimike/i3-wpd"
+[{{- joinPath $i3_dir "i3altlayout" | quote -}}]
   type = "git-repo"
-  url = "git@github.com:antimike/i3altlayout"
+  url = "https://github.com/antimike/i3altlayout"
 [{{- joinPath $kitty_dir "kitty-themes" | quote -}}]
   type = "git-repo"
-  url = "git@github.com:dexpota/kitty-themes.git"
+  url = "https://github.com/dexpota/kitty-themes.git"
 [{{- joinPath $kitty_dir "kitty_grab" | quote -}}]
   type = "git-repo"
   url = "https://github.com/yurikhan/kitty_grab"
