@@ -1,0 +1,2 @@
+user = mathgeek101@gmail.com
+password_command = pass show personal/pandora | head -1
