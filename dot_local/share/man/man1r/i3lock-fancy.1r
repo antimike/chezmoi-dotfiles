@@ -1,0 +1,151 @@
+.TH i3lock\-fancy
+.PP
+This is an i3lock bash script that takes a screenshot of the desktop, blurs the background and adds a lock icon and text
+.PP
+website: github pages website \[la]http://meskarune.github.io/i3lock-fancy/\[ra]
+.PP
+[screen shot of lockscreen](\[la]https://raw.githubusercontent.com/meskarune/i3lock-fancy/master/screenshot.png\[ra])
+.SH Dependencies
+.RS
+.IP \(bu 2
+<s>i3lock\-color\-git \[la]https://github.com/eBrnd/i3lock-color\[ra]</s>
+.IP \(bu 2
+i3lock\-color\-git \[la]https://github.com/Raymo111/i3lock-color\[ra] \- this is a fork of i3lock\-color that is kept up to date with i3lock
+.IP \(bu 2
+imagemagick
+.IP \(bu 2
+bash
+.IP \(bu 2
+awk
+.IP \(bu 2
+util\-linux
+.RE
+.SH Optional Dependencies
+.RS
+.IP \(bu 2
+wmctrl
+.IP \(bu 2
+a screenshot utility such as scrot or maim.
+.RE
+.SH Installation
+.PP
+To install i3lock\-fancy manually, git clone the repository:
+.PP
+.RS
+.nf
+git clone https://github.com/meskarune/i3lock\-fancy.git
+.fi
+.RE
+.PP
+Then change to the directory and run make.
+.PP
+.RS
+.nf
+cd i3lock\-fancy
+sudo make install
+.fi
+.RE
+.TP
+\fBIMPORTANT NOTE: the way to install i3lock\-fancy has changed! If you are a
+package maintainer or previously installed manually you may have to review
+and update your configurations. The new change simplifies a lot of
+things so updates will be easier in the future.\fP
+.SS The following distro's have packages you can use to install:
+.RS
+.IP \(bu 2
+Arch Linux: \[la]https://aur.archlinux.org/packages/i3lock-fancy-git/\[ra]
+.IP \(bu 2
+GNU Guix: Run \fB\fCguix package \-\-install i3lock\-fancy\fR
+.IP \(bu 2
+Debian: \[la]https://packages.debian.org/sid/i3lock-fancy\[ra]
+.RE
+.SH Usage
+.PP
+.RS
+.nf
+i3lock\-fancy [options]
+
+Options:
+    \-h, \-\-help       This help menu.
+
+    \-d, \-\-desktop    Attempt to minimize all windows before locking. Requires wmctrl.
+
+    \-g, \-\-greyscale  Set background to greyscale instead of color.
+
+    \-p, \-\-pixelate   Pixelate the background instead of blur, runs faster.
+
+    \-f <fontname>, \-\-font <fontname>  Set a custom font.
+
+    \-t <text>, \-\-text <text> Set a custom text prompt.
+
+    \-l, \-\-listfonts  Display a list of possible fonts for use with \-f/\-\-font.
+                     Note: this option will not lock the screen, it displays
+                     the list and exits immediately.
+
+    \-n, \-\-nofork     Do not fork i3lock after starting.
+
+    \-\-               Must be last option. Set command to use for taking a
+                     screenshot. Default is 'import \-window root'. Using 'scrot'
+                     or 'maim' will increase script speed and allow setting
+                     custom flags like having a delay.
+.fi
+.RE
+.PP
+example: \fB\fCi3lock\-fancy \-gpf Comic\-Sans\-MS \-\- scrot \-z\fR
+.SH Extras
+.PP
+The lock screen in action:
+.PP
+[lockscreen animation](\[la]https://raw.githubusercontent.com/meskarune/i3lock-fancy/master/action.gif\[ra])
+.PP
+To use this script you can set a hotkey in your window manager to run the lock command,
+set xautolock to run at boot, or use a systemd script to either lock on suspend or run xautolock.
+.PP
+xautolock is a utility to automatically lock the screen after a set time. It also 
+supports hot corners.
+.PP
+Systemd Unit file example (edit for your own use):
+.PP
+.RS
+.nf
+[Unit]
+Description=Lock the screen automatically after a timeout
+
+[Service]
+Type=simple
+User=meskarune
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/xautolock \-time 5 \-locker /usr/bin/i3lock\-fancy \-detectsleep
+
+[Install]
+WantedBy=graphical.target
+.fi
+.RE
+.SH Multiple Monitors
+.PP
+There is a branch called dual monitor with support for multiple monitors. 
+(it is currently out of date compared to the main locker, I need to update 
+it with all the new features) This branch uses a grey icon and text with 
+outlines to make it visible on light and dark backgrounds (though it looks 
+better on dark backgrounds). I am still working to get it looking just right 
+right. The script is usable now, but it's under developement and things may change.
+.SH Static image
+.PP
+If you would like to run \fB\fCi3lock\-color\fR with a static image in the style of
+i3lock\-fancy, run \fB\fCconvert\fR from image magick directly on the background image
+you want to use. Then specify the result \fB\fCnewimage.png\fR to \fB\fCi3lock \-i\fR:
+```
+.SH !/bin/sh
+.SH Add a lock icon and text to the center of an image
+.PP
+convert /path/to/background.png \-font Liberation\-Sans \[rs]
+    \-pointsize 26 \-fill white \-gravity center \[rs]
+    \-annotate +0+160 "Type Password to Unlock" lock.png \[rs]
+    \-gravity center \-composite newimage.png
+```
+.PP
+.RS
+.nf
+i3lock \-i newimage.png
+.fi
+.RE

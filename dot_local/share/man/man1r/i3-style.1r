@@ -1,0 +1,77 @@
+README()                                                              README()
+
+
+
+Make your i3 _h_t_t_p_:_/_/_i_3_w_m_._o_r_g config a little more stylish.
+
+AAbboouutt
+       ii33--ssttyyllee  applies  a  theme  to  your i3 config file to change the col-
+       orscheme of the window decorations and the different  parts  of  i3bar.
+       It's  designed especially for people who make frequent changes to their
+       colorscheme to get things just right.
+
+       +o   Easy to try out new themes right after you install.
+
+       +o   Themes are easy to read, modify, and share.
+
+       +o   Modifies your theme in place - extra template files are not needed.
+
+
+
+IInnssttaalllliinngg
+       If you have a Rust toolchain available, you can install with Cargo:
+
+
+
+           cargo install i3-style
+
+
+
+       Otherwise, check the  releases  _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_a_c_r_i_s_c_i_/_i_3_-_s_t_y_l_e_/_r_e_-
+       _l_e_a_s_e_s page where I post precompiled binaries.
+
+UUssaaggee
+       Just call ii33--ssttyyllee with the name of the theme you want to try and where
+       you want to write the config file to. i3-style will look for your  con-
+       fig in the default place and apply the theme.
+
+
+
+           i3-style solarized -o ~/.config/i3/config --reload
+
+
+
+       Check the tthheemmeess directory for the list of built-in themes.
+
+
+
+           i3-style ~/.config/i3/solarized.yaml -o ~/.config/i3/config
+
+
+
+       Just keep doing that until you get it perfect (which might be never).
+
+SSeenndd uuss tthheemmeess!!
+       Do  you  have  a  cool colorscheme in your config file that you want to
+       share with other people? i3-style can automatically  convert  it  to  a
+       theme file:
+
+
+
+           i3-style --to-theme ~/.config/i3/config -o my-theme.yaml
+
+
+
+       If  you  have a new theme, or made an improvement to an existing theme,
+       please make a pull request adding your theme to the tthheemmeess directory!
+
+LLiicceennssee
+       This work is available under a FreeBSD License (see LICENSE).
+
+       Copyright ^A(C) 2013, Tony Crisci
+
+       All rights reserved.
+
+
+
+                                 November 2018                        README()

@@ -1,0 +1,1613 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Polybar User Manual stable documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html#document-index" class="icon icon-home"> Polybar User Manual
+          
+
+          
+          </a>
+
+          
+            
+            
+            
+              <div class="version">
+                stable
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><p class="caption"><span class="caption-text">Content:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-user/actions">Actions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-user/ipc">Inter-process-messaging</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Manual Pages:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-man/polybar.1">polybar(1)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-man/polybar-msg.1">polybar-msg(1)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-man/polybar.5">polybar(5)</a></li>
+</ul>
+<p class="caption"><span class="caption-text">For Contributors:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-dev/packaging">Packaging Polybar</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Developer Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-dev/release-workflow">Release Workflow</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html#document-index">Polybar User Manual</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html#document-index">Docs</a> &raquo;</li>
+        
+      <li>Polybar User Manual stable documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <a href="https://github.com/polybar/polybar/blob/4a61d3157f470270a5d98e5d3b1778c11894d65f/doc/index.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="polybar-documentation">
+<h1>Polybar Documentation<a class="headerlink" href="#polybar-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is still very much a work-in-progress. Most information is still
+to be found on our <a class="reference external" href="https://github.com/polybar/polybar/wiki">GitHub Wiki</a>.
+We will migrate the wiki content step-by-step.</p>
+</div>
+<p>Welcome to the official polybar documentation.</p>
+<div class="toctree-wrapper compound">
+<span id="document-user/actions"></span><div class="section" id="actions">
+<h2>Actions<a class="headerlink" href="#actions" title="Permalink to this headline">¶</a></h2>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 3.5.0.</span></p>
+</div>
+<div class="contents local topic" id="table-of-contents">
+<p class="topic-title">Table of Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#action-string-format" id="id3">Action String Format</a></li>
+<li><a class="reference internal" href="#triggering-actions" id="id4">Triggering Actions</a></li>
+<li><a class="reference internal" href="#available-actions" id="id5">Available Actions</a><ul>
+<li><a class="reference internal" href="#all-modules" id="id6">All Modules</a></li>
+<li><a class="reference internal" href="#internal-date" id="id7">internal/date</a></li>
+<li><a class="reference internal" href="#internal-alsa" id="id8">internal/alsa</a></li>
+<li><a class="reference internal" href="#internal-pulseaudio" id="id9">internal/pulseaudio</a></li>
+<li><a class="reference internal" href="#internal-xbacklight" id="id10">internal/xbacklight</a></li>
+<li><a class="reference internal" href="#internal-backlight" id="id11">internal/backlight</a></li>
+<li><a class="reference internal" href="#internal-xkeyboard" id="id12">internal/xkeyboard</a></li>
+<li><a class="reference internal" href="#internal-mpd" id="id13">internal/mpd</a></li>
+<li><a class="reference internal" href="#internal-xworkspaces" id="id14">internal/xworkspaces</a></li>
+<li><a class="reference internal" href="#internal-bspwm" id="id15">internal/bspwm</a></li>
+<li><a class="reference internal" href="#internal-i3" id="id16">internal/i3</a></li>
+<li><a class="reference internal" href="#custom-menu" id="id17">custom/menu</a></li>
+<li><a class="reference internal" href="#custom-ipc" id="id18">custom/ipc</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#deprecated-action-names" id="id19">Deprecated Action Names</a><ul>
+<li><a class="reference internal" href="#migration" id="id20">Migration</a><ul>
+<li><a class="reference internal" href="#menu-module-example" id="id21">Menu Module Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>&quot;Actions&quot; are used to trigger certain behavior in modules.
+For example, when you click on your volume module (pulseaudio or alsa), polybar
+internally sends an action to that module that tells it to mute/unmute the
+audio.</p>
+<p>These actions are not only used internally, but users can also send these
+actions to polybar through <a class="reference external" href="https://github.com/polybar/polybar/wiki/Inter-process-messaging">Inter Process Communication</a> (IPC) to
+trigger certain behavior in polybar modules.</p>
+<div class="section" id="action-string-format">
+<span id="id1"></span><h3><a class="toc-backref" href="#id3">Action String Format</a><a class="headerlink" href="#action-string-format" title="Permalink to this headline">¶</a></h3>
+<p>An action string follows the following format:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#NAME.ACTION[.DATA]
+</pre></div>
+</div>
+<p>Where <code class="docutils literal notranslate"><span class="pre">NAME</span></code> is the name of the target module (not the type!) and <code class="docutils literal notranslate"><span class="pre">ACTION</span></code>
+is the name of the action in that module. <code class="docutils literal notranslate"><span class="pre">DATA</span></code> is optional data attached to
+an action (for example to say which menu level should be opened).</p>
+<p>For example the
+<a class="reference external" href="https://github.com/polybar/polybar/wiki/Module:-date">date module</a> supports
+the <code class="docutils literal notranslate"><span class="pre">toggle</span></code> action to toggle between the regular and the alternative time and
+date format.
+If you have the following date module:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[module/mydate]</span><span class="w"></span>
+<span class="na">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">internal/date</span><span class="w"></span>
+<span class="na">...</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The action string for toggling between the date formats would look like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#mydate.toggle
+</pre></div>
+</div>
+<p>Note that we use the name of the module (<code class="docutils literal notranslate"><span class="pre">mydate</span></code>) and not the type.</p>
+<p>As an example for an action string with additional data, take the menu module:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[module/powermenu]</span><span class="w"></span>
+<span class="na">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">custom/menu</span><span class="w"></span>
+<span class="na">menu-0-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Poweroff</span><span class="w"></span>
+<span class="na">menu-0-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">poweroff</span><span class="w"></span>
+<span class="na">menu-0-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Suspend</span><span class="w"></span>
+<span class="na">menu-0-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">systemctl suspend</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The action name to open a certain menu level is <code class="docutils literal notranslate"><span class="pre">open</span></code>, so to open level 0
+(<cite>menu-0</cite>), the action string additionally has the level attached to it:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#powermenu.open.0
+</pre></div>
+</div>
+</div>
+<div class="section" id="triggering-actions">
+<h3><a class="toc-backref" href="#id4">Triggering Actions</a><a class="headerlink" href="#triggering-actions" title="Permalink to this headline">¶</a></h3>
+<p>Most modules already use action strings to trigger actions when you click on or
+scroll over a module.
+But in some cases you may want or need to manually send action strings to
+polybar to trigger a certain behavior.</p>
+<p>Everywhere where you can specify a command to run on click or scroll, you can
+also specify an action string.
+For example, in the bar section, you can specify a command that is triggered
+when you click anywhere on the bar (where there isn't another click action):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[bar/mybar]</span><span class="w"></span>
+<span class="na">...</span><span class="w"></span>
+<span class="na">click-left</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">#mydate.toggle</span><span class="w"></span>
+<span class="na">...</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This will then trigger the <code class="docutils literal notranslate"><span class="pre">toggle</span></code> action on the <code class="docutils literal notranslate"><span class="pre">mydate</span></code> module when you
+click anywhere on the bar.</p>
+<p>Similarly, we can use action strings in <code class="docutils literal notranslate"><span class="pre">%{A}</span></code>
+<a class="reference external" href="https://github.com/polybar/polybar/wiki/Formatting#action-a">formatting tags</a>
+just as we would regular commands:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>%{A1:firefox:}%{A3:#mydate.toggle:}Opens firefox on left-click and toggles the
+date on right-click %{A}%{A}
+</pre></div>
+</div>
+<p>Finally, polybar's <a class="reference external" href="https://github.com/polybar/polybar/wiki/Inter-process-messaging">Inter Process Communication</a> (IPC) can
+also be used to trigger actions:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>polybar-msg action <span class="s2">&quot;#mydate.toggle&quot;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The quotes around the action string are necessary, otherwise your shell may
+interpret the <code class="docutils literal notranslate"><span class="pre">#</span></code> as the beginning of the comment and ignore the rest of the
+line.</p>
+</div>
+</div>
+<div class="section" id="available-actions">
+<h3><a class="toc-backref" href="#id5">Available Actions</a><a class="headerlink" href="#available-actions" title="Permalink to this headline">¶</a></h3>
+<p>The following modules have actions available. Most of them are already used by
+the module by default for click and scroll events.</p>
+<div class="section" id="all-modules">
+<h4><a class="toc-backref" href="#id6">All Modules</a><a class="headerlink" href="#all-modules" title="Permalink to this headline">¶</a></h4>
+<p>These actions are available to all modules and are prefixed with <code class="docutils literal notranslate"><span class="pre">module_</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2"><code class="docutils literal notranslate"><span class="pre">module_show</span></code>, <code class="docutils literal notranslate"><span class="pre">module_hide</span></code>:</th></tr>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body"><p class="first">Shows/Hides a module. The module is still running in the background when
+hidden, it is just not drawn. The starting state can be configured with the
+<cite>hidden</cite> configuration option.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 3.6.0.</span></p>
+</div>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">module_toggle</span></code>:</th><td class="field-body"><p class="first">Toggles the visibility of a module.</p>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 3.6.0.</span></p>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-date">
+<h4><a class="toc-backref" href="#id7">internal/date</a><a class="headerlink" href="#internal-date" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">toggle</span></code>:</th><td class="field-body">Toggles the date/time format between <code class="docutils literal notranslate"><span class="pre">date</span></code>/<code class="docutils literal notranslate"><span class="pre">time</span></code> and
+<code class="docutils literal notranslate"><span class="pre">date-alt</span></code>/<code class="docutils literal notranslate"><span class="pre">time-alt</span></code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-alsa">
+<h4><a class="toc-backref" href="#id8">internal/alsa</a><a class="headerlink" href="#internal-alsa" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">inc</span></code>, <code class="docutils literal notranslate"><span class="pre">dec</span></code>:</th><td class="field-body">Increases/Decreases the volume by <code class="docutils literal notranslate"><span class="pre">interval</span></code> percentage points, where
+<code class="docutils literal notranslate"><span class="pre">interval</span></code> is the config setting in the module. Volume changed like this
+will never go above 100%.</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">toggle</span></code>:</th><td class="field-body">Toggles between muted and unmuted.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-pulseaudio">
+<h4><a class="toc-backref" href="#id9">internal/pulseaudio</a><a class="headerlink" href="#internal-pulseaudio" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">inc</span></code>, <code class="docutils literal notranslate"><span class="pre">dec</span></code>:</th><td class="field-body">Increases/Decreases the volume by <code class="docutils literal notranslate"><span class="pre">interval</span></code> percentage points, where
+<code class="docutils literal notranslate"><span class="pre">interval</span></code> is the config setting in the module. Volume changed like this
+will never go above ~153% (if <code class="docutils literal notranslate"><span class="pre">use-ui-max</span></code> is set to <code class="docutils literal notranslate"><span class="pre">true</span></code>) or 100% (if
+not).</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">toggle</span></code>:</th><td class="field-body">Toggles between muted and unmuted.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-xbacklight">
+<h4><a class="toc-backref" href="#id10">internal/xbacklight</a><a class="headerlink" href="#internal-xbacklight" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">inc</span></code>, <code class="docutils literal notranslate"><span class="pre">dec</span></code>:</th><td class="field-body">Increases/Decreases screen brightness 5 percentage points.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-backlight">
+<h4><a class="toc-backref" href="#id11">internal/backlight</a><a class="headerlink" href="#internal-backlight" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">inc</span></code>, <code class="docutils literal notranslate"><span class="pre">dec</span></code>:</th><td class="field-body">Increases/Decreases screen brightness 5 percentage points.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-xkeyboard">
+<h4><a class="toc-backref" href="#id12">internal/xkeyboard</a><a class="headerlink" href="#internal-xkeyboard" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">switch</span></code>:</th><td class="field-body">Cycles through configured keyboard layouts.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-mpd">
+<h4><a class="toc-backref" href="#id13">internal/mpd</a><a class="headerlink" href="#internal-mpd" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">play</span></code>:</th><td class="field-body"><p class="first">Starts playing the current song.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">pause</span></code>:</th><td class="field-body"><p class="first">Pauses the current song.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">stop</span></code>:</th><td class="field-body"><p class="first">Stops playing.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">prev</span></code>:</th><td class="field-body"><p class="first">Starts playing the previous song.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">next</span></code>:</th><td class="field-body"><p class="first">Starts playing the next song.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">repeat</span></code>:</th><td class="field-body"><p class="first">Toggles repeat mode.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">single</span></code>:</th><td class="field-body"><p class="first">Toggles single mode.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">random</span></code>:</th><td class="field-body"><p class="first">Toggles random mode.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">consume</span></code>:</th><td class="field-body"><p class="first">Toggles consume mode.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">seek</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Seeks inside the current song.</p>
+<p>The data must be of the form <code class="docutils literal notranslate"><span class="pre">[+-]N</span></code>, where <code class="docutils literal notranslate"><span class="pre">N</span></code> is a number
+between 0 and 100.</p>
+<p class="last">If either <code class="docutils literal notranslate"><span class="pre">+</span></code> or <code class="docutils literal notranslate"><span class="pre">-</span></code> is used, it will seek forward or backward
+from the current position by <code class="docutils literal notranslate"><span class="pre">N%</span></code> (relative to the length of the
+song).
+Otherwise it will seek to <code class="docutils literal notranslate"><span class="pre">N%</span></code> of the current song.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-xworkspaces">
+<h4><a class="toc-backref" href="#id14">internal/xworkspaces</a><a class="headerlink" href="#internal-xworkspaces" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">focus</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Switches to the given workspace.</p>
+<p>The data is the index of the workspace that should be selected.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">next</span></code>:</th><td class="field-body"><p class="first">Switches to the next workspace. The behavior of this action is
+affected by the <code class="docutils literal notranslate"><span class="pre">pin-workspaces</span></code> setting.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">prev</span></code>:</th><td class="field-body"><p class="first last">Switches to the previous workspace. The behavior of this action is
+affected by the <code class="docutils literal notranslate"><span class="pre">pin-workspaces</span></code> setting.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-bspwm">
+<h4><a class="toc-backref" href="#id15">internal/bspwm</a><a class="headerlink" href="#internal-bspwm" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">focus</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Switches to the given workspace.</p>
+<p>The data has the form <code class="docutils literal notranslate"><span class="pre">N+M</span></code>, where <code class="docutils literal notranslate"><span class="pre">N</span></code> is the index of the
+monitor and <code class="docutils literal notranslate"><span class="pre">M</span></code> the index of the workspace on that monitor.
+Both indices are 0-based and correspond to the position the monitor
+and workspace appear in the output of <code class="docutils literal notranslate"><span class="pre">bspc</span> <span class="pre">subscribe</span> <span class="pre">report</span></code>.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">next</span></code>:</th><td class="field-body"><p class="first">Switches to the next workspace. The behavior of this action is
+affected by the <code class="docutils literal notranslate"><span class="pre">pin-workspaces</span></code> setting.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">prev</span></code>:</th><td class="field-body"><p class="first last">Switches to the previous workspace. The behavior of this action is
+affected by the <code class="docutils literal notranslate"><span class="pre">pin-workspaces</span></code> setting.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="internal-i3">
+<h4><a class="toc-backref" href="#id16">internal/i3</a><a class="headerlink" href="#internal-i3" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">focus</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Switches to the given workspace.</p>
+<p>The data is the name of the workspace defined in the i3 config.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">next</span></code>:</th><td class="field-body"><p class="first">Switches to the next workspace. The behavior of this action is
+affected by the <code class="docutils literal notranslate"><span class="pre">pin-workspaces</span></code> setting.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">prev</span></code>:</th><td class="field-body"><p class="first last">Switches to the previous workspace. The behavior of this action is
+affected by the <code class="docutils literal notranslate"><span class="pre">pin-workspaces</span></code> setting.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="custom-menu">
+<h4><a class="toc-backref" href="#id17">custom/menu</a><a class="headerlink" href="#custom-menu" title="Permalink to this headline">¶</a></h4>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">open</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Opens the given menu level</p>
+<p>The data is a single number specifying which menu level should be
+opened.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">close</span></code>:</th><td class="field-body"><p class="first">Closes the menu</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">exec</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Executes the command at the given menu element.</p>
+<p class="last">The data has the form <code class="docutils literal notranslate"><span class="pre">N-M</span></code> and the action will execute the command
+in <code class="docutils literal notranslate"><span class="pre">menu-N-M-exec</span></code>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="custom-ipc">
+<span id="actions-ipc"></span><h4><a class="toc-backref" href="#id18">custom/ipc</a><a class="headerlink" href="#custom-ipc" title="Permalink to this headline">¶</a></h4>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 3.6.0.</span></p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">send</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Replace the contents of the module with the data passed in this action.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">hook</span></code>:</th><td class="field-body"><p class="first"><em>(Has Data)</em> Trigger the given hook.</p>
+<p>The data is the 0-based index of the hook to trigger.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">next</span></code>:</th><td class="field-body"><p class="first">Switches to the next hook and wrap around when the last hook was displayed.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">prev</span></code>:</th><td class="field-body"><p class="first">Switches to the previous hook and wrap around when the first hook was displayed.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name"><code class="docutils literal notranslate"><span class="pre">reset</span></code>:</th><td class="field-body"><p class="first last">Reset the module to its startup state: either empty or according to the <code class="docutils literal notranslate"><span class="pre">initial</span></code> setting.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="deprecated-action-names">
+<h3><a class="toc-backref" href="#id19">Deprecated Action Names</a><a class="headerlink" href="#deprecated-action-names" title="Permalink to this headline">¶</a></h3>
+<div class="deprecated">
+<p><span class="versionmodified">Deprecated since version 3.5.0.</span></p>
+</div>
+<p>In earlier versions (&lt; 3.5.0) action strings only included information about the
+module type.
+This meant in bars that contained multiple different modules of the same type,
+actions for these modules were sometimes processed by the wrong module with the
+same type.</p>
+<p>Since version 3.5.0, this no longer happens. However, this also means we had to
+change what actions are recognized by polybar modules.</p>
+<p>If you explicitly use any polybar action names in your config or any of your
+scripts, you are advised to change them, as they may stop working at some point
+in the future.
+For now polybar still supports the old action names, will convert them to the
+appropriate new action name, and will print a warning to help you find old
+action names in your config.</p>
+<p>If you use the <a class="reference external" href="https://github.com/polybar/polybar/wiki/Module:-menu">menu module</a>, you most likely use
+old action names to open and close the menu (for example <code class="docutils literal notranslate"><span class="pre">menu-open-1</span></code> or
+<code class="docutils literal notranslate"><span class="pre">menu-close</span></code>).
+The <code class="docutils literal notranslate"><span class="pre">i3wm-wsnext</span></code>, <code class="docutils literal notranslate"><span class="pre">i3wm-wsprev</span></code>, <code class="docutils literal notranslate"><span class="pre">bspwm-desknext</span></code>, and <code class="docutils literal notranslate"><span class="pre">bspwm-deskprev</span></code>
+actions, to switch workspaces in i3 and bspwm, may also appear in your config.</p>
+<div class="section" id="migration">
+<h4><a class="toc-backref" href="#id20">Migration</a><a class="headerlink" href="#migration" title="Permalink to this headline">¶</a></h4>
+<p>Updating your config to use the new action names is quite straightforward.</p>
+<p>For each action name, consult the table below to find the new action name.
+Afterwards build the complete action string as described in
+<a class="reference internal" href="#action-string-format"><span class="std std-ref">Action String Format</span></a>.</p>
+<p>Please see <a class="reference internal" href="#menu-example"><span class="std std-ref">below</span></a> for an example of migrating a typical menu module.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="40%" />
+<col width="37%" />
+<col width="24%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Module Type</th>
+<th class="head">Deprecated Action Name</th>
+<th class="head">New Action Name</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">internal/date</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">datetoggle</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">toggle</span></code></td>
+</tr>
+<tr class="row-odd"><td rowspan="3"><code class="docutils literal notranslate"><span class="pre">internal/alsa</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">volup</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">inc</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">voldown</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">volmute</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">toggle</span></code></td>
+</tr>
+<tr class="row-even"><td rowspan="3"><code class="docutils literal notranslate"><span class="pre">internal/pulseaudio</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pa_volup</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">inc</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pa_voldown</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pa_volmute</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">toggle</span></code></td>
+</tr>
+<tr class="row-odd"><td rowspan="2"><code class="docutils literal notranslate"><span class="pre">internal/xbacklight</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">xbacklight+</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">inc</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">xbacklight-</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+</tr>
+<tr class="row-odd"><td rowspan="2"><code class="docutils literal notranslate"><span class="pre">internal/backlight</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">backlight+</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">inc</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">backlight-</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">internal/xkeyboard</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">xkeyboard/switch</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">switch</span></code></td>
+</tr>
+<tr class="row-even"><td rowspan="10"><code class="docutils literal notranslate"><span class="pre">internal/mpd</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">mpdplay</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">play</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">mpdpause</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">pause</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">mpdstop</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">stop</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">mpdprev</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">prev</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">mpdnext</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">next</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">mpdrepeat</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">repeat</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">mpdsingle</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">single</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">mpdrandom</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">random</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">mpdconsume</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">consume</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">mpdseekN</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">seek.N</span></code></td>
+</tr>
+<tr class="row-even"><td rowspan="3"><code class="docutils literal notranslate"><span class="pre">internal/xworkspaces</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">xworkspaces-focus=N</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">focus.N</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">xworkspaces-next</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">next</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">xworkspaces-prev</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">prev</span></code></td>
+</tr>
+<tr class="row-odd"><td rowspan="3"><code class="docutils literal notranslate"><span class="pre">internal/bspwm</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">bspwm-deskfocusN</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">focus.N</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">bspwm-desknext</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">next</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">bspwm-deskprev</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">prev</span></code></td>
+</tr>
+<tr class="row-even"><td rowspan="3"><code class="docutils literal notranslate"><span class="pre">internal/i3</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">i3wm-wsfocus-N</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">focus.N</span></code></td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">i3-wsnext</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">next</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">i3-wsprev</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">prev</span></code></td>
+</tr>
+<tr class="row-odd"><td rowspan="2"><code class="docutils literal notranslate"><span class="pre">custom/menu</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">menu-open-N</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">open.N</span></code></td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">menu-close</span></code></td>
+<td><code class="docutils literal notranslate"><span class="pre">close</span></code></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Some deprecated action names are suffixed with <code class="docutils literal notranslate"><span class="pre">N</span></code>, this means that that
+action has some additional data (represented by that <code class="docutils literal notranslate"><span class="pre">N</span></code>), in the new
+action names this data will appear in exactly the same way, after a period.</p>
+</div>
+<div class="section" id="menu-module-example">
+<span id="menu-example"></span><h5><a class="toc-backref" href="#id21">Menu Module Example</a><a class="headerlink" href="#menu-module-example" title="Permalink to this headline">¶</a></h5>
+<p>The menu module is the only module where we have to explicitly use actions for
+it to work. Because of this, almost everyone will need to update their menu
+module to use the new action format.</p>
+<p>Below you can see an example of a menu module:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[module/apps]</span><span class="w"></span>
+<span class="na">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">custom/menu</span><span class="w"></span>
+
+<span class="na">menu-0-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Browsers</span><span class="w"></span>
+<span class="na">menu-0-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">menu-open-1</span><span class="w"></span>
+<span class="na">menu-0-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Multimedia</span><span class="w"></span>
+<span class="na">menu-0-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">menu-open-2</span><span class="w"></span>
+
+<span class="na">menu-1-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Firefox</span><span class="w"></span>
+<span class="na">menu-1-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">firefox &amp;</span><span class="w"></span>
+<span class="na">menu-1-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Chromium</span><span class="w"></span>
+<span class="na">menu-1-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">chromium &amp;</span><span class="w"></span>
+
+<span class="na">menu-2-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Gimp</span><span class="w"></span>
+<span class="na">menu-2-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">gimp &amp;</span><span class="w"></span>
+<span class="na">menu-2-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Scrot</span><span class="w"></span>
+<span class="na">menu-2-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">scrot &amp;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This module uses two actions: <code class="docutils literal notranslate"><span class="pre">menu-open-1</span></code> and <code class="docutils literal notranslate"><span class="pre">menu-open-2</span></code>.
+These are actions with data, the data specifies which level of the menu should
+be opened.</p>
+<p>Looking at the table, we see that the new action name for <code class="docutils literal notranslate"><span class="pre">menu-open-N</span></code> is
+<code class="docutils literal notranslate"><span class="pre">open.N</span></code>, where <code class="docutils literal notranslate"><span class="pre">.N</span></code> is the data attached to the action.
+Putting this together with the name of the module gives us <code class="docutils literal notranslate"><span class="pre">#apps.open.1</span></code> and
+<code class="docutils literal notranslate"><span class="pre">#apps.open.2</span></code> as action strings.
+Since your menu module likely has a different name, your action strings will
+likely not use <code class="docutils literal notranslate"><span class="pre">apps</span></code>, but the name of your module.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[module/apps]</span><span class="w"></span>
+<span class="na">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">custom/menu</span><span class="w"></span>
+
+<span class="na">menu-0-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Browsers</span><span class="w"></span>
+<span class="na">menu-0-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">#apps.open.1</span><span class="w"></span>
+<span class="na">menu-0-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Multimedia</span><span class="w"></span>
+<span class="na">menu-0-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">#apps.open.2</span><span class="w"></span>
+
+<span class="na">menu-1-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Firefox</span><span class="w"></span>
+<span class="na">menu-1-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">firefox &amp;</span><span class="w"></span>
+<span class="na">menu-1-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Chromium</span><span class="w"></span>
+<span class="na">menu-1-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">chromium &amp;</span><span class="w"></span>
+
+<span class="na">menu-2-0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Gimp</span><span class="w"></span>
+<span class="na">menu-2-0-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">gimp &amp;</span><span class="w"></span>
+<span class="na">menu-2-1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Scrot</span><span class="w"></span>
+<span class="na">menu-2-1-exec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">scrot &amp;</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<span id="document-user/ipc"></span><div class="section" id="inter-process-messaging">
+<h2>Inter-process-messaging<a class="headerlink" href="#inter-process-messaging" title="Permalink to this headline">¶</a></h2>
+<p>Polybar supports controlling parts of the bar and its modules from the outside
+through inter-process-messaging (IPC).</p>
+<p>IPC is disabled by default and can be enabled by setting <code class="docutils literal notranslate"><span class="pre">enable-ipc</span> <span class="pre">=</span> <span class="pre">true</span></code>
+in the bar section.</p>
+<p>By default polybar ships with the <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> tool that is needed to send
+messages to polybar.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Starting with version 3.6.0, the underlying IPC mechanism has been
+completely changed.</p>
+<p>Writing directly to the named pipe to send IPC messages has been
+deprecated, <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> should be used exclusively
+Everything you could do by directly writing to the named pipe, you
+can also do using <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code>.
+In addition, hook messages are also deprecated; they are replaced by
+actions on the <a class="reference internal" href="index.html#actions-ipc"><span class="std std-ref">ipc module</span></a>.</p>
+<p class="last">Unless noted otherwise, everything in this guide is still valid for
+older versions.</p>
+</div>
+<div class="section" id="sending-messages">
+<h3>Sending Messages<a class="headerlink" href="#sending-messages" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> can be called on the commandline like this:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>polybar-msg <span class="o">[</span>-p &lt;pid&gt;<span class="o">]</span> &lt;type&gt; &lt;payload&gt;
+</pre></div>
+</div>
+<p>If the <code class="docutils literal notranslate"><span class="pre">-p</span></code> argument is specified, the message is only sent to the running
+polybar instance with the given process ID.
+Otherwise, the message is sent to all running polybar processes that have IPC
+enabled.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>IPC messages are only sent to polybar instances running under the
+same user as <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> is running as.</p>
+<p>Concretely, <code class="docutils literal notranslate"><span class="pre">polybar</span></code> and <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> use the
+<code class="docutils literal notranslate"><span class="pre">$XDG_RUNTIME_DIR</span></code> environment variable in accordance with the <a class="reference external" href="https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html">XDG
+Base Directory Specification</a> to determine where to find the socket
+to communicate.</p>
+<p class="last">If <code class="docutils literal notranslate"><span class="pre">polybar</span></code> and <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> don't have the same value for
+<code class="docutils literal notranslate"><span class="pre">$XDG_RUNTIME_DIR</span></code>, they will likely not be able to communicate.
+The variable may not be set if you use <code class="docutils literal notranslate"><span class="pre">su</span></code> or <code class="docutils literal notranslate"><span class="pre">sudo</span></code> to execute
+<code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> as a different user, often a full user session is
+required.</p>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">&lt;type&gt;</span></code> argument is either <a class="reference internal" href="#ipc-actions"><span class="std std-ref">action</span></a> or
+<a class="reference internal" href="#ipc-commands"><span class="std std-ref">cmd</span></a>.
+The allowed values for <code class="docutils literal notranslate"><span class="pre">&lt;payload&gt;</span></code> depend on the type.</p>
+</div>
+<div class="section" id="message-types">
+<h3>Message Types<a class="headerlink" href="#message-types" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="commands">
+<span id="ipc-commands"></span><h4>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h4>
+<p>Using <code class="docutils literal notranslate"><span class="pre">cmd</span></code> for <code class="docutils literal notranslate"><span class="pre">&lt;type&gt;</span></code>, you can control certain aspects of the bar.</p>
+<p>Available values for <code class="docutils literal notranslate"><span class="pre">&lt;payload&gt;</span></code> are:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">quit</span></code>: Terminates the bar</li>
+<li><code class="docutils literal notranslate"><span class="pre">restart</span></code>: Restarts the bar in-place</li>
+<li><code class="docutils literal notranslate"><span class="pre">hide</span></code>: Hides the bar</li>
+<li><code class="docutils literal notranslate"><span class="pre">show</span></code>: Makes the bar visible again, if it was hidden</li>
+<li><code class="docutils literal notranslate"><span class="pre">toggle</span></code>: Toggles between the hidden and visible state.</li>
+</ul>
+</div>
+<div class="section" id="module-actions">
+<span id="ipc-actions"></span><h4>Module Actions<a class="headerlink" href="#module-actions" title="Permalink to this headline">¶</a></h4>
+<p>For the <code class="docutils literal notranslate"><span class="pre">&lt;type&gt;</span></code> <code class="docutils literal notranslate"><span class="pre">action</span></code>, <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> can execute
+<a class="reference internal" href="index.html#document-user/actions"><span class="doc">module actions</span></a> in the bar.</p>
+<p>An action consists of the name of the target module, the name of the action and an optional data string:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#&lt;modulename&gt;.&lt;actionname&gt;[.&lt;data&gt;]
+</pre></div>
+</div>
+<p>More information about action strings and available actions can be found in
+<a class="reference internal" href="index.html#document-user/actions"><span class="doc">Actions</span></a></p>
+<p>For example, if you have a date module named <code class="docutils literal notranslate"><span class="pre">date</span></code>, you can toggle between
+the regular and alternative label with:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>polybar-msg action <span class="s2">&quot;#date.toggle&quot;</span>
+</pre></div>
+</div>
+<p>As an example for an action with data, say you have a menu module named
+<code class="docutils literal notranslate"><span class="pre">powermenu</span></code>, you can open the menu level 0 using:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>polybar-msg action <span class="s2">&quot;#powermenu.open.0&quot;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>For convenience, <code class="docutils literal notranslate"><span class="pre">polybar-msg</span></code> also allows you to pass the module name,
+action name, and data as separate arguments:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>polybar-msg action date toggle
+polybar-msg action powermenu open <span class="m">0</span>
+</pre></div>
+</div>
+<div class="last versionadded">
+<p><span class="versionmodified">New in version 3.6.0.</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="toctree-wrapper compound">
+<span id="document-man/polybar.1"></span><div class="section" id="polybar-1">
+<h2>polybar(1)<a class="headerlink" href="#polybar-1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="synopsis">
+<h3>SYNOPSIS<a class="headerlink" href="#synopsis" title="Permalink to this headline">¶</a></h3>
+<p><strong>polybar</strong> [<em>OPTIONS</em>]... [<em>BAR</em>]</p>
+</div>
+<div class="section" id="description">
+<h3>DESCRIPTION<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h3>
+<p>Polybar aims to help users build beautiful and highly customizable status bars for their desktop environment, without the need of having a black belt in shell scripting.
+If the <em>BAR</em> argument is not provided and the configuration file only contains one bar definition, polybar will display this bar.</p>
+</div>
+<div class="section" id="options">
+<h3>OPTIONS<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h3>
+<dl class="option">
+<dt id="cmdoption-polybar-h">
+<code class="descname">-h</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--help</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-h" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display help text and exit</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-v">
+<code class="descname">-v</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--version</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-v" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display build details and exit</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-l">
+<code class="descname">-l</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--log</code><code class="descclassname">=LEVEL</code><a class="headerlink" href="#cmdoption-polybar-l" title="Permalink to this definition">¶</a></dt>
+<dd><div class="line-block">
+<div class="line">Set the logging verbosity (default: <strong>notice</strong>)</div>
+<div class="line"><em>LEVEL</em> is one of: error, warning, notice, info, trace</div>
+</div>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-q">
+<code class="descname">-q</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--quiet</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Be quiet (will override -l)</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-c">
+<code class="descname">-c</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--config</code><code class="descclassname">=FILE</code><a class="headerlink" href="#cmdoption-polybar-c" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify the path to the configuration file. By default, the configuration file is loaded from:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/polybar/config</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/polybar/config.ini</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$HOME/.config/polybar/config</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$HOME/.config/polybar/config.ini</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_DIRS/polybar/config.ini</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">/etc/xdg/polybar/config.ini</span></code> (only if <code class="docutils literal notranslate"><span class="pre">XDG_CONFIG_DIRS</span></code> is not set)</li>
+<li><code class="docutils literal notranslate"><span class="pre">/etc/polybar/config.ini</span></code></li>
+</ul>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-r">
+<code class="descname">-r</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--reload</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reload the application when the config file has been modified</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-d">
+<code class="descname">-d</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--dump</code><code class="descclassname">=PARAM</code><a class="headerlink" href="#cmdoption-polybar-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print the value of the specified parameter <em>PARAM</em> in bar section and exit</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-m">
+<code class="descname">-m</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--list-monitors</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-m" title="Permalink to this definition">¶</a></dt>
+<dd><div class="line-block">
+<div class="line">Print list of available monitors and exit.</div>
+<div class="line">If some monitors are cloned, this will exclude all but one of them.</div>
+<div class="line">If polybar was compiled with RandR monitor support, only monitors are listed and not physical outputs.</div>
+</div>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-list-all-monitors">
+<code class="descname">-M</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--list-all-monitors</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-list-all-monitors" title="Permalink to this definition">¶</a></dt>
+<dd><div class="line-block">
+<div class="line">Print list of all available monitors and exit.</div>
+<div class="line">This includes cloned monitors as well as both physical outputs and RandR monitors (if supported).</div>
+<div class="line">Only the names listed here can be used as monitor names in polybar.</div>
+</div>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-w">
+<code class="descname">-w</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--print-wmname</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print the generated <em>WM_NAME</em> and exit</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-s">
+<code class="descname">-s</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--stdout</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-s" title="Permalink to this definition">¶</a></dt>
+<dd><p>Output the data to stdout instead of drawing it to the X window</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-p">
+<code class="descname">-p</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--png</code><code class="descclassname">=FILE</code><a class="headerlink" href="#cmdoption-polybar-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save png snapshot to <em>FILE</em> after running for 3 seconds</p>
+</dd></dl>
+
+</div>
+<div class="section" id="authors">
+<h3>AUTHORS<a class="headerlink" href="#authors" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line">Polybar was created by Michael Carlberg and is currently maintained by Patrick Ziegler.</div>
+<div class="line">Contributors can be listed on GitHub.</div>
+</div>
+</div>
+<div class="section" id="reporting-bugs">
+<h3>REPORTING BUGS<a class="headerlink" href="#reporting-bugs" title="Permalink to this headline">¶</a></h3>
+<p>Report issues on GitHub &lt;<a class="reference external" href="https://github.com/polybar/polybar">https://github.com/polybar/polybar</a>&gt;</p>
+</div>
+<div class="section" id="see-also">
+<h3>SEE ALSO<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="index.html#document-man/polybar-msg.1"><span class="doc">polybar-msg(1)</span></a>,
+<a class="reference internal" href="index.html#document-man/polybar.5"><span class="doc">polybar(5)</span></a></p>
+<div class="line-block">
+<div class="line">Full documentation at: &lt;<a class="reference external" href="https://github.com/polybar/polybar">https://github.com/polybar/polybar</a>&gt;</div>
+<div class="line">Project wiki: &lt;<a class="reference external" href="https://github.com/polybar/polybar/wiki">https://github.com/polybar/polybar/wiki</a>&gt;</div>
+</div>
+</div>
+</div>
+<span id="document-man/polybar-msg.1"></span><div class="section" id="polybar-msg-1">
+<h2>polybar-msg(1)<a class="headerlink" href="#polybar-msg-1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="synopsis">
+<h3>SYNOPSIS<a class="headerlink" href="#synopsis" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line"><strong>polybar-msg</strong> [<em>OPTIONS</em>] <strong>action</strong> <em>action-string</em></div>
+<div class="line"><strong>polybar-msg</strong> [<em>OPTIONS</em>] <strong>action</strong> <em>module</em> <em>action</em> [<em>data</em>]</div>
+<div class="line"><strong>polybar-msg</strong> [<em>OPTIONS</em>] <strong>cmd</strong> <em>command</em></div>
+</div>
+</div>
+<div class="section" id="description">
+<h3>DESCRIPTION<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h3>
+<p>Polybar allows external control through <em>actions</em> and <em>commands</em>.
+Actions control individual modules and commands control the bar itself.</p>
+<p>The full IPC documentation is linked at the end of this document.</p>
+<p>The available actions depend on the target module.
+For actions, the payload is either a single action string or the module name,
+the action name, and the optional data string specified separately.</p>
+<p>In order for <strong>polybar-msg</strong> being able to send a message to a running
+<strong>polybar</strong> process, the bar must have IPC enabled and both <strong>polybar-msg</strong> and
+<strong>polybar</strong> must run under the same user.</p>
+</div>
+<div class="section" id="options">
+<h3>OPTIONS<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h3>
+<dl class="option">
+<dt id="cmdoption-polybar-msg-h">
+<code class="descname">-h</code><code class="descclassname"></code><code class="descclassname">, </code><code class="descname">--help</code><code class="descclassname"></code><a class="headerlink" href="#cmdoption-polybar-msg-h" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display help text and exit</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-polybar-msg-p">
+<code class="descname">-p</code><code class="descclassname"> PID</code><a class="headerlink" href="#cmdoption-polybar-msg-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send message only to <strong>polybar</strong> process running under the given process ID.
+If not specified, the message is sent to all running <strong>polybar</strong> processes.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="examples">
+<h3>EXAMPLES<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt><strong>polybar-msg</strong> <strong>cmd</strong> <em>quit</em></dt>
+<dd>Terminate all running <strong>polybar</strong> instances.</dd>
+</dl>
+<p><strong>polybar-msg</strong> <strong>action</strong> <em>mymodule</em> <em>module_hide</em></p>
+<dl class="docutils">
+<dt><strong>polybar-msg</strong> <strong>action</strong> &quot;<em>#mymodule.module_hide</em>&quot;</dt>
+<dd>Hide the module named <em>mymodule</em>.
+The first variant specifies the module and action names separately, the second uses an action string.</dd>
+</dl>
+</div>
+<div class="section" id="authors">
+<h3>AUTHORS<a class="headerlink" href="#authors" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line">Polybar was created by Michael Carlberg and is currently maintained by Patrick Ziegler.</div>
+<div class="line">Contributors can be listed on GitHub.</div>
+</div>
+</div>
+<div class="section" id="reporting-bugs">
+<h3>REPORTING BUGS<a class="headerlink" href="#reporting-bugs" title="Permalink to this headline">¶</a></h3>
+<p>Report issues on GitHub &lt;<a class="reference external" href="https://github.com/polybar/polybar">https://github.com/polybar/polybar</a>&gt;</p>
+</div>
+<div class="section" id="see-also">
+<h3>SEE ALSO<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="index.html#document-man/polybar.1"><span class="doc">polybar(1)</span></a>,
+<a class="reference internal" href="index.html#document-man/polybar.5"><span class="doc">polybar(5)</span></a></p>
+<p><a class="reference internal" href="index.html#document-user/ipc"><span class="doc">Inter-process-messaging</span></a></p>
+</div>
+</div>
+<span id="document-man/polybar.5"></span><div class="section" id="polybar-5">
+<h2>polybar(5)<a class="headerlink" href="#polybar-5" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="description">
+<h3>Description<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h3>
+<p>The polybar configuration file defines the behavior and look of polybar. It uses
+a variant of the <a class="reference external" href="https://en.wikipedia.org/wiki/INI_file">INI</a> file format.
+The exact syntax is described below but first a small snippet to get familiar
+with the syntax:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[section_name]</span><span class="w"></span>
+<span class="c1">; A comment</span><span class="w"></span>
+<span class="c1"># Another comment</span><span class="w"></span>
+
+<span class="na">background</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">#ff992a</span><span class="w"></span>
+<span class="na">width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">90%</span><span class="w"></span>
+<span class="na">monitor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">HDMI-0</span><span class="w"></span>
+
+<span class="na">screenchange-reload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">false</span><span class="w"></span>
+
+<span class="c1">; Use double quotes if you want to keep the surrounding space.</span><span class="w"></span>
+<span class="na">text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot; Some text &quot;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>When started <code class="docutils literal notranslate"><span class="pre">polybar</span></code> will search for the config file in one of several
+places in the following order:</p>
+<ul class="simple">
+<li>If the <code class="docutils literal notranslate"><span class="pre">-c</span></code> or <code class="docutils literal notranslate"><span class="pre">--config</span></code> command line argument is specified, it will use
+the path given there.</li>
+<li><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/polybar/config</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_HOME/polybar/config.ini</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$HOME/.config/polybar/config</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$HOME/.config/polybar/config.ini</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$XDG_CONFIG_DIRS/polybar/config.ini</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">/etc/xdg/polybar/config.ini</span></code> (only if <code class="docutils literal notranslate"><span class="pre">XDG_CONFIG_DIRS</span></code> is not set)</li>
+<li><code class="docutils literal notranslate"><span class="pre">/etc/polybar/config.ini</span></code></li>
+</ul>
+</div>
+<div class="section" id="syntax">
+<h3>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h3>
+<p>The entire config is line-based so everything is constrained to a single line.
+This means there are no multiline values or other multiline constructs (except
+for sections).
+Each line has one of four types:</p>
+<ul class="simple">
+<li>Empty</li>
+<li>Comment</li>
+<li>Section Header</li>
+<li>Key</li>
+</ul>
+<p>Spaces at the beginning and end of each line will be ignored.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In this context &quot;spaces&quot; include the regular space character as well as the
+tab character and any other character for which <em class="manpage">isspace(3)</em> returns
+<code class="docutils literal notranslate"><span class="pre">true</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">\r</span></code>).</p>
+</div>
+<p>Any line that doesn't fit into one of these four types is a syntax error.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>It is recommended that <cite>section header</cite> names and <cite>key</cite> names only use
+alphanumeric characters as well as dashes (<code class="docutils literal notranslate"><span class="pre">-</span></code>), underscores (<code class="docutils literal notranslate"><span class="pre">_</span></code>) and
+forward slashes (<code class="docutils literal notranslate"><span class="pre">/</span></code>).</p>
+<p class="last">In practice all characters are allowed except for spaces and any of these:
+<code class="docutils literal notranslate"><span class="pre">&quot;'=;#[](){}:.$\%</span></code></p>
+</div>
+<div class="section" id="section-headers">
+<h4>Section Headers<a class="headerlink" href="#section-headers" title="Permalink to this headline">¶</a></h4>
+<p>Sections are used to group config options together. For example each module is
+defined in its own section.</p>
+<p>A section is defined by placing the name of the section in square brackets
+(<code class="docutils literal notranslate"><span class="pre">[</span></code> and <code class="docutils literal notranslate"><span class="pre">]</span></code>). For example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[module/wm]</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This declares a section with the name <code class="docutils literal notranslate"><span class="pre">module/wm</span></code> and all keys defined after
+this line will belong to that section until a new section is declared.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The first non-empty and non-comment line in the main config file must be a
+section header. It cannot be a key because that key would not belong to any
+section.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The following section names are reserved and cannot be used inside the config:
+<code class="docutils literal notranslate"><span class="pre">self</span></code>, <code class="docutils literal notranslate"><span class="pre">root</span></code>, and <code class="docutils literal notranslate"><span class="pre">BAR</span></code>.</p>
+</div>
+</div>
+<div class="section" id="keys">
+<h4>Keys<a class="headerlink" href="#keys" title="Permalink to this headline">¶</a></h4>
+<p>Keys are defined by assigning a value to a name like this:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">value</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This assigns <code class="docutils literal notranslate"><span class="pre">value</span></code> to the key <code class="docutils literal notranslate"><span class="pre">name</span></code> in whatever section this line is in.
+Key names need to be unique per section.
+If the value is enclosed by double-quotes (<code class="docutils literal notranslate"><span class="pre">&quot;</span></code>), the quotes will be ignored.
+So the following still assigns <code class="docutils literal notranslate"><span class="pre">value</span></code> to <code class="docutils literal notranslate"><span class="pre">name</span></code>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;value&quot;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Spaces around the equal sign are ignored, the following are all equivalent:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">name</span><span class="o">=</span><span class="s">value</span><span class="w"></span>
+<span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">value</span><span class="w"></span>
+<span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w">      </span><span class="s">value</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Because spaces at the beginning and end of the line are also ignored, if you
+want your value to begin and/or end with a space, the value needs to be enclosed
+in double-quotes:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot; value &quot;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Here the value of the <code class="docutils literal notranslate"><span class="pre">name</span></code> key has a leading and trailing whitespace.</p>
+<p>To treat characters with special meaning as literal characters, you need to
+prepend them with the backslash (<code class="docutils literal notranslate"><span class="pre">\</span></code>) escape character:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;value\\value\\value&quot;</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Value of this key <code class="docutils literal notranslate"><span class="pre">name</span></code> results in <code class="docutils literal notranslate"><span class="pre">value\value\value</span></code>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The only character with a special meaning right now is the backslash character
+(<code class="docutils literal notranslate"><span class="pre">\</span></code>), which serves as the escape character.
+More will be added in the future.</p>
+</div>
+</div>
+<div class="section" id="empty-lines-comments">
+<h4>Empty Lines &amp; Comments<a class="headerlink" href="#empty-lines-comments" title="Permalink to this headline">¶</a></h4>
+<p>Empty lines and comment lines are ignored when reading the config file, they do
+not affect polybar's behavior. Comment lines start with either the <code class="docutils literal notranslate"><span class="pre">;</span></code> or the
+<code class="docutils literal notranslate"><span class="pre">#</span></code> character.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Inline comments are not supported. For example the following line does not end
+with a comment, the value of <code class="docutils literal notranslate"><span class="pre">name</span></code> is actually set to <code class="docutils literal notranslate"><span class="pre">value</span> <span class="pre">;</span> <span class="pre">comment</span></code>:</p>
+<div class="last highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">value ; comment</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="authors">
+<h3>AUTHORS<a class="headerlink" href="#authors" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line">Polybar was created by Michael Carlberg and is currently maintained by Patrick Ziegler.</div>
+<div class="line">Contributors can be listed on GitHub.</div>
+</div>
+</div>
+<div class="section" id="see-also">
+<h3>SEE ALSO<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="index.html#document-man/polybar.1"><span class="doc">polybar(1)</span></a>,
+<a class="reference internal" href="index.html#document-man/polybar-msg.1"><span class="doc">polybar-msg(1)</span></a></p>
+</div>
+</div>
+</div>
+<div class="toctree-wrapper compound">
+<span id="document-dev/packaging"></span><div class="section" id="packaging-polybar">
+<h2>Packaging Polybar<a class="headerlink" href="#packaging-polybar" title="Permalink to this headline">¶</a></h2>
+<p>Do you want to package polybar for a distro? Great! Read this page to get
+started.</p>
+<div class="section" id="first-steps">
+<h3>First Steps<a class="headerlink" href="#first-steps" title="Permalink to this headline">¶</a></h3>
+<p>Before you get started, have a look at the <a class="reference external" href="https://github.com/polybar/polybar/issues?q=label%3APackaging">Packaging Label</a> on our GitHub
+repo and <a class="reference external" href="https://repology.org/project/polybar/versions">Repology</a> to see if
+polybar is already packaged for that distro or if there are efforts to do so.</p>
+<p>Even if a package already exists, it might still make sense for you to package
+polybar in some cases. Some of these cases are:</p>
+<ul class="simple">
+<li>The existing package is out-of-date and the packager is no longer able/willing
+to continue maintaining the package (or they are simply not reachable
+anymore).</li>
+<li>The existing package exist in some non-official repository and you are able to
+introduce the package into the official package repository for the
+distro/package manager. For example if there is a PPA providing polybar for
+Ubuntu and you can add polybar to the official Ubuntu repositories, please do
+:)</li>
+</ul>
+<p>The list above is not exhaustive, if you are unsure, feel free to ask in a new
+GitHub issue or on <a class="reference external" href="https://gitter.im/polybar">Gitter</a>. Please also ask if you
+run into any polybar related issues while packaging.</p>
+</div>
+<div class="section" id="packaging">
+<h3>Packaging<a class="headerlink" href="#packaging" title="Permalink to this headline">¶</a></h3>
+<p>If you haven't already, carefully read the <a class="reference external" href="https://github.com/polybar/polybar/wiki/Compiling">Compiling</a> wiki page to make sure you
+fully understand all the dependencies involved and how to build polybar
+manually.</p>
+<p>We can't really tell you how to create a package for your distro, you need to
+figure that out yourself. But we can give you some guidance on building polybar
+for a package</p>
+<div class="section" id="gathering-the-source-code">
+<h4>Gathering the Source Code<a class="headerlink" href="#gathering-the-source-code" title="Permalink to this headline">¶</a></h4>
+<p>Unless you are creating a package that tracks the <code class="docutils literal notranslate"><span class="pre">master</span></code> branch, don't clone
+the git repository. We provide a tarball with all the required source code on
+our <a class="reference external" href="https://github.com/polybar/polybar/releases">Release Page</a>, use that in
+your build.</p>
+</div>
+<div class="section" id="configuring-and-compiling">
+<h4>Configuring and Compiling<a class="headerlink" href="#configuring-and-compiling" title="Permalink to this headline">¶</a></h4>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Do not use the <code class="docutils literal notranslate"><span class="pre">build.sh</span></code> script for building polybar for your package. The
+usage and flags of the script may change without notice and we don't consider
+that a breaking change.</p>
+</div>
+<p>You can mostly follow the instructions on the <a class="reference external" href="https://github.com/polybar/polybar/wiki/Compiling#compiling">wiki</a> for how to
+compile polybar, but there are some additional <code class="docutils literal notranslate"><span class="pre">cmake</span></code> arguments you might
+want to use:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">-DCMAKE_BUILD_TYPE=Release</span></code>: As of writing this is already the default, but
+use it just to be on the safe side.</li>
+<li><code class="docutils literal notranslate"><span class="pre">-DCMAKE_INSTALL_PREFIX=/usr</span></code>: Without this all the polybar files will be
+installed under <code class="docutils literal notranslate"><span class="pre">/usr/local</span></code>. However, for packages it is often recommended
+they directly install to <code class="docutils literal notranslate"><span class="pre">/usr</span></code>. So this flag will install polybar to
+<code class="docutils literal notranslate"><span class="pre">/usr/bin/polybar</span></code> instead of <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/polybar</span></code>. The packaging
+guidelines for your distro may disagree with this, in that case be sure to
+follow your distro's guidelines.</li>
+</ul>
+<p>Instead of <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">make</span> <span class="pre">install</span></code>, you will most likely want to use
+<code class="docutils literal notranslate"><span class="pre">DESTDIR=&lt;dir&gt;</span> <span class="pre">make</span> <span class="pre">install</span></code>. That way the files will be installed into
+<code class="docutils literal notranslate"><span class="pre">&lt;dir&gt;</span></code> instead of your filesystem root.</p>
+</div>
+</div>
+<div class="section" id="finishing-up">
+<h3>Finishing Up<a class="headerlink" href="#finishing-up" title="Permalink to this headline">¶</a></h3>
+<p>Finally, subscribe to our <a class="reference external" href="https://github.com/polybar/polybar/issues/1971">GitHub thread for package maintainers</a> to get notified about new
+releases and changes to how polybar is built.
+If you want to, you can also open a PR to add your package to the <a class="reference external" href="https://github.com/polybar/polybar#getting-started">Getting
+Started</a> section of our
+README.</p>
+<p>Thank you very much for maintaining a polybar package! 🎉</p>
+</div>
+</div>
+</div>
+<div class="toctree-wrapper compound">
+<span id="document-dev/release-workflow"></span><div class="section" id="release-workflow">
+<h2>Release Workflow<a class="headerlink" href="#release-workflow" title="Permalink to this headline">¶</a></h2>
+<p>We try to follow <a class="reference external" href="https://semver.org/">Semantic Versioning</a> in this project.
+Patch releases (e.g. <code class="docutils literal notranslate"><span class="pre">3.3.X</span></code>) contain only bug fixes. Minor releases (e.g.
+<code class="docutils literal notranslate"><span class="pre">3.X.0</span></code>) can have backwards-compatible features. And major releases (
+<code class="docutils literal notranslate"><span class="pre">X.0.0</span></code>) can introduce incompatible changes.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This document replaces the &quot;<a class="reference external" href="https://github.com/polybar/polybar/wiki/Release-Guidelines">Release Guidelines</a>&quot; on the wiki
+that we used between 3.2.0 and 3.4.3. Starting with 3.5.0, we will follow
+the workflow described here to publish releases.</p>
+</div>
+<p>Polybar uses the <a class="reference external" href="https://www.endoflineblog.com/oneflow-a-git-branching-model-and-workflow">OneFlow</a>
+branching model for publishing new releases and introducing hotfixes.</p>
+<p>The way we accept code from contributors does not change: Contributors fork
+polybar, commit their changes to a new branch and open a PR to get that branch
+merged.
+After reviewing and approving the changes, a maintainer &quot;merges&quot; the PR.
+&quot;Merging&quot; is done in the GitHub UI by either rebasing or squashing the
+changes.
+Regular merging is disabled because we do not want merge a merge commit for
+every PR.</p>
+<p>This document is mainly concerned with how to properly release a new version of
+polybar.
+For that reason this might not be of interest to you, if you are not a
+maintainer, but feel free to read on anyway.</p>
+<div class="section" id="drafting-a-new-release">
+<h3>Drafting a new Release<a class="headerlink" href="#drafting-a-new-release" title="Permalink to this headline">¶</a></h3>
+<p>There a two processes for how to draft a new release. The process for major and
+minor versions is the same as they both are &quot;regular&quot; releases.
+Patch releases are triggered by bugfixes that cannot wait until the next regular
+release and have a slightly different workflow.</p>
+<div class="section" id="regular-releases-major-minor">
+<h4>Regular Releases (Major, Minor)<a class="headerlink" href="#regular-releases-major-minor" title="Permalink to this headline">¶</a></h4>
+<p>Regular releases are created once we find that <code class="docutils literal notranslate"><span class="pre">master</span></code> is in a stable state
+and that there are enough new features to justify a new release.
+A release branch <code class="docutils literal notranslate"><span class="pre">release/X.Y.0</span></code> is branched off of a commit on <code class="docutils literal notranslate"><span class="pre">master</span></code>
+that contains all the features we want in the release, this branch is pushed to
+the official repository.
+For example for version <code class="docutils literal notranslate"><span class="pre">3.5.0</span></code> the branch <code class="docutils literal notranslate"><span class="pre">release/3.5.0</span></code> would be created:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>git checkout -b release/3.5.0 &lt;commit&gt;
+</pre></div>
+</div>
+<p>The release branch should typically only exist for at most a few days.</p>
+</div>
+<div class="section" id="hotfix-releases-patch">
+<h4>Hotfix Releases (Patch)<a class="headerlink" href="#hotfix-releases-patch" title="Permalink to this headline">¶</a></h4>
+<p>A hotfix release is created whenever we receive a fix for a bug that we believe
+should be released immediately instead of it only being part of the next regular
+release.
+Generally any bugfix qualifies, but it is up to the maintainers to decide
+whether a hotfix release should be created.</p>
+<p>The hotfix release branch <code class="docutils literal notranslate"><span class="pre">hotfix/X.Y.Z</span></code> is created by branching off at the
+previous release tag (<code class="docutils literal notranslate"><span class="pre">X.Y.Z-1</span></code>).
+For example, if the latest version is <code class="docutils literal notranslate"><span class="pre">3.5.2</span></code>, the next hotfix will be on
+branch <code class="docutils literal notranslate"><span class="pre">hotfix/3.5.3</span></code>:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>git checkout -b hotfix/3.5.3 <span class="m">3</span>.5.2
+</pre></div>
+</div>
+<p>Since the PRs for such bugfixes are often not created by maintainers, they will
+often not be based on the latest release tag, but just be branched off
+<code class="docutils literal notranslate"><span class="pre">master</span></code> because contributors don't necessarily know about this branching
+model and also may well not know whether a hotfix will be created for a certain
+bugfix.</p>
+<p>In case a PR containing a bugfix that is destined for a patch release is not
+branched off the previous release, a maintainer creates the proper release
+branch and cherry-picks the bugfix commits.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Alternatively, the contributor can also <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rebase</span> <span class="pre">--onto</span></code> to base the
+branch off the previous release tag. However, in most cases it makes sense for
+a maintainer to create the release branch since they will also need to add a
+<a class="reference internal" href="#release-commit">Release Commit</a> to it.</p>
+</div>
+<p>Once the release branch is created and contains the right commits, the
+maintainer should follow <a class="reference internal" href="#publishing-a-new-release">Publishing a new Release</a> to finish this patch
+release.</p>
+<p>If multiple bugfixes are submitted in close succession, they can all be
+cherry-picked onto the same patch release branch to not create many individual
+release with only a single fix.
+The maintainer can also decide to leave the release branch for this patch
+release open for a week in order to possibly combine multiple bugfixes into a
+single release.</p>
+</div>
+</div>
+<div class="section" id="publishing-a-new-release">
+<h3>Publishing a new Release<a class="headerlink" href="#publishing-a-new-release" title="Permalink to this headline">¶</a></h3>
+<p>The process for publishing a release is the same for all release types. It goes
+as follows:</p>
+<ul class="simple">
+<li>A <a class="reference internal" href="#release-commit">Release commit</a> is added to the tip of the release branch.</li>
+<li>A draft PR is opened for the release branch. This PR MUST NOT be merged in
+GitHub's interface, it is only here for review, merging happens at the
+commandline.</li>
+<li>A <a class="reference internal" href="#draft-release">draft release</a> is created in GitHub's release publishing tools</li>
+<li>After approval, the GitHub release publishing tool is used to publish the
+release and tag the tip of the release branch (the release commit).</li>
+<li>After the tag is created, the release branch is manually merged into
+<code class="docutils literal notranslate"><span class="pre">master</span></code>.
+Here it is vitally important that the history of the release branch does not
+change and so we use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">merge</span></code>. We do it manually because using <code class="docutils literal notranslate"><span class="pre">git</span>
+<span class="pre">merge</span></code> is disabled on PRs.</li>
+</ul>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>git checkout master
+git merge &lt;release-branch&gt;
+git push origin
+</pre></div>
+</div>
+<ul class="simple">
+<li>After the tag is created, the release branch can be deleted with <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">push</span>
+<span class="pre">origin</span> <span class="pre">:&lt;release-branch&gt;</span></code>.</li>
+<li>Work through the <a class="reference internal" href="#after-release-checklist">After-Release Checklist</a>.</li>
+</ul>
+<p>Here <code class="docutils literal notranslate"><span class="pre">&lt;release-branch&gt;</span></code> is either a <code class="docutils literal notranslate"><span class="pre">release/X.Y.0</span></code> branch or a
+<code class="docutils literal notranslate"><span class="pre">hotfix/X.Y.Z</span></code> branch.</p>
+<div class="section" id="release-commit">
+<h4>Release Commit<a class="headerlink" href="#release-commit" title="Permalink to this headline">¶</a></h4>
+<p>When merging, a release commit must be at the tip of the release branch.</p>
+<p>The release commit needs to update the version number in:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">version.txt</span></code></li>
+</ul>
+<p>The release commit must also finalize the <a class="reference internal" href="#changelog">Changelog</a> for this release.</p>
+</div>
+<div class="section" id="changelog">
+<h4>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code> file at the root of the repo should already contain all the
+changes for the upcoming release in a format based on
+<a class="reference external" href="https://keepachangelog.com/en/1.0.0/">keep a changelog</a>.
+For each release those changes should be checked to make sure we did not miss
+anything.</p>
+<p>For all releases, a new section of the following form should be created below
+the <code class="docutils literal notranslate"><span class="pre">Unreleased</span></code> section:</p>
+<div class="highlight-md notranslate"><div class="highlight"><pre><span></span><span class="gu">## [X.Y.Z] - YYYY-MM-DD</span>
+</pre></div>
+</div>
+<p>In addition, the reference link for the release should be added and the
+reference link for the unreleased section should be updated at the bottom of the
+document:</p>
+<div class="highlight-md notranslate"><div class="highlight"><pre><span></span>[<span class="nl">Unreleased</span>]: <span class="na">https://github.com/polybar/polybar/compare/X.Y.Z...HEAD</span>
+[<span class="nl">X.Y.Z</span>]: <span class="na">https://github.com/polybar/polybar/releases/tag/X.Y.Z</span>
+</pre></div>
+</div>
+<p>Since the release tag doesn't exist yet, both of these links will be invalid
+until the release is published.</p>
+<p>All changes from the <code class="docutils literal notranslate"><span class="pre">Unreleased</span></code> section that apply to this release should be
+moved into the new release section.
+For regular releases this is generally the entire <code class="docutils literal notranslate"><span class="pre">Unreleased</span></code> section, while
+for patch releases it will only be a few entries.</p>
+<p>The contents of the release section can be copied into the draft release in
+GitHub's release tool with a heading named <code class="docutils literal notranslate"><span class="pre">##</span> <span class="pre">Changelog</span></code>.</p>
+<p>Since major releases generally break backwards compatibility in some way, their
+changelog should also prominently feature precisely what breaking changes were
+introduced. If suitable, maybe even separate documentation dedicated to the
+migration should be written.</p>
+</div>
+<div class="section" id="draft-release">
+<h4>Draft Release<a class="headerlink" href="#draft-release" title="Permalink to this headline">¶</a></h4>
+<p>On <a class="reference external" href="https://github.com/polybar/polybar/releases/new">GitHub</a> a new release
+should be drafted.
+The release targets the tip of the release branch (the release commit), the
+name of the release and the tag is simply the release number.</p>
+<p>The content of the release message should contain the changelog copied from
+<code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code> under the heading <code class="docutils literal notranslate"><span class="pre">##</span> <span class="pre">Changelog</span></code>.
+In addition using GitHub's &quot;Auto-generate release notes&quot; feature, the list of
+new contributors should be generated and put at the end of the release notes.
+The generated list of PRs can be removed.</p>
+</div>
+<div class="section" id="after-release-checklist">
+<h4>After-Release Checklist<a class="headerlink" href="#after-release-checklist" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Make sure all the new functionality is documented on the wiki</li>
+<li>Mark deprecated features appropriately (see <a class="reference internal" href="#deprecations">Deprecations</a>)</li>
+<li>Remove all unreleased notes from the wiki (not for patch releases)</li>
+<li>Inform packagers of new release in <a class="reference external" href="https://github.com/polybar/polybar/issues/1971">#1971</a>. Mention any dependency
+changes and any changes to the build workflow. Also mention any new files are
+created by the installation.</li>
+<li>Confirm that the release archive was added to the release.
+We have a GitHub action workflow called 'Release Workflow' that on every
+release automatically creates a release archive, uploads it to the release,
+and adds a 'Download' section to the release body.
+If this fails for some reason, it should be triggered manually.</li>
+<li>Create a PR that updates the AUR <code class="docutils literal notranslate"><span class="pre">PKGBUILD</span></code> files for the <code class="docutils literal notranslate"><span class="pre">polybar</span></code> and
+<code class="docutils literal notranslate"><span class="pre">polybar-git</span></code> packages (push after the release archive is uploaded).</li>
+<li>Close the <a class="reference external" href="https://github.com/polybar/polybar/milestones">GitHub Milestone</a>
+for the new release and move open issues (if any) to a later release.</li>
+<li>Activate the version on <a class="reference external" href="https://readthedocs.org/projects/polybar/versions/">Read the Docs</a> and deactivate all
+previous versions for the same minor release (e.g. for 3.5.4, deactivate all
+other 3.5.X versions).</li>
+</ul>
+</div>
+<div class="section" id="deprecations">
+<h4>Deprecations<a class="headerlink" href="#deprecations" title="Permalink to this headline">¶</a></h4>
+<p>If any publicly facing part of polybar is being deprecated, it should be marked
+as such in the code, through warnings/errors in the log, and by comments in the
+wiki. Every deprecated functionality is kept until the next major release and
+removed there, unless it has not been deprecated in a minor release before.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="getting-help">
+<h1>Getting Help<a class="headerlink" href="#getting-help" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference external" href="https://github.com/polybar/polybar/wiki">Polybar Wiki</a></li>
+<li><a class="reference external" href="https://gitter.im/polybar/polybar">Gitter</a></li>
+<li><a class="reference external" href="https://reddit.com/r/polybar">/r/polybar</a> on reddit</li>
+<li><code class="docutils literal notranslate"><span class="pre">#polybar</span></code> on <a class="reference external" href="https://libera.chat/">irc.libera.chat:6697</a></li>
+</ul>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016-2022, Michael Carlberg &amp; contributors
+      
+        <span class="commit">
+          Revision <code>4a61d315</code>.
+        </span>
+      
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      <span class="fa fa-book"> Read the Docs</span>
+      v: stable
+      <span class="fa fa-caret-down"></span>
+    </span>
+    <div class="rst-other-versions">
+      <dl>
+        <dt>Versions</dt>
+        
+          <dd><a href="/en/latest/">latest</a></dd>
+        
+          <dd><a href="/en/stable/">stable</a></dd>
+        
+          <dd><a href="/en/3.6.1/">3.6.1</a></dd>
+        
+          <dd><a href="/en/3.6.0/">3.6.0</a></dd>
+        
+          <dd><a href="/en/3.5.7/">3.5.7</a></dd>
+        
+          <dd><a href="/en/3.4.3/">3.4.3</a></dd>
+        
+      </dl>
+      <dl>
+        <dt>Downloads</dt>
+        
+          <dd><a href="//polybar.readthedocs.io/_/downloads/en/stable/htmlzip/">html</a></dd>
+        
+      </dl>
+      <dl>
+        <dt>On Read the Docs</dt>
+          <dd>
+            <a href="//readthedocs.org/projects/polybar/?fromdocs=polybar">Project Home</a>
+          </dd>
+          <dd>
+            <a href="//readthedocs.org/builds/polybar/?fromdocs=polybar">Builds</a>
+          </dd>
+      </dl>
+      <hr/>
+      Free document hosting provided by <a href="http://www.readthedocs.org">Read the Docs</a>.
+
+    </div>
+  </div>
+
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+   
+
+</body>
+</html>

@@ -1,0 +1,663 @@
+.TH \fB\fCtermpdf.py\fR
+.PP
+A graphical pdf and epub viewer, written in python, that works inside
+kitty \[la]https://sw.kovidgoyal.net/kitty/\[ra]\&. 
+.PP
+I wrote this to replace termpdf \[la]https://github.com/dsanson/termpdf\[ra], which
+was a ridiculous hack of a bash script written around a bunch of command line
+tools.
+.PP
+This is alpha software. Expect bugs. Expect changes. The
+goal is feature parity with pdf\-tools \[la]https://github.com/politza/pdf-tools\[ra]\&.
+.SH Screenshot
+.PP
+[Screenshot](screenshot.png)
+.PP
+Note the alpha transparency. You can toggle this on or off by pressing \fB\fCa\fR\&.
+.SH Dependencies
+.RS
+.IP \(bu 2
+Python 3
+.IP \(bu 2
+Kitty (unless other terminal emulators implement the same graphics protocol.)
+.IP \(bu 2
+PyMuPDF \[la]https://pypi.org/project/PyMuPDF/\[ra]
+.RS
+.IP \(bu 2
+PyMuPDF in turn depends on MuPDF. On OSX, \fB\fCbrew install mupdf\-tools\fR\&.
+.RE
+.IP \(bu 2
+bibtool \[la]http://gerd-neugebauer.de/software/TeX/BibTool/en/\[ra] (optional) for faster
+bibtex parsing than pybtex.
+.RE
+.SH Installation
+.PP
+.RS
+.nf
+git clone https://github.com/dsanson/termpdf.py
+cd termpdf.py
+pip install \-r requirements.txt
+.fi
+.RE
+.PP
+(You might need to use \fB\fCpip3\fR if \fB\fCpip\fR is Python 2 on your system.)
+.PP
+Now you can run the script in place:
+.PP
+.RS
+.nf
+\&./termpdf.py <file.pdf>
+.fi
+.RE
+.PP
+Or copy it somewhere in your path.
+.PP
+Or you can install it with pip:
+.PP
+.RS
+.nf
+pip install .
+.fi
+.RE
+.SH Simple Usage
+.PP
+This is evolving. Here is the simplest example:
+.PP
+.RS
+.nf
+termpdf.py example.pdf
+.fi
+.RE
+.PP
+If you want to open to a specific page,
+.PP
+.RS
+.nf
+termpdf.py \-p 10 example.pdf
+.fi
+.RE
+.PP
+If you want to specify the "logical page number" of the first page,
+.PP
+.RS
+.nf
+termpdf.py \-f 132 example.pdf
+.fi
+.RE
+.PP
+(This is handy if you want to launch \fB\fCtermpdf.py\fR from a script, and your
+script knows that the PDF is a journal article that begins on page 236.)
+.PP
+You can open several files at once:
+.PP
+.RS
+.nf
+termpdf.py example.pdf example2.pdf example3.pdf
+.fi
+.RE
+.PP
+To cycle through several open files, press \fB\fCb\fR (for "buffer").
+.SH Keyboard Shortcuts
+.PP
+Within termpdf, key mappings are meant to be vim\-style. For simple
+navigation:
+.PP
+.RS
+.nf
+j, down, space: forward [count] pages
+k, up:          back [count] pages
+l, right:       forward [count] sections
+h, left:        back [count] sections
+gg:             go to beginning of document
+G:              go to end of document
+[count]G:       go to page [count]
+q:              quit
+.fi
+.RE
+.PP
+Note that these take counts, so \fB\fC10j\fR moves forward 10 pages. 
+.PP
+As mentioned above, if you opened several documents at once, you can cycle through these documents by pressing \fB\fCb\fR:
+.PP
+.RS
+.nf
+b               cycle through documents in buffer
+.fi
+.RE
+.SH Page Numbers and Page Labels
+.PP
+The first page of a PDF is not always page 1. termpdf.py supports PDF "Page
+Labels" for managing this. If your document already has page labels,
+termpdf.py will use those labels to number pages. Note that this can cause
+trouble when using a command like \fB\fC10G\fR to go to page 10, as it is quite
+possible to have two pages in a single document, both labeled "10".
+.PP
+You can also add Page Labels from within termpdf.py. 
+.PP
+.RS
+.nf
+[count]P:       Set page label of current page to count (as an arabic
+                numeral)
+[count]I:       Set page label of current page to count (as a lowercase
+                roman numeral)
+.fi
+.RE
+.PP
+For example, if your PDF is a journal article, and the first page should be
+page 283, navigate to the first page, and type \fB\fC283P\fR\&. Or, if your PDF is a
+book, you might navigate to the first page, and type \fB\fC1I\fR, to start numbering
+the preface material in lowercase roman numerals, and then navigate to the
+proper page 1, and type \fB\fC1P\fR, to continue numbering the rest of the PDF in
+arabic numerals.
+.PP
+Some caveats:
+.RS
+.IP \(bu 2
+A Page Label affects page numbering for all \fIsubsequent unlabeled pages\fP\&.
+It does not affect the page numbering of pages before it.
+.IP \(bu 2
+Nothing will stop you from labelling the first page of your PDF "10", the
+second page of your PDF "10", the third page of your PDF "10", and so on.
+The result will be nonsense, and will break your ability to navigate to
+pages by page number.
+.IP \(bu 2
+Currently, termpdf.py offers no methods for \fIdeleting\fP page labels, so if
+you make a mess, you will have to fix it with some other piece of
+software. I'm not sure what the best software is for this purpose.
+.RE
+.SH Table of Contents, Links, and Metadata
+.PP
+You can view the table of contents, metadata, or any links (internal or
+external) on the current page:
+.PP
+.RS
+.nf
+t:              table of contents 
+f:              show links on page
+M:              show metadata
+.fi
+.RE
+.PP
+While viewing the table of contents, use \fB\fCj\fR and \fB\fCk\fR to navigate, and <enter> to jump to a new section.
+.PP
+While viewing links, use \fB\fCj\fR and \fB\fCk\fR to navigate, and <enter> to open the link. For internal links, this will jump to the appropriate page. External links will be opened in your browser (see URL_BROWSER for more info).
+.PP
+While viewing metadata, press \fB\fCb\fR to update the metadata from an associated
+bibtex file (see below for how to set this up). There is currently no support
+for manually editing the metadata within termpdf.py.
+.SH Rotation, Cropping, Inverting
+.PP
+You can also adjust the display of the document in a variety of ways:
+.PP
+.RS
+.nf
+r:              rotate [count] quarter turns clockwise
+R:              rotate [count] quarter turns counterclockwise
+c:              toggle autocropping of margins
+a:              toggle alpha transparency
+i:              invert colors
+d:              darken using TINT_COLOR
+\-:              zoom out (reflowable only)
++:              zoom in (reflowable only)
+ctrl\-r:         refresh
+.fi
+.RE
+.PP
+Zooming is currently only implemented for reflowable formats, like \fB\fCepub\fR\&.
+.PP
+Alpha transparency and autocropping will only work on some PDFs. For manual
+cropping, see the section below, on the visual select mode.
+.PP
+The refresh command is helpful if the page fails to display, or displays
+funny: try hitting \fB\fCctrl\-r\fR to see if that fixes the problem.
+.SH Visual Select Mode
+.PP
+If you want to select some text and send that to nvim, you
+need to enter "visual select mode":
+.PP
+.RS
+.nf
+s:              visual select mode
+v:              toggle between selecting and not.
+n:              insert selected text in nvim at current cursor location
+a:              append selected text in nvim at end of buffer
+.fi
+.RE
+.PP
+While in visual select mode, use \fB\fCj\fR and \fB\fCk\fR (with counts) to move up and
+down. Use \fB\fCv\fR to toggle between selecting and not. Use 'H' and 'h' to adjust
+the left edge of selection, and 'L' and 'l' to adjust the right edge of
+selection. Use \fB\fCy\fR to copy all the text within the selection to the clipboard,
+\fB\fCn\fR to insert the text at the cursor point of an attached nvim session or \fB\fCa\fR
+to append it to the end of an attached nvim session.
+.PP
+Note that selection of text will only work on PDFs that have embedded textual
+information, and may be unreliable with OCRed text, or weirdly constructed
+PDFs.
+.PP
+You can also use visual select mode to manually crop a document (the manual
+crop is not written to the file\-\-\-it just affects how the document is
+displayed). Use \fB\fCs\fR to enter visual select mode, \fB\fCv\fR to begin a selection, and
+the motion keys to select the rectangle you wish to crop to. Then press \fB\fCc\fR\&.
+The crop will affect all pages of the document. If you have defined a manual
+crop, you can use \fB\fCc\fR to rotate through no cropping, autocropping, and manual
+cropping.
+.PP
+Note that visual select mode is implemented using curses, and the smallest block you can select is a terminal cell. If you want higher 'resolution', adjust kitty's font size in the window.
+.SH Bibtex Integration
+.PP
+If your document has an associated bibtex citekey (see below), yanked text will include a pandoc\-style citation:
+.PP
+.RS
+.nf
+[@author2015, p. 205]
+.fi
+.RE
+.PP
+(Other citation formats are not yet implemented.) Otherwise, it will construct
+a citation from the PDF metadata:
+.PP
+.RS
+.nf
+(Author, Title, p. 205)
+.fi
+.RE
+.PP
+If you just want to send a citation to nvim, without selecting any text, you
+can use \fB\fCn\fR or \fB\fCa\fR in normal mode, too.
+.SH Config file
+.PP
+termpdf.py looks for a config file at \fB\fC$HOME/.config/termpdf.py/config\fR\&. The
+config file is a json file. Here is mine:
+.PP
+.RS
+.nf
+{
+  "TINT_COLOR": "antiquewhite2",
+  "BIBTEX": "/Users/desanso/d/research/zotero.bib",
+  "NOTE_PATH": "/Users/desanso/org/inbox.org",
+  "KITTYCMD": "kitty \-\-single\-instance \-\-instance\-group=1"
+}
+.fi
+.RE
+.PP
+TINT_COLOR can be set to any color in pymupdf's color database \[la]https://pymupdf.readthedocs.io/en/latest/colors/\[ra]\&. 
+.PP
+BIBTEX can be set to the path of a bibtex file with information about your documents. 
+.PP
+NOTE_PATH can be set to the path of a default notes file. The default is \fB\fC$HOME/inbox.org\fR\&.
+.PP
+KITTYCMD is the command used to open new windows in kitty. My preferred setting is for kitty to open a new os window. If you'd prefer to have kitty open a new kitty window, replace KITTYCMD with something like:
+.PP
+   "KITTYCMD": "kitty @ new\-window"
+.PP
+You can also set "URL_BROWSER". If this is not set, termpdf.py will use \fB\fCopen\fR on OSX, and otherwise, the first browser it finds from this list:
+.PP
+.RS
+.nf
+\&'gnome\-open', 'gvfs\-open', 'xdg\-open', 'kde\-open', 'firefox', 'w3m',
+\&'elinks', 'lynx'
+.fi
+.RE
+.SH citekeys and bibtex integration
+.PP
+If you use bibtex, you can associate a bibtex citekey with a document by using the \fB\fC\-\-citekey\fR cli option:
+.PP
+.RS
+.nf
+termpdf.py \-\-citekey author2015 example.pdf 
+.fi
+.RE
+.PP
+This information will be saved, so you don't need to specify the citekey every time you open the document. (Note that processing of cli options is dumb right now. If you try to open several documents and specify several citekeys, the last citeky specified will be applied to the first document, and the others will be ignored.)
+.PP
+If you have specified a bibtex file by setting BIBTEX in your config, and your bibtex includes a \fB\fCFile\fR field containing the path to your document, termpdf.py will attempt to discover the citekey automatically by matching the path, so you don't need to use the \fB\fC\-\-citekey\fR option. Likewise, if your bibtex includes a \fB\fCFile\fR field, you can open the document by specifying its key instead of its path:
+.PP
+.RS
+.nf
+termpdf.py \-\-open author2015
+.fi
+.RE
+.PP
+This works for several documents as well:
+.PP
+.RS
+.nf
+termpdf.py \-\-open author2015 \-\-open author2016
+.fi
+.RE
+.PP
+Both of these features rely on pybtex, but it takes awhile for pybtex to parse
+a large bibtex database. So, if \fB\fCbibtool\fR is installed, termpdf.py will use it to speed things up.
+.SH nvim interaction
+.PP
+If you attempt to send a note to nvim, using \fB\fCn\fR or \fB\fCa\fR, and nothing has been
+set up, termpdf.py will open a new window in kitty (using KITTYCMD), open nvim
+in that window, and attach itself to that window, so that future notes will be
+sent there as well.
+.PP
+Alternatively, you can specify an nvim\fIlisten\fPaddress on the command line:
+.PP
+.RS
+.nf
+termpdf.py \-\-nvim\-listen\-address '/var/folders/tn/fjvms9ln3nvg8tztwcl31q1c0000gp/T/nvims23DfE/0'
+.fi
+.RE
+.PP
+You can find the address for your current nvim session, either as the value of
+NVIM\fILISTEN\fPADDRESS, or as the value of \fB\fCv:servername\fR:
+.PP
+.RS
+.nf
+:echo $NVIM_LISTEN_ADDRESS
+:echo v:servername
+.fi
+.RE
+.PP
+You can set the address when launching nvim:
+.PP
+.RS
+.nf
+nvim \-\-listen '/tmp/termpdf_nvim_bridge'
+.fi
+.RE
+.PP
+But perhaps it is simplest to define a function in your nvimrc, to open
+termpdf from within nvim. Here is the somewhat clunky function I am currently
+using:
+.PP
+.RS
+.nf
+function! OpenPDFCitekey()
+   let kcmd = 'kitty \-\-single\-instance \-\-instance\-group=1 '
+   let kcmd = kcmd . 'termpdf.py \-\-nvim\-listen\-address '
+   let kcmd = kcmd . $NVIM_LISTEN_ADDRESS . ' '
+   let key=expand('<cword>')
+   keepjumps normal! ww
+   let page=expand('<cword>')
+   if page ==? 'p'
+       keepjumps normal! ww
+       let page=expand('<cword>')
+   endif
+   keepjumps normal! bbb
+   let kcmd = kcmd . '\-\-open ' . key . ' '
+   if page
+       let kcmd = kcmd . '\-p ' . page 
+   endif
+   exe "!" . kcmd
+endfunction
+.fi
+.RE
+.PP
+When called, this function treats the current word as a citekey, and attempts
+to open the document associated with that citekey in termpdf.py, jumping to
+the cited page if there is one. Notes will now be sent back to this document
+in nvim.
+.SH Cached document settings
+.PP
+termpdf.py creates a cache directory in \fB\fC$HOME/.cache/termpdf.py\fR, and uses
+the cache to save settings for each document you open. Documents will
+automatically open to the last viewed page, with the same cropping and
+rotation, etc.
+.PP
+Sometimes, that's not what you want. 
+.PP
+.RS
+.nf
+termpdf.py \-\-ignore\-cache example.pdf
+.fi
+.RE
+.PP
+will open the document up "fresh", ignoring any saved settings.
+.SH Features
+.SH Document Formats
+.RS
+.IP \(bu 2
+[x] supports the formats supported by mupdf. Tested with:
+.RS
+.IP \(bu 2
+[x] PDF
+.IP \(bu 2
+[x] ePub
+.IP \(bu 2
+[x] Html
+.IP \(bu 2
+[x] CBZ
+.IP \(bu 2
+[x] JPEG
+.RE
+.IP \(bu 2
+[ ] add additional format support using other tools
+.RS
+.IP \(bu 2
+[ ] DJVU
+.IP \(bu 2
+[ ] CBR
+.IP \(bu 2
+[ ] DOCX
+.IP \(bu 2
+[ ] ODT
+.IP \(bu 2
+[ ] PPTX
+.IP \(bu 2
+[ ] formats from which pandoc can generate html?
+.RE
+.IP \(bu 2
+[ ] Support for encrypted documents (should be trivial to add with
+pymupdf)
+.RE
+.SH Commands and Interaction
+.RS
+.IP \(bu 2
+[ ] support command line arguments
+.RS
+.IP \(bu 2
+[x] \-\-help
+.IP \(bu 2
+[x] \-\-version
+.IP \(bu 2
+[x] \-\-page\-number 
+.IP \(bu 2
+[x] \-\-first\-page
+.IP \(bu 2
+[x] \-\-citekey
+.IP \(bu 2
+[x] \-\-open (by citekey)
+.RE
+.IP \(bu 2
+[x] remember last\-viewed page and document state
+.IP \(bu 2
+[ ] vim\-style ex\-mode
+.IP \(bu 2
+[ ] configuration file
+.RS
+.IP \(bu 2
+[ ] configurable key mappings
+.IP \(bu 2
+[x] basic configuration
+.RE
+.IP \(bu 2
+[x] Open multiple documents at once ("buffers")
+.IP \(bu 2
+[ ] Remote control from other apps
+.RS
+.IP \(bu 2
+[x] msgpack\-rpc for interaction with nvim
+.RS
+.IP \(bu 2
+[x] send selected text to nvim buffer
+.IP \(bu 2
+[x] send page number to buffer
+.IP \(bu 2
+[ ] configurable format for sent text 
+.IP \(bu 2
+[x] jump back from nvim to page in text
+(see the clunky vimscript function above)
+.RE
+.IP \(bu 2
+[ ] SyncTeX support
+.IP \(bu 2
+[ ] jump to page, chapter, annotation, bookmark
+.IP \(bu 2
+[ ] Note\-taking integration ala org\-noter
+.RE
+.RE
+.SH Navigation
+.RS
+.IP \(bu 2
+[x] vim\-style navigation
+.RS
+.IP \(bu 2
+[x] next\-page, prev\-page (with counts)
+.IP \(bu 2
+[x] next\-chapter, prev\-chapter (with counts)
+.IP \(bu 2
+[x] jump to page number
+.IP \(bu 2
+[x] jump to beginning, end of document
+.RE
+.IP \(bu 2
+[ ] logical page numbers
+.RS
+.IP \(bu 2
+[x] read PDF pagelabels
+.IP \(bu 2
+[x] write PDF pagelabels
+.RE
+.IP \(bu 2
+[x] navigate via table of contents
+.RS
+.IP \(bu 2
+[ ] outline folding support
+.RE
+.IP \(bu 2
+[ ] Thumbnail mode
+.RS
+.IP \(bu 2
+[ ] Navigation
+.IP \(bu 2
+[ ] Deleting pages
+.IP \(bu 2
+[ ] Adding pages
+.IP \(bu 2
+[ ] Moving pages within document
+.IP \(bu 2
+[ ] Creating new document from selected pages
+.RE
+.IP \(bu 2
+[x] Follow/fetch urls and internal links on page
+.IP \(bu 2
+[x] view document metadata
+.RS
+.IP \(bu 2
+[ ] edit metadata
+.IP \(bu 2
+[x] update metadata from bibtex (requires that you set a citekey
+    via the cli (\fB\fC\-\-citekey key\fR) and that you configure BIBTEX
+    in the config file.
+.RE
+.RE
+.SH Image Manipulation
+.RS
+.IP \(bu 2
+[x] page rotation
+.RS
+.IP \(bu 2
+[ ] save rotation state to PDF
+.RE
+.IP \(bu 2
+[x] toggle transparency
+.IP \(bu 2
+[x] invert colors ("dark mode")
+.IP \(bu 2
+[x] toggle tinted background
+.IP \(bu 2
+[ ] Cropping and zooming
+.RS
+.IP \(bu 2
+[x] autocrop margins
+.IP \(bu 2
+[x] manual cropping using visual select mode
+.IP \(bu 2
+[ ] fit to width
+.IP \(bu 2
+[ ] fit to height
+.IP \(bu 2
+[ ] arbitrary zooming 
+.IP \(bu 2
+[ ] panning
+.RE
+.IP \(bu 2
+[x] zoom in and out for reflowable documents
+.RE
+.SH PDF Manipulation
+.RS
+.IP \(bu 2
+[ ] remove 
+.BR page (s) 
+from PDF
+.IP \(bu 2
+[ ] combine PDFs
+.IP \(bu 2
+[ ] create new PDF from selected pages
+.IP \(bu 2
+[ ] move PDF pages
+.IP \(bu 2
+[ ] split two\-up pages
+.RE
+.SH Notes, Annotations, Forms
+.RS
+.IP \(bu 2
+[x] Send citation and current page number to nvim
+.IP \(bu 2
+[x] Send selected text with citation to nvim
+.IP \(bu 2
+[ ] Add and edit annotations
+.IP \(bu 2
+[ ] Extract annotations to org/markdown
+.IP \(bu 2
+[ ] Apply annotations from org/markdown
+.IP \(bu 2
+[ ] Fill out forms
+.RS
+.IP \(bu 2
+[ ] Document signing?
+.RE
+.RE
+.SH Visual Mode
+.RS
+.IP \(bu 2
+[ ] Keyboard visual mode
+.RS
+.IP \(bu 2
+[x] Select by rectangle
+.IP \(bu 2
+[ ] Select by word
+.IP \(bu 2
+[x] Copy text selection: use the key 'y'
+.IP \(bu 2
+[x] Insert selection in nvim buffer: use the key 'n'
+.IP \(bu 2
+[x] Append selection to nvim_note file: use 'a'
+.IP \(bu 2
+[ ] Copy selected image
+.IP \(bu 2
+[x] Crop to selection
+.IP \(bu 2
+[ ] Insert annotation
+.RE
+.IP \(bu 2
+[ ] Mouse mode
+.RS
+.IP \(bu 2
+[ ] Select by word
+.IP \(bu 2
+[ ] Select by rectangle
+.IP \(bu 2
+[ ] Copy text selection
+.IP \(bu 2
+[ ] Copy image selection
+.IP \(bu 2
+[ ] Insert annotation
+.RE
+.RE
