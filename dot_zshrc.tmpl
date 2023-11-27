@@ -2,6 +2,13 @@
 {{- $data := . -}}
 #!usr/bin/env zsh
 
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 {{ $exports := list -}}
 {{- if hasKey . "export" }}{{ $exports = concat $exports .export }}{{ end -}}
 {{- range $toplevel_file := joinPath $zsh_tmpls "exports.{yml,yaml}" | glob -}}
@@ -95,9 +102,12 @@ zinit light-mode for \
 {{- $plugin_files := joinPath $zsh_tmpls "plugins.{yml,yaml}" | glob -}}
 {{- $plugin_files = concat $plugin_files (joinPath $zsh_tmpls "plugins.d" "**" "*.{yaml,yml}" | glob | sortAlpha) -}}
 {{- range $file := $plugin_files -}}
-  {{- $plugins := includeTemplate $file $data | fromYaml | jq ".plugins[]" -}}
-  {{- range $plugins -}}
-    {{- includeTemplate "zsh/plugin" . -}}
+  {{- $contents := includeTemplate $file $data | fromYaml -}}
+  {{- if eq (kindOf $contents) "map" -}}
+    {{- $plugins := includeTemplate $file $data | fromYaml | jq ".plugins[]" -}}
+    {{- range $plugins -}}
+      {{- includeTemplate "zsh/plugin" . -}}
+    {{- end -}}
   {{- end -}}
 {{- end -}}
 
@@ -137,3 +147,5 @@ if [[ "$PROFILE_STARTUP" == true ]]; then
 fi
 {{ end }}
 
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

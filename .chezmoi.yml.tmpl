@@ -1,6 +1,3 @@
-{{- $zsh_use_histdb := promptBool "Use Zsh history DB" -}}
-{{- $zsh_use_marker := promptBool "Use Zsh marker plugin" -}}
-{{- $zinit_relpath := joinPath ".local" "share" "zinit" "zinit.git" -}}
 data:
   email: "antihaynes@gmail.com"
   gpg:
@@ -9,3 +6,4 @@ data:
   filesystem:
     cacheDir: {{ joinPath .chezmoi.homeDir ".cache" | quote }}
     appData: {{ joinPath .chezmoi.homeDir ".local" "share" | quote }}
+    sourceDir: {{ joinPath .chezmoi.homeDir "Source" | quote }}

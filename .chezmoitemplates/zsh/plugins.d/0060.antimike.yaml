@@ -4,4 +4,4 @@ plugins:
       - lucid
     for:
       - url: antimike/opus.plugin.zsh.git
-      - url: antimike.wdnote.git
+      - url: antimike/wdnote.git

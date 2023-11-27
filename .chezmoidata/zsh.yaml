@@ -32,3 +32,4 @@ zsh:
     opts:
       set: [promptsubst]
   use_old_annexes: false
+  use_marker: false

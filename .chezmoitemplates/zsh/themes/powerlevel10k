@@ -1,9 +1,5 @@
 # Load powerlevel10k
 # Provide A Simple Prompt Till The Theme Loads
 PS1="READY >"
-zinit ice wait'!' depth'1' lucid
+zinit ice depth'1' lucid
 zinit light romkatv/powerlevel10k
-
-# To Customize Prompt, Run `p10k configure` Or Edit `~/.p10k.zsh`.
-[[ ! -f ~/.p10k.zsh ]] || . ~/.p10k.zsh
-
