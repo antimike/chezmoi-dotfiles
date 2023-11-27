@@ -8,6 +8,7 @@ data:
     appData: {{ joinPath .chezmoi.homeDir ".local" "share" | quote }}
     sourceDir: {{ joinPath .chezmoi.homeDir "Source" | quote }}
     tmpDir: /tmp
+    scriptDir: {{ joinPath .chezmoi.homeDir ".local" "bin" | quote }}
   terminal: kitty
   shell: {{ $zsh := lookPath "zsh" }}{{ if $zsh -}}
     {{ $zsh }}{{ else -}}
