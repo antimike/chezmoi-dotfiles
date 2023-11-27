@@ -1,0 +1,14 @@
+[Unit]
+Description=Status bar for i3
+PartOf=graphical-session.target
+# Ensure that polybar is reloaded when autorandr runs
+# Not sure if I should use this or autorandr hooks
+# PartOf=autorandr.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+WatchdogSignal=SIGTERM
+ExecStart=%h/.config/i3/bin/polybar
+ExecStop=/usr/bin/polybar-msg cmd quit
+Restart=on-failure

@@ -1,0 +1,8 @@
+[Unit]
+Description=Configure monitors
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/autorandr --change --default laptop --force
+Type=oneshot
+RemainAfterExit=false

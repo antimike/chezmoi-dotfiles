@@ -1,0 +1,11 @@
+[Unit]
+Description=Use Pywal to coordinate colorschemes based on background
+PartOf=graphical-session.target
+After=wallpaper.service
+
+[Service]
+ExecStart=%h/.local/bin/wal -n -i %h/.cache/i3/current-wallpaper.png
+Type=oneshot
+
+[Install]
+WantedBy=wallpaper.service

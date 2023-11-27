@@ -1,0 +1,11 @@
+[Unit]
+Description=Redshift display colour temperature adjustment
+Documentation=http://jonls.dk/redshift/
+; Wants=geoclue-agent.service
+PartOf=graphical-session.target
+; After=display-manager.service
+; After=geoclue-agent.service
+
+[Service]
+ExecStart=/usr/bin/redshift -l manual:lon=-93.27:lat=44.97
+Restart=on-failure

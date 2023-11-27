@@ -1,0 +1,13 @@
+[Unit]
+Description=Miscellaneous settings for X11
+PartOf=graphical-session.target
+After=ssh-agent.service
+
+[Service]
+# System bell
+ExecStart=/usr/bin/xset -b
+ExecStart=/usr/bin/xsetroot -cursor_name left_ptr
+# TODO: Replace gpg-agent startup in ~/.zshenv with systemd service
+# ExecStart=%h/.config/i3/bin/ssh-add
+Type=oneshot
+RemainAfterExit=false

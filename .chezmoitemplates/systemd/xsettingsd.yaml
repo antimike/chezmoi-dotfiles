@@ -1,0 +1,3 @@
+script: '{{ joinPath .filesystem.scriptDir "xsettingsd-setup" }}'
+config: '{{ joinPath .filesystem.appData "xsettingsd" }}'
+output: '{{ joinPath .filesystem.cacheDir "xsettingsd" }}'
