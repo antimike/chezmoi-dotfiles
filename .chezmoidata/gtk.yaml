@@ -1,0 +1,20 @@
+gtk:
+  theme:
+    name: "Adwaita-dark"
+  icon_theme:
+    name: "Adwaita"
+    fallback: "gnome"
+  cursor_theme:
+    name: "Adwaita"
+    size: 0
+  font:
+    family: "DejaVu"
+    face: "Sans"
+    size: "10"
+  button_images: 1
+  menu_images: 1
+  toolbar:
+    style: GTK_TOOLBAR_BOTH
+    icon_size: GTK_ICON_SIZE_LARGE_TOOLBAR
+  decoration:
+    layout: ":menu"
