@@ -1,0 +1,8 @@
+systemd:
+  user:
+    xsettingsd:
+      install:
+        - dnf: polybar
+        - dnf: xrandr
+        - dnf: xrdb
+        - dnf: xsettingsd

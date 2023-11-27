@@ -1,0 +1,23 @@
+{{- $exec := lookPath "xsettingsd" -}}
+{{- if $exec -}}
+{{- $tmpl := includeTemplate "systemd/xsettingsd.yaml" . | fromYaml -}}
+{{- if and (stat $tmpl.script) (stat $tmpl.config) -}}
+{{- $script := list .chezmoi.homeDir $tmpl.script | includeTemplate "cmd/relpath" | joinPath "%h" -}}
+{{- $output := list .chezmoi.homeDir $tmpl.output | includeTemplate "cmd/relpath" -}}
+[Unit]
+Description=XSETTINGS daemon
+PartOf=graphical-session.target
+
+[Service]
+Environment="XSETTINGSD_OUTPUT={{ joinPath "$HOME" $output }}"
+Restart=on-failure
+ExecStartPre={{ $script }}
+ExecStart={{ $exec }} -c {{ joinPath "%h" $output }}
+ExecReload={{ $script }}
+ExecReload={{ lookPath "kill" }} -HUP $MAINPID
+# Restart i3 (it uses Xft.dpi)
+ExecReload=-{{ lookPath "i3-msg" }} restart
+# Restart polybar (it uses an environment variable)
+ExecReload={{ lookPath "systemctl" }} --user try-restart polybar.service
+{{- end -}}
+{{- end -}}

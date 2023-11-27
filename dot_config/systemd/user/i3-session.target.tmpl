@@ -1,0 +1,11 @@
+[Unit]
+Description=i3 session
+PartOf=graphical-session.target
+Wants=wallpaper.service
+Wants=wallpaper.timer
+Wants=polybar-weather.service
+Wants=polybar-weather.timer
+Wants=polybar.service
+Wants=misc-x.service
+Wants=xsession.target
+After=xsession.target

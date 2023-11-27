@@ -1,0 +1,14 @@
+[Unit]
+Description=Update weather for Polybar
+PartOf=graphical-session.target
+After=polybar.service
+
+[Service]
+# Get one from https://openweathermap.org/, it's free
+Environment=OWM_API_KEY=25726cba5b512eebca636f8c274fbb42
+ExecStart=/usr/bin/mkdir -p %h/.cache/i3
+ExecStart=%h/.config/i3/bin/polybar-weather
+Type=oneshot
+RemainAfterExit=false
+Restart=on-failure
+RestartSec=3s

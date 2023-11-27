@@ -1,0 +1,9 @@
+[Unit]
+Description=X session
+BindsTo=graphical-session.target
+Wants=autorandr.service
+Wants=picom.service
+Wants=pulseaudio.socket
+Wants=redshift.service
+Wants=xsettingsd.service
+Wants=xss-lock.service

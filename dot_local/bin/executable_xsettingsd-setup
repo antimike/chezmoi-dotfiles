@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Compute DPI of each screens
+dpis=$(xrandr --current \
+    | sed -En 's/^([^ ]+)* connected.* ([0-9]+)x.* ([0-9]+)mm x .*/\1 \2 \3/p' \
+    | while read output pixels mm; do
+
+    # Compute DPI
+    dpi=$((pixels * 254 / 10 / mm))
+
+    # For laptop screens, we need to apply a correction factor
+    case $output in
+        eDP-1|eDP1) corrected=$(($dpi * 96/144)) ;;
+        *) corrected=$dpi ;;
+    esac
+
+    # Authorized factors: 1, 1.5, 2, 3, 4, ...
+    rounded=$(((corrected + 24) / 48 * 48))
+    [ $rounded -gt 192 ] && rounded=$(((corrected + 48) / 96 * 96))
+    [ $rounded -lt 96 ] && rounded=96
+
+    echo "$output: ${dpi}dpi (corrected to ${corrected}dpi, rounded to ${rounded}dpi)" >&2
+    echo "$rounded"
+ done \
+    | tr '\n' ' ')
+
+# Use first screen DPI
+dpi=${dpis%% *}
+dpi=${dpi:-96}
+
+echo "using ${dpi}dpi" >&2
+{
+    echo Xft.dpi: $dpi
+    echo Xft.rgba: $( [ $dpi -gt 144 ] && echo none || echo rgb )
+} | xrdb -merge
+xrandr --dpi $dpi
+
+# Build xsettingsd
+{
+    cat  ~/.config/i3/dotfiles/xsettingsd
+    echo Xft/DPI $(( $dpi*1024 ))
+    echo Xft/RGBA \"$( [ $dpi -gt 144 ] && echo none || echo rgb )\"
+    echo Gdk/WindowScalingFactor $(( $dpi/96 ))
+    echo Gdk/UnscaledDPI $(( $dpi*1024/($dpi/96) ))
+} > ~/.xsettingsd
