@@ -7,3 +7,12 @@ data:
     cacheDir: {{ joinPath .chezmoi.homeDir ".cache" | quote }}
     appData: {{ joinPath .chezmoi.homeDir ".local" "share" | quote }}
     sourceDir: {{ joinPath .chezmoi.homeDir "Source" | quote }}
+    tmpDir: /tmp
+  terminal: kitty
+  shell: {{ $zsh := lookPath "zsh" }}{{ if $zsh -}}
+    {{ $zsh }}{{ else -}}
+    {{ lookPath "sh" }}{{ end }}
+  editor: {{ if lookPath "nvim" -}}nvim
+    {{- else if lookPath "vim" }}vim
+    {{- else }}vi{{ end }}
+  enable_systemd_session_services: {{ eq .chezmoi.hostname "voidmobile" }}
