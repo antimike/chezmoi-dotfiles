@@ -1,0 +1,39 @@
+MD2MAN-ROFF(1)                             General Commands Manual                             MD2MAN-ROFF(1)
+
+NAME
+       md2man-roff - convert md2man(5) flavored Markdown ⟨http://daringfireball.net/projects/markdown/syntax⟩
+       text into roff(7)
+
+SYNOPSIS
+       md2man-roff [OPTION]... [FILE]
+
+DESCRIPTION
+       This  program  converts  the  md2man(5)  flavored  Markdown  ⟨http://daringfireball.net/projects/mark‐
+       down/syntax⟩  text  from the given FILE into roff(7) and then prints the result to the standard output
+       stream.  If FILE is not given, then the standard input stream is read in its place.
+
+   Limitations
+       This program does not convert the following Redcarpet  ⟨https://github.com/vmg/redcarpet⟩  nodes  into
+       roff(7):
+
+              • block_html
+
+              • strikethrough
+
+              • superscript
+
+              • image
+
+              • raw_html
+
+       It issues a warning when it encounters these instead.  Patches are welcome!
+
+OPTIONS
+       -h [PATTERN], --help [PATTERN]
+              Show this help manual and optionally search for PATTERN regular expression.
+
+SEE ALSO
+       md2man-html(1),  md2man-rake(1), md2man(5), Markdown ⟨http://daringfireball.net/projects/markdown/syn‐
+       tax⟩
+
+5.1.2                                             2018-02-04                                   MD2MAN-ROFF(1)

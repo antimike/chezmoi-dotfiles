@@ -1,0 +1,434 @@
+README()                                                              README()
+
+
+
+NNAAMMEE
+       RREEAADDMMEE
+
+       xsv  is a command line program for indexing, slicing, analyzing, split-
+       ting and joining CSV files. Commands should be simple, fast and compos-
+       able:
+
+       1.  Simple tasks should be easy.
+
+       2.  Performance trade offs should be exposed in the CLI interface.
+
+       3.  Composition should not come at the expense of performance.
+
+
+
+       This    README   contains   information   on   how   to   install   xxssvv
+       _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_B_u_r_n_t_S_u_s_h_i_/_x_s_v_#_i_n_s_t_a_l_l_a_t_i_o_n, in addition to a  quick
+       tour of several commands.
+
+        _h_t_t_p_s_:_/_/_t_r_a_v_i_s_-_c_i_._o_r_g_/_B_u_r_n_t_S_u_s_h_i_/_x_s_v                    _h_t_t_p_s_:_/_/_c_i_._a_p_-
+       _p_v_e_y_o_r_._c_o_m_/_p_r_o_j_e_c_t_/_B_u_r_n_t_S_u_s_h_i_/_x_s_v  _h_t_t_p_s_:_/_/_c_r_a_t_e_s_._i_o_/_c_r_a_t_e_s_/_x_s_v
+
+       Dual-licensed under MIT or the UNLICENSE _h_t_t_p_:_/_/_u_n_l_i_c_e_n_s_e_._o_r_g.
+
+   AAvvaaiillaabbllee ccoommmmaannddss
+       +o   ccaatt - Concatenate CSV files by row or by column.
+
+       +o   ccoouunntt - Count the rows in a CSV file. (Instantaneous  with  an  in-
+           dex.)
+
+       +o   ffiixxlleennggtthhss - Force a CSV file to have same-length records by either
+           padding or truncating them.
+
+       +o   ffllaatttteenn - A flattened view of CSV records. Useful for  viewing  one
+           record at a time. e.g., xxssvv sslliiccee --ii 55 ddaattaa..ccssvv || xxssvv ffllaatttteenn.
+
+       +o   ffmmtt  - Reformat CSV data with different delimiters, record termina-
+           tors or quoting rules. (Supports ASCII delimited data.)
+
+       +o   ffrreeqquueennccyy - Build frequency tables of  each  column  in  CSV  data.
+           (Uses parallelism to go faster if an index is present.)
+
+       +o   hheeaaddeerrss - Show the headers of CSV data. Or show the intersection of
+           all headers between many CSV files.
+
+       +o   iinnddeexx - Create an index for a CSV file. This is very quick and pro-
+           vides constant time indexing into the CSV file.
+
+       +o   iinnppuutt - Read CSV data with exotic quoting/escaping rules.
+
+       +o   jjooiinn  -  Inner,  outer and cross joins. Uses a simple hash index to
+           make it fast.
+
+       +o   ssaammppllee - Randomly draw rows from CSV data using reservoir  sampling
+           (i.e., use memory proportional to the size of the sample).
+
+       +o   sseeaarrcchh - Run a regex over CSV data. Applies the regex to each field
+           individually and shows only matching rows.
+
+       +o   sseelleecctt - Select or re-order columns from CSV data.
+
+       +o   sslliiccee - Slice rows from any part of a CSV file. When  an  index  is
+           present,  this  only has to parse the rows in the slice (instead of
+           all rows leading up to the start of the slice).
+
+       +o   ssoorrtt - Sort CSV data.
+
+       +o   sspplliitt - Split one CSV file into many CSV files of N chunks.
+
+       +o   ssttaattss - Show basic types and statistics of each column in  the  CSV
+           file. (i.e., mean, standard deviation, median, range, etc.)
+
+       +o   ttaabbllee  - Show aligned output of any CSV data using elastic tabstops
+           _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_B_u_r_n_t_S_u_s_h_i_/_t_a_b_w_r_i_t_e_r.
+
+
+
+   AA wwhhiirrllwwiinndd ttoouurr
+       Let's say you're playing with some of the data from  the  Data  Science
+       Toolkit  _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_p_e_t_e_w_a_r_d_e_n_/_d_s_t_k_d_a_t_a, which contains several
+       CSV files. Maybe you're interested in the  population  counts  of  each
+       city in the world. So grab the data and start examining it:
+
+
+
+           $ curl -LO http://burntsushi.net/stuff/worldcitiespop.csv
+           $ xsv headers worldcitiespop.csv
+           1   Country
+           2   City
+           3   AccentCity
+           4   Region
+           5   Population
+           6   Latitude
+           7   Longitude
+
+
+
+       The  next  thing you might want to do is get an overview of the kind of
+       data that appears in each column. The ssttaattss command will  do  this  for
+       you:
+
+
+
+           $ xsv stats worldcitiespop.csv --everything | xsv table
+           field       type     min            max            min_length  max_length  mean          stddev         median     mode         cardinality
+           Country     Unicode  ad             zw             2           2                                                   cn           234
+           City        Unicode   bab el ahmar  ~Ayk_kvibaer     1           91                                                  san jose     2351892
+           AccentCity  Unicode   B~A/cb el Ahmar  ~A n Bou Chella  1           91                                                  San Antonio  2375760
+           Region      Unicode  00             Z9             0           2                                        13         04           397
+           Population  Integer  7              31480498       0           8           47719.570634  302885.559204  10779                   28754
+           Latitude    Float    -54.933333     82.483333      1           12          27.188166     21.952614      32.497222  51.15        1038349
+           Longitude   Float    -179.983333    180            1           14          37.08886      63.22301       35.28      23.8         1167162
+
+
+
+       The  xxssvv  ttaabbllee  command takes any CSV data and formats it into aligned
+       columns using elastic tabstops _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_B_u_r_n_t_S_u_s_h_i_/_t_a_b_w_r_i_t_e_r.
+       You'll notice that it even gets alignment right with respect to Unicode
+       characters.
+
+       So, this command takes about 12 seconds to run on my  machine,  but  we
+       can speed it up by creating an index and re-running the command:
+
+
+
+           $ xsv index worldcitiespop.csv
+           $ xsv stats worldcitiespop.csv --everything | xsv table
+
+
+
+       Which  cuts it down to about 8 seconds on my machine. (And creating the
+       index takes less than 2 seconds.)
+
+       Notably, the same type of "statistics" command in another  CSV  command
+       line  toolkit  _h_t_t_p_s_:_/_/_c_s_v_k_i_t_._r_e_a_d_t_h_e_d_o_c_s_._i_o_/  takes about 2 minutes to
+       produce similar statistics on the same data set.
+
+       Creating an index gives us more than just faster statistics  gathering.
+       It  also  makes slice operations extremely fast because _o_n_l_y _t_h_e _s_l_i_c_e_d
+       _p_o_r_t_i_o_n has to be parsed. For example, let's say you wanted to grab the
+       last 10 records:
+
+
+
+           $ xsv count worldcitiespop.csv
+           3173958
+           $ xsv slice worldcitiespop.csv -s 3173948 | xsv table
+           Country  City               AccentCity         Region  Population  Latitude     Longitude
+           zw       zibalonkwe         Zibalonkwe         06                  -19.8333333  27.4666667
+           zw       zibunkululu        Zibunkululu        06                  -19.6666667  27.6166667
+           zw       ziga               Ziga               06                  -19.2166667  27.4833333
+           zw       zikamanas village  Zikamanas Village  00                  -18.2166667  27.95
+           zw       zimbabwe           Zimbabwe           07                  -20.2666667  30.9166667
+           zw       zimre park         Zimre Park         04                  -17.8661111  31.2136111
+           zw       ziyakamanas        Ziyakamanas        00                  -18.2166667  27.95
+           zw       zizalisari         Zizalisari         04                  -17.7588889  31.0105556
+           zw       zuzumba            Zuzumba            06                  -20.0333333  27.9333333
+           zw       zvishavane         Zvishavane         07      79876       -20.3333333  30.0333333
+
+
+
+       These  commands  are  _i_n_s_t_a_n_t_a_n_e_o_u_s because they run in time and memory
+       proportional to the size of the slice (which means they will  scale  to
+       arbitrarily large CSV data).
+
+       Switching  gears  a  little bit, you might not always want to see every
+       column in the CSV data. In this case, maybe  we  only  care  about  the
+       country, city and population. So let's take a look at 10 random rows:
+
+
+
+           $ xsv select Country,AccentCity,Population worldcitiespop.csv \
+             | xsv sample 10 \
+             | xsv table
+           Country  AccentCity       Population
+           cn       Guankoushang
+           za       Klipdrift
+           ma       Ouled Hammou
+           fr       Les Gravues
+           la       Ban Phad~A"ng
+           de       L~A1/4denscheid      80045
+           qa       Umm ash Shubrum
+           bd       Panditgoan
+           us       Appleton
+           ua       Lukashenkivske
+
+
+
+       Whoops!  It  seems some cities don't have population counts. How perva-
+       sive is that?
+
+
+
+           $ xsv frequency worldcitiespop.csv --limit 5
+           field,value,count
+           Country,cn,238985
+           Country,ru,215938
+           Country,id,176546
+           Country,us,141989
+           Country,ir,123872
+           City,san jose,328
+           City,san antonio,320
+           City,santa rosa,296
+           City,santa cruz,282
+           City,san juan,255
+           AccentCity,San Antonio,317
+           AccentCity,Santa Rosa,296
+           AccentCity,Santa Cruz,281
+           AccentCity,San Juan,254
+           AccentCity,San Miguel,254
+           Region,04,159916
+           Region,02,142158
+           Region,07,126867
+           Region,03,122161
+           Region,05,118441
+           Population,(NULL),3125978
+           Population,2310,12
+           Population,3097,11
+           Population,983,11
+           Population,2684,11
+           Latitude,51.15,777
+           Latitude,51.083333,772
+           Latitude,50.933333,769
+           Latitude,51.116667,769
+           Latitude,51.133333,767
+           Longitude,23.8,484
+           Longitude,23.2,477
+           Longitude,23.05,476
+           Longitude,25.3,474
+           Longitude,23.1,459
+
+
+
+       (The xxssvv ffrreeqquueennccyy command builds a frequency table for each column  in
+       the CSV data. This one only took 5 seconds.)
+
+       So  it seems that most cities do not have a population count associated
+       with them at all. No matter^awe can adjust our previous command so  that
+       it only shows rows with a population count:
+
+
+
+           $ xsv search -s Population '[0-9]' worldcitiespop.csv \
+             | xsv select Country,AccentCity,Population \
+             | xsv sample 10 \
+             | xsv table
+           Country  AccentCity       Population
+           es       Bara~A+-~A!in         22264
+           es       Puerto Real      36946
+           at       Moosburg         4602
+           hu       Hejobaba         1949
+           ru       Polyarnyye Zori  15092
+           gr       Kand~Ala          1245
+           is       ~Alafsv~Ak         992
+           hu       Decs             4210
+           bg       Sliven           94252
+           gb       Leatherhead      43544
+
+
+
+       Erk.  Which  country is aatt? No clue, but the Data Science Toolkit has a
+       CSV file called ccoouunnttrryynnaammeess..ccssvv. Let's grab it and do a join so we can
+       see which countries these are:
+
+
+
+           curl -LO https://gist.githubusercontent.com/anonymous/063cb470e56e64e98cf1/raw/98e2589b801f6ca3ff900b01a87fbb7452eb35c7/countrynames.csv
+           $ xsv headers countrynames.csv
+           1   Abbrev
+           2   Country
+           $ xsv join --no-case  Country sample.csv Abbrev countrynames.csv | xsv table
+           Country  AccentCity       Population  Abbrev  Country
+           es       Bara~A+-~A!in         22264       ES      Spain
+           es       Puerto Real      36946       ES      Spain
+           at       Moosburg         4602        AT      Austria
+           hu       Hejobaba         1949        HU      Hungary
+           ru       Polyarnyye Zori  15092       RU      Russian Federation | Russia
+           gr       Kand~Ala          1245        GR      Greece
+           is       ~Alafsv~Ak         992         IS      Iceland
+           hu       Decs             4210        HU      Hungary
+           bg       Sliven           94252       BG      Bulgaria
+           gb       Leatherhead      43544       GB      Great Britain | UK | England | Scotland | Wales | Northern Ireland | United Kingdom
+
+
+
+       Whoops,  now  we  have  two columns called CCoouunnttrryy and an AAbbbbrreevv column
+       that we no longer need. This is easy to fix by re-ordering columns with
+       the xxssvv sseelleecctt command:
+
+
+
+           $ xsv join --no-case  Country sample.csv Abbrev countrynames.csv \
+             | xsv select 'Country[1],AccentCity,Population' \
+             | xsv table
+           Country                                                                              AccentCity       Population
+           Spain                                                                                Bara~A+-~A!in         22264
+           Spain                                                                                Puerto Real      36946
+           Austria                                                                              Moosburg         4602
+           Hungary                                                                              Hejobaba         1949
+           Russian Federation | Russia                                                          Polyarnyye Zori  15092
+           Greece                                                                               Kand~Ala          1245
+           Iceland                                                                              ~Alafsv~Ak         992
+           Hungary                                                                              Decs             4210
+           Bulgaria                                                                             Sliven           94252
+           Great Britain | UK | England | Scotland | Wales | Northern Ireland | United Kingdom  Leatherhead      43544
+
+
+
+       Perhaps  we  can  do this with the original CSV data? Indeed we can^abe-
+       cause joins in xxssvv are fast.
+
+
+
+           $ xsv join --no-case Abbrev countrynames.csv Country worldcitiespop.csv \
+             | xsv select '!Abbrev,Country[1]' \
+             > worldcitiespop_countrynames.csv
+           $ xsv sample 10 worldcitiespop_countrynames.csv | xsv table
+           Country                      City                   AccentCity             Region  Population  Latitude    Longitude
+           Sri Lanka                    miriswatte             Miriswatte             36                  7.2333333   79.9
+           Romania                      livezile               Livezile               26      1985        44.512222   22.863333
+           Indonesia                    tawainalu              Tawainalu              22                  -4.0225     121.9273
+           Russian Federation | Russia  otar                   Otar                   45                  56.975278   48.305278
+           France                       le breuil-bois robert  le Breuil-Bois Robert  A8                  48.945567   1.717026
+           France                       lissac                 Lissac                 B1                  45.103094   1.464927
+           Albania                      lumalasi               Lumalasi               46                  40.6586111  20.7363889
+           China                        motzushih              Motzushih              11                  27.65       111.966667
+           Russian Federation | Russia  svakino                Svakino                69                  55.60211    34.559785
+           Romania                      tirgu pancesti         Tirgu Pancesti         38                  46.216667   27.1
+
+
+
+       The !!AAbbbbrreevv,,CCoouunnttrryy[[11]] syntax means, "remove the AAbbbbrreevv column and  re-
+       move the second occurrence of the CCoouunnttrryy column." Since we joined with
+       ccoouunnttrryynnaammeess..ccssvv first, the first CCoouunnttrryy name (fully expanded) is  now
+       included in the CSV data.
+
+       This  xxssvv jjooiinn command takes about 7 seconds on my machine. The perfor-
+       mance comes from constructing a very simple hash index of  one  of  the
+       CSV  data  files given. The jjooiinn command does an inner join by default,
+       but it also has left, right and full outer join support too.
+
+   IInnssttaallllaattiioonn
+       Binaries  for  Windows,  Linux  and  Mac  are  available  from   Github
+       _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_B_u_r_n_t_S_u_s_h_i_/_x_s_v_/_r_e_l_e_a_s_e_s_/_l_a_t_e_s_t.
+
+       If you're a MMaacc OOSS XX HHoommeebbrreeww user, then you can install xsv from home-
+       brew-core:
+
+
+
+           $ brew install xsv
+
+
+
+       If you're a NNiixx//NNiixxOOSS user, you can install xsv from nixpkgs:
+
+
+
+           $ nix-env -i xsv
+
+
+
+       Alternatively,  you  can  compile  from  source  by  installing   Cargo
+       _h_t_t_p_s_:_/_/_c_r_a_t_e_s_._i_o_/_i_n_s_t_a_l_l   (Rust's  _h_t_t_p_:_/_/_w_w_w_._r_u_s_t_-_l_a_n_g_._o_r_g_/  package
+       manager) and installing xxssvv using Cargo:
+
+
+
+           cargo install xsv
+
+
+
+       Compiling from this repository also works similarly:
+
+
+
+           git clone git://github.com/BurntSushi/xsv
+           cd xsv
+           cargo build --release
+
+
+
+       Compilation will probably take a few minutes depending on your machine.
+       The binary will end up in ..//ttaarrggeett//rreelleeaassee//xxssvv.
+
+   BBeenncchhmmaarrkkss
+       I've        compiled       some       very       rough       benchmarks
+       _h_t_t_p_s_:_/_/_g_i_t_h_u_b_._c_o_m_/_B_u_r_n_t_S_u_s_h_i_/_x_s_v_/_b_l_o_b_/_m_a_s_t_e_r_/_B_E_N_C_H_M_A_R_K_S_._m_d of  various
+       xxssvv commands.
+
+   MMoottiivvaattiioonn
+       Here are several valid criticisms of this project:
+
+       1.  You  shouldn't  be  working with CSV data because CSV is a terrible
+           format.
+
+       2.  If your data is gigabytes in size, then CSV is  the  wrong  storage
+           type.
+
+       3.  Various  SQL  databases  provide all of the operations available in
+           xxssvv with more sophisticated indexing support. And  the  performance
+           is a zillion times better.
+
+
+
+       I'm  sure  there  are more criticisms, but the impetus for this project
+       was a 40GB CSV file that was handed to me. I was tasked  with  figuring
+       out  the shape of the data inside of it and coming up with a way to in-
+       tegrate it into our existing system. It was then that I  realized  that
+       every  single  CSV tool I knew about was woefully inadequate. They were
+       just too slow or didn't provide enough flexibility. (Another project  I
+       had  comprised  of  a few dozen CSV files. They were smaller than 40GB,
+       but they were each supposed to represent the same  kind  of  data.  But
+       they  all had different column and unintuitive column names. Useful CSV
+       inspection tools were critical  here^aand  they  had  to  be  reasonably
+       fast.)
+
+       The  key  ingredients for helping me with my task were indexing, random
+       sampling, searching, slicing and selecting columns. All of these things
+       made  dealing with 40GB of CSV data a bit more manageable (or dozens of
+       CSV files).
+
+       Getting handed a large CSV file _o_n_c_e was enough to launch  me  on  this
+       quest.  From  conversations  I've  had with others, CSV data files this
+       large don't seem to be a rare event. Therefore, I believe there is room
+       for a tool that has a hope of dealing with data that large.
+
+
+
+                                   May 2018                           README()

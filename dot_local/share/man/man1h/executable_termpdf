@@ -1,0 +1,51 @@
+#!/bin/bash
+
+case "$1" in
+--help) cat <<HELP
+Usage:
+    termpdf.py [options] example.pdf
+
+Options:
+    -p n, --page-number n : open to page n
+    -f n, --first-page n : set logical page number for page 1 to n
+    --citekey key : associate file with bibtex citekey
+    -o, --open citekey : open file associated with bibtex entry with citekey
+    --nvim-listen-address path : path to nvim msgpack server
+    --ignore-cache : ignore saved settings for files
+    -v, --version
+    -h, --help
+
+Keys:
+    j, down, space: forward [count] pages
+    k, up:          back [count] pages
+    l, right:       forward [count] sections
+    h, left:        back [count] sections
+    gg:             go to beginning of document
+    G:              go to end of document
+    [count]G:       go to page [count]
+    b:		    cycle through open documents
+    s:              visual mode
+    t:              table of contents 
+    M:              show metadata
+    f:              show links on page
+    r:              rotate [count] quarter turns clockwise
+    R:              rotate [count] quarter turns counterclockwise
+    c:              toggle autocropping of margins
+    a:              toggle alpha transparency
+    i:              invert colors
+    d:              darken using TINT_COLOR
+    [count]P:       Set logical page number of current page to count
+    -:              zoom out (reflowable only)
+    +:              zoom in (reflowable only)
+    ctrl-r:         refresh
+    q:              quit
+HELP
+;;
+--version) cat <<VERSION
+0.1.1
+MIT License
+Copyright (c) 2019 David Sanson
+https://github.com/dsanson/termpdf.py
+VERSION
+;;
+esac

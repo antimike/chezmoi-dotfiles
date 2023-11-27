@@ -1,0 +1,185 @@
+.TH memo
+.PP
+Memo Life For You
+.PP
+[Memo Life For You](\[la]https://raw.githubusercontent.com/mattn/memo/master/screenshot.gif\[ra])
+.SH Usage
+.PP
+.RS
+.nf
+NAME:
+   memo \- Memo Life For You
+
+USAGE:
+   memo [global options] command [command options] [arguments...]
+
+VERSION:
+   0.0.4
+
+COMMANDS:
+     new, n     create memo
+     list, l    list memo
+     edit, e    edit memo
+     delete, d  delete memo
+     grep, g    grep memo
+     cat, v     view memo
+     config, c  configure
+     serve, s   start http server
+     help, h    Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   \-\-help, \-h     show help
+   \-\-version, \-v  print the version
+.fi
+.RE
+.SH Installation
+.PP
+.RS
+.nf
+$ go get github.com/mattn/memo
+.fi
+.RE
+.PP
+Let's start create memo file.
+.PP
+.RS
+.nf
+$ memo new
+Title:
+.fi
+.RE
+.PP
+Input title for the memo, then you see the text editor launched. After saving markdown, list entries with \fB\fCmemo list\fR\&.
+.PP
+.RS
+.nf
+$ memo list
+2017\-02\-07\-memo\-command.md   : Installed memo command
+.fi
+.RE
+.PP
+And grep
+.PP
+.RS
+.nf
+$ memo grep command
+2017\-02\-07\-memo\-command.md:1:# Installed memo command
+.fi
+.RE
+.SH Configuration
+.PP
+run \fB\fCmemo config\fR\&.
+.PP
+.RS
+.nf
+memodir = "/path/to/you/memo/dir" # specify memo directory
+memotemplate = "path/to/tmpl.txt" # optional memo template file. default '~/.config/memo/template.txt'
+editor = "vim"                    # your favorite text editor
+column = 30                       # column size for list command
+selectcmd = "peco"                # selector command for edit command
+grepcmd = "grep \-nH"              # grep command executable
+assetsdir = "/path/to/assets"     # assets directory for serve command
+pluginsdir = "path/to/plugins"    # plugins directory for plugin commands. default '~/.config/memo/plugins'.
+.fi
+.RE
+.PP
+memodir, memotemplate and assetsdir can be used \fB\fC~/\fR prefix or \fB\fC$HOME\fR or OS specific environment variables. editor, selectcmd and grepcmd can be used placeholder below.
+.TS
+allbox;
+cb cb
+l l
+l l
+l l
+.
+placeholder	replace to
+${FILES}	target files
+${DIR}	same as memodir
+${PATTERN}	grep pattern
+.TE
+.SH Memo Template
+.PP
+You can use memo template using Go's text/template format. A template receives the following attributes.
+.RS
+.IP \(bu 2
+Title
+.IP \(bu 2
+Date (format: %Y\-%m\-%d %H:%M)
+.IP \(bu 2
+Categories (always empty)
+.IP \(bu 2
+Tags (always empty)
+.RE
+.PP
+The following is a template example to apply YAML Frontmatter.
+.PP
+.RS
+.nf
+\-\-\-
+title: {{.Title}}
+date: {{.Date}}
+\-\-\-
+
+{{.Title}}
+===========
+.fi
+.RE
+.PP
+You can also use glidenote/memolist.vim's template format like following.
+.PP
+.RS
+.nf
+title: {{_title_}}
+==========
+date: {{_date_}}
+tags: [{{_tags_}}]
+categories: [{{_categories_}}]
+\-\-\-\-\-\-\-\-\-\-
+.fi
+.RE
+.SH Supported GrepCmd
+.TS
+allbox;
+cb cb
+l l
+l l
+l l
+.
+Command	Configuration
+GNU Grep	grepcmd = "grep \-nH" #default
+ag \[la]https://github.com/ggreer/the_silver_searcher\[ra]	grepcmd = "ag ${PATTERN} ${DIR}"
+jvgrep \[la]https://github.com/mattn/jvgrep\[ra]	grepcmd = "jvgrep ${PATTERN} ${DIR}"
+.TE
+.SH Supported SelectCmd
+.TS
+allbox;
+cb cb
+l l
+l l
+l l
+.
+Command	Configuration
+gof \[la]https://github.com/mattn/gof\[ra]	selectcmd = "gof"
+cho \[la]https://github.com/mattn/cho\[ra]	selectcmd = "cho"
+fzf \[la]https://github.com/junegunn/fzf\[ra]	selectcmd = "fzf"
+.TE
+.SH Extend With Plugin Commands
+.PP
+You can extend memo with custom commands. 
+Place an executable file in your \fB\fCpluginsdir\fR, memo can use it as a subcommand.
+For example, If you place \fB\fCfoo\fR file in your \fB\fCpluginsdir\fR, you can run it by \fB\fCmemo foo\fR\&.
+.PP
+Below is spec of plugins:
+.RS
+.IP \(bu 2
+MUST handle \fB\fC\-usage\fR option to show briefly, at least.
+.IP \(bu 2
+MUST NOT handle \fB\fC\-\-xxx\fR option.
+.IP \(bu 2
+MUST NOT use multi\-byte strings in the usage.
+.RE
+.SH License
+.PP
+MIT
+.SH Author
+.PP
+Yasuhiro Matsumoto (a.k.a. mattn)

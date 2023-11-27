@@ -1,0 +1,766 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "PAPIS-EXPLORE" "1" "Oct 17, 2020" "0.11.1" "papis"
+.SH NAME
+papis-explore \- explore command
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.sp
+This command is in an experimental stage but it might be useful for many
+people.
+.sp
+Imagine you want to search for some papers online, but you don\(aqt want to
+go into a browser and look for it. Explore gives you way to do this,
+using several services available online, more should be coming on the way.
+.sp
+An excellent such resource is \fI\%crossref\fP,
+which you can use by using the subcommand crossref:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore crossref \-\-author \(aqFreeman Dyson\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If you issue this command, you will see some text but basically nothing
+will happen. This is because \fBexplore\fP is conceived in such a way
+as to concatenate commands, doing a simple
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore crossref \-h
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+will tell you which commands are available.
+Let us suppose that you want to look for some documents on crossref,
+say some papers of Schroedinger, and you want to store them into a bibtex
+file called \fBlib.bib\fP, then you could concatenate the commands
+\fBcrossref\fP and \fBexport \-\-format bibtex\fP as such
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore crossref \-a \(aqSchrodinger\(aq export \-\-format bibtex lib.bib
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This will store everything that you got from crossref in the file \fBlib.bib\fP
+and store in bibtex format. \fBexplore\fP is much more flexible than that,
+you can also pick just one document to store, for instance let\(aqs assume that
+you don\(aqt want to store all retrieved documents but only one that you pick,
+the \fBpick\fP command will take care of it
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore crossref \-a \(aqSchrodinger\(aq pick export \-\-format bibtex lib.bib
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+notice how the \fBpick\fP command is situated before the \fBexport\fP\&.
+More generally you could write something like
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore \e
+    crossref \-a Schroedinger \e
+    crossref \-a Einstein \e
+    arxiv \-a \(aqFelix Hummel\(aq \e
+    export \-\-format yaml docs.yaml \e
+    pick  \e
+    export \-\-format bibtex specially\-picked\-document.bib
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The upper command will look in crossref for documents authored by Schrodinger,
+then also by Einstein, and will look on the arxiv for papers authored by Felix
+Hummel. At the end, all these documents will be stored in the \fBdocs.yaml\fP\&.
+After that we pick one document from them and store the information in
+the file \fBspecially\-picked\-document.bib\fP, and we could go on and on.
+.sp
+If you want to follow\-up on these documents and get them again to pick one,
+you could use the \fByaml\fP command to read in document information from a yaml
+file, i.e., the previously created \fBdocs.yaml\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore \e
+    yaml docs.yaml \e
+    pick \e
+    cmd \(aqpapis scihub {doc[doi]}\(aq \e
+    cmd \(aqfirefox {doc[url]}\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In this last example, we read the documents\(aq information from \fBdocs.yaml\fP and
+pick a document, which then feed into the \fBexplore cmd\fP command, that accepts
+a papis formatting string to issue a general shell command.  In this case, the
+picked document gets fed into the \fBpapis scihub\fP command which tries to
+download the document using \fBscihub\fP, and also this very document is tried to
+be opened by firefox (in case the document does have a \fBurl\fP).
+.SH CLI
+.SS papis explore
+.sp
+Explore new documents using a variety of resources
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore [OPTIONS] COMMAND1 [ARGS]... [COMMAND2 [ARGS]...]...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.SS add
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore add [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS arxiv
+.sp
+Look for documents on ArXiV.org.
+.sp
+Examples of its usage are
+.INDENT 0.0
+.INDENT 3.5
+papis explore arxiv \-a \(aqHummel\(aq \-m 100 arxiv \-a \(aqGarnet Chan\(aq pick
+.UNINDENT
+.UNINDENT
+.sp
+If you want to search for the exact author name \(aqJohn Smith\(aq, you should
+enclose it in extra quotes, as in the example below
+.INDENT 0.0
+.INDENT 3.5
+papis explore arxiv \-a \(aq"John Smith"\(aq pick
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore arxiv [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-query <query>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a, \-\-author <author>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t, \-\-title <title>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-abstract <abstract>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-comment <comment>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-journal <journal>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-report\-number <report_number>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-category <category>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-id\-list <id_list>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-page <page>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-m, \-\-max <max>
+.UNINDENT
+.SS base
+.sp
+Look for documents on the BielefeldAcademicSearchEngine
+.sp
+Examples of its usage are
+.sp
+papis explore base \-q \(aqAlbert einstein\(aq pick cmd \(aqfirefox {doc[url]}\(aq
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore base [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-query <query>
+.UNINDENT
+.SS bibtex
+.sp
+Import documents from a bibtex file
+.sp
+Examples of its usage are
+.sp
+papis explore bibtex lib.bib pick
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore bibtex [OPTIONS] BIBFILE
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B BIBFILE
+Required argument
+.UNINDENT
+.SS citations
+.sp
+Query the citations of a paper
+.sp
+Example:
+.sp
+Go through the citations of a paper and export it in a yaml file
+.INDENT 0.0
+.INDENT 3.5
+papis explore citations \(aqeinstein\(aq export \-\-format yaml einstein.yaml
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore citations [OPTIONS] [QUERY]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-\-doc\-folder <doc_folder>
+Apply action to a document path
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-s, \-\-save
+Store the citations in the document\(aqs folder for later use
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-rmfile
+Remove the stored citations file
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-m, \-\-max\-citations <max_citations>
+Number of citations to be retrieved
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B QUERY
+Optional argument
+.UNINDENT
+.SS cmd
+.sp
+Run a general command on the document list
+.sp
+Examples of its usage are:
+.sp
+Look for 200 Schroedinger papers, pick one, and add it via papis\-scihub
+.INDENT 0.0
+.TP
+.B papis explore crossref \-m 200 \-a \(aqSchrodinger\(aq 
+pick cmd \(aqpapis scihub {doc[doi]}\(aq
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore cmd [OPTIONS] COMMAND
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B COMMAND
+Required argument
+.UNINDENT
+.SS crossref
+.sp
+Look for documents on crossref.org.
+.sp
+Examples of its usage are
+.sp
+papis explore crossref \-a \(aqAlbert einstein\(aq pick export \-\-bibtex lib.bib
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore crossref [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-query <query>
+General query
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a, \-\-author <author>
+Author of the query
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t, \-\-title <title>
+Title of the query
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-m, \-\-max <_ma>
+Maximum number of results
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f, \-\-filter <_filters>
+Filters to apply
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-order <order>
+Order of appearance according to sorting
+.INDENT 7.0
+.TP
+.B Default
+desc
+.TP
+.B Options
+asc|desc
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-s, \-\-sort <sort>
+Sorting parameter
+.INDENT 7.0
+.TP
+.B Default
+score
+.TP
+.B Options
+relevance|score|updated|deposited|indexed|published|published\-print|published\-online|issued|is\-referenced\-by\-count|references\-count
+.UNINDENT
+.UNINDENT
+.SS dissemin
+.sp
+Look for documents on dissem.in
+.sp
+Examples of its usage are
+.sp
+papis explore dissemin \-q \(aqAlbert einstein\(aq pick cmd \(aqfirefox {doc[url]}\(aq
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore dissemin [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-query <query>
+.UNINDENT
+.SS export
+.sp
+Export retrieved documents into various formats for later use
+.sp
+Examples of its usage are
+.sp
+papis explore crossref \-m 200 \-a \(aqSchrodinger\(aq export \-\-yaml lib.yaml
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore export [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f, \-\-format <fmt>
+Format for the document
+.INDENT 7.0
+.TP
+.B Options
+bibtex|json|yaml
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-out <out>
+Outfile to write information to
+.UNINDENT
+.SS isbn
+.sp
+Look for documents using isbnlib
+.sp
+Examples of its usage are
+.sp
+papis explore isbn \-q \(aqAlbert einstein\(aq pick cmd \(aqfirefox {doc[url]}\(aq
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore isbn [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-query <query>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-s, \-\-service <service>
+.INDENT 7.0
+.TP
+.B Options
+wcat|goob|openl
+.UNINDENT
+.UNINDENT
+.SS isbnplus
+.sp
+Look for documents on isbnplus.com
+.sp
+Examples of its usage are
+.sp
+papis explore isbnplus \-q \(aqAlbert einstein\(aq pick cmd \(aqfirefox {doc[url]}\(aq
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore isbnplus [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-query <query>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a, \-\-author <author>
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t, \-\-title <title>
+.UNINDENT
+.SS json
+.sp
+Import documents from a json file
+.sp
+Examples of its usage are
+.sp
+papis explore json lib.json pick
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore json [OPTIONS] JSONFILE
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B JSONFILE
+Required argument
+.UNINDENT
+.SS lib
+.sp
+Query for documents in your library
+.sp
+Examples of its usage are
+.INDENT 0.0
+.INDENT 3.5
+papis lib \-l books einstein pick
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore lib [OPTIONS] [QUERY]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-doc\-folder <doc_folder>
+Apply action to a document path
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-l, \-\-library <library>
+Papis library to look
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B QUERY
+Optional argument
+.UNINDENT
+.SS pick
+.sp
+Pick a document from the retrieved documents
+.sp
+Examples of its usage are
+.sp
+papis explore bibtex lib.bib pick
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore pick [OPTIONS]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-n, \-\-number <number>
+Pick automatically the n\-th document
+.UNINDENT
+.SS yaml
+.sp
+Import documents from a yaml file
+.sp
+Examples of its usage are
+.sp
+papis explore yaml lib.yaml pick
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+papis explore yaml [OPTIONS] YAMLFILE
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show this message and exit.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B YAMLFILE
+Required argument
+.UNINDENT
+.SH AUTHOR
+Alejandro Gallo
+.SH COPYRIGHT
+2017, Alejandro Gallo
+.\" Generated by docutils manpage writer.
+.
