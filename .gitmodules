@@ -1,3 +1,4 @@
 [submodule "external_dot_password-store"]
 	path = external_dot_password-store
 	url = https://github.com/antimike/pass
+	branch = zbook
