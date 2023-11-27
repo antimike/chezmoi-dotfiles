@@ -1,0 +1,39 @@
+#!/bin/sh
+
+{{ $gtk2_rules := joinPath .chezmoi.homeDir ".gtkrc-2.0" -}}
+{{ if stat $gtk2_rules -}}
+# Ensure we use the appropriate gtkrc-2.0 file
+export GTK2_RC_FILES="{{ $gtk2_rules }}"
+{{- end }}
+
+{{ $mailcap := joinPath .chezmoi.homeDir ".mailcap" -}}
+{{ if stat $mailcap -}}
+# We do not want to rely on crappy mailcap
+export MAILCAPS="{{ $mailcap }}"
+{{- end }}
+
+# Make QT automatically scale according to screen DPI
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_QPA_PLATFORMTHEME=qt5ct
+
+# GTK3 apps try to contact org.a11y.Bus. Disable that.
+export NO_AT_BRIDGE=1
+
+{{ if eq .chezmoi.hostname "voidmobile" -}}
+# Environment variables
+. "$HOME/.zshenv"
+export TERMINAL={{ .terminal }}
+{{- end }}
+
+if [ -r "$HOME/.dconf.ini" ]; then
+	dconf <"$HOME/.dconf.ini" load /
+else
+	echo "$HOME/.dconf.ini not found!" >&2
+fi
+
+{{ if .enable_systemd_session_services -}}
+# Services are started with systemd
+systemctl --user import-environment
+systemctl --user daemon-reload
+exec systemctl --user start --wait i3-session.target
+{{- end }}
