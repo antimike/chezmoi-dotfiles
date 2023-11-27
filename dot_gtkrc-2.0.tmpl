@@ -1,0 +1,15 @@
+gtk-theme-name={{ .gtk.theme.name | quote }}
+gtk-icon-theme-name={{ .gtk.icon_theme.name | quote }}
+gtk-cursor-theme-name={{ .gtk.cursor_theme.name | quote }}
+gtk-cursor-theme-size={{ .gtk.cursor_theme.size }}
+gtk-font-name={{ cat .gtk.font.family .gtk.font.face .gtk.font.size | quote }}
+gtk-button-images={{ .gtk.button_images }}
+gtk-menu-images={{ .gtk.menu_images }}
+gtk-fallback-icon-theme={{ .gtk.icon_theme.fallback | quote }}
+gtk-toolbar-style={{ .gtk.toolbar.style }}
+gtk-toolbar-icon-size={{ .gtk.toolbar.icon_size }}
+gtk-decoration-layout={{ .gtk.decoration.layout | quote }}
+gtk-xft-antialias={{ .Xresources.Xft.antialias }}
+gtk-xft-hinting={{ .Xresources.Xft.hinting }}
+gtk-xft-hintstyle={{ .Xresources.Xft.hintstyle | quote }}
+gtk-xft-rgba={{ .Xresources.Xft.rgba | quote }}
