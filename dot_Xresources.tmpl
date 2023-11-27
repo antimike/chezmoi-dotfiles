@@ -1,0 +1,27 @@
+{{ if .Xresources.dpi.set_in_xresources -}}
+Xft.dpi: {{ .Xresources.dpi.value }}
+{{- end }}
+{{ range $key, $value := .Xresources.Xft -}}
+Xft.{{ $key }}: {{ $value }}
+{{ end -}}
+
+{{ if eq .chezmoi.hostname "voidmobile" -}}
+i3wm.border_size: 3
+i3wm.floating_border_size: 2
+i3wm.minimal_border_size: 1
+i3wm.corner_radius: 15
+{{- end }}
+
+*icons: {{ .Xresources.icons }}
+
+{{ range .Xresources.xterm.font.names -}}
+!xterm*font: {{ . }}
+{{- end }}
+xterm*faceName: {{ .Xresources.xterm.font.faceName }}
+xterm*faceSize: {{ .Xresources.xterm.font.faceSize }}
+xterm*eightBitInput: {{ .Xresources.xterm.eightBitInput }}
+{{ if .Xresources.xterm.create_copypaste_keybinds }}
+xterm*vt100.translations: #override \
+				Ctrl Alt <Key> C: copy-selection(CLIPBOARD) \n\
+				Ctrl Alt <Key> V: insert-selection(CLIPBOARD)
+{{- end }}

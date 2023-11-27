@@ -1,0 +1,21 @@
+Xresources:
+  dpi:
+    value: 81
+    set_in_xresources: false
+  Xft:
+    antialias: 1
+    hinting: 1
+    rgba: rgb
+    hintstyle: hintslight
+    lcdfilter: lcddefault
+  icons: Papirus-Dark
+  xterm:
+    font:
+      names:
+        - terminus-12
+        - "*-terminus-*-*-*-14-*"
+        - XTerm.VT100.font5
+      faceName: Monospace
+      faceSize: 12
+    eightBitInput: false
+    create_copypaste_keybinds: true
