@@ -34,4 +34,4 @@
 - [ ] general
   - [ ] clone /etc repo (init script?)
   - [ ] follow website instructions to write pass clone script
-
+  - [ ] figure out sleep / lid close settings
