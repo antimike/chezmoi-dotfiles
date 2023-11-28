@@ -17,3 +17,6 @@ data:
     {{- else if lookPath "vim" }}vim
     {{- else }}vi{{ end }}
   enable_systemd_session_services: {{ eq .chezmoi.hostname "voidmobile" }}
+  wallpaper:
+    cache: {{ joinPath .filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
+    library: {{ joinPath .filesystem.appData "wallpaper" }}

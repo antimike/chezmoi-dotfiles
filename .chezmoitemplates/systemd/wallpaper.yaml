@@ -1,0 +1,3 @@
+script:
+  set: '{{ joinPath .filesystem.scriptDir "set-wallpaper" }}'
+  apply: '{{ joinPath .filesystem.scriptDir "apply-wallpaper" }}'

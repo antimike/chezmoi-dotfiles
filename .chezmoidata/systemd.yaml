@@ -6,3 +6,13 @@ systemd:
         - dnf: xrandr
         - dnf: xrdb
         - dnf: xsettingsd
+    dimmer:
+      use: false
+    wallpaper:
+      install:
+        - pipx: pywal
+          exec: wal
+        - dnf: feh
+        - dnf: hsetroot
+      timer:
+        period: 2h
