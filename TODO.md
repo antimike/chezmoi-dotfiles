@@ -20,3 +20,18 @@
 - i3
 - ipython
 - nvim
+
+## TODO
+
+- [ ] systemd
+  - [ ] geoclue + init location finder
+  - [ ] document and install deps
+- [ ] wallpaper
+  - [ ] clone wallpaper repo
+    - [ ] init script?
+  - [ ] get pywal
+
+- [ ] general
+  - [ ] clone /etc repo (init script?)
+  - [ ] follow website instructions to write pass clone script
+
