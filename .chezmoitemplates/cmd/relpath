@@ -1,5 +1,5 @@
 {{- if lookPath "realpath" -}}
-{{ concat (list "realpath" "--relative-to") . | output }}
+{{ output "realpath" "--relative-to" (index . 0) (index . 1) }}
 {{- else -}}
 {{ fail "Cannot find realpath executable!" }}
 {{- end -}}

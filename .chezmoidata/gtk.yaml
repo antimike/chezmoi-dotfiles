@@ -18,3 +18,4 @@ gtk:
     icon_size: GTK_ICON_SIZE_LARGE_TOOLBAR
   decoration:
     layout: ":menu"
+  enable_event_sounds: 0
