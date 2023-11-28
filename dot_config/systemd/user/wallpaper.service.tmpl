@@ -1,14 +1,20 @@
+{{- $hsetroot := lookPath "hsetroot" -}}{{- if $hsetroot -}}
+{{- $data := includeTemplate "systemd/wallpaper.yaml" . | fromYaml -}}
+{{- $set_wp := list .chezmoi.homeDir $data.script.set | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
+{{- $apply_wp := list .chezmoi.homeDir $data.script.apply | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
+{{- $library := list .chezmoi.homeDir .wallpaper.library | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
+{{- $bg := list .chezmoi.homeDir .wallpaper.cache | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
 [Unit]
 Description=Build and display wallpaper
 PartOf=graphical-session.target
 
 [Service]
-Environment=WALLPAPER_DIRECTORY=%h/.local/share/wallpapers/Wallpapers
-Environment=WALLPAPER_OUTPUT=%h/.cache/i3/current-wallpaper.png
-ExecStart=/usr/bin/mkdir -p %h/.cache/i3
-ExecStart=%h/.config/i3/bin/wallpaper --directory $WALLPAPER_DIRECTORY \
+Environment=WALLPAPER_DIRECTORY={{ $library }}
+Environment=WALLPAPER_OUTPUT={{ $bg }}
+ExecStart={{ $set_wp }} --directory $WALLPAPER_DIRECTORY \
                                       --target $WALLPAPER_OUTPUT
-ExecStart=%h/.fehbg
-ExecStart=/usr/bin/hsetroot -root -center $WALLPAPER_OUTPUT
+ExecStart={{ $apply_wp }}
+ExecStart={{ lookPath "hsetroot" }} -root -center $WALLPAPER_OUTPUT
 Type=oneshot
 RemainAfterExit=false
+{{- end -}}
