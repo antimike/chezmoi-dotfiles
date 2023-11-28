@@ -16,3 +16,10 @@ systemd:
         - dnf: hsetroot
       timer:
         period: 2h
+    redshift:
+      install:
+        - dnf: redshift
+        - dnf: redshift-gtk
+      TODO:
+        - write script to configure geoclue
+        - write init script to obtain and cache coordinates
