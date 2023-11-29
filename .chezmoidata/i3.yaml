@@ -1,0 +1,50 @@
+i3:
+  # idea: key -> list of program names here, in order of preference
+  # program name -> dedicated YAML template with cmds, options, etc.
+  keys:
+    named:
+      mod: Mod4
+      alt: Mod1
+      up: k
+      down: j
+      left: h
+      right: l
+    modes:
+      gaps: $mod+Shift+g
+      resize: $mod+r
+    programs:
+      - cmd: passmenu
+        exec_opts: ["--no-startup-id"]
+        cmd_opts: ["--type"]
+        keybind: $mod+p
+      - cmd: passmenu
+        exec_opts: ["--no-startup-id"]
+        keybind: $mod+Shift+p
+  gaps:
+    corner_radius: 10
+    minimal_border_size: 1
+    floating_border_size: 2
+    border_size: 3
+    top: 5
+    left: 5
+    right: 5
+    inner: 5
+    outer: 0
+    smart_gaps: ["on", "inverse_outer"]
+    smart_borders: ["on", "no_gaps"]
+    hide_edge_borders: smart_no_gaps
+  borders:
+    default_border: pixel 3
+    default_floating_border: pixel 3
+  colors:
+    fg:
+      name: i3wm.color7
+      default: #f0f0f0
+    bg:
+      name: i3wm.color3
+      default: #f0f0f0
+  font: Iosevka-Nerd-Font-Complete-Mono 12
+  mouse:
+    warping: none
+    follow_with_focus: no
+    floating_modifier: $mod

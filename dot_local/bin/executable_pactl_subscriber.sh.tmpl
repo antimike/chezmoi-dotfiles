@@ -1,0 +1,12 @@
+#!/bin/env bash
+# Inspired by https://unix.stackexchange.com/questions/674127/is-there-a-way-to-run-a-hook-i-e-shell-script-etc-when-an-audio-device-is-op
+
+notify={{ joinPath .filesystem.scriptDir "notify_volume.sh" | quote }}
+
+pactl subscribe | while read _ event _ control num; do
+	if [[ $event == "'change'" ]] && [[ $control =~ (source|sink)* ]]; then
+		echo "Volume changed!  Calling notification script ${notify}..."
+		$notify
+		canberra-gtk-play -i audio-volume-change -d "changeVolume"
+	fi
+done

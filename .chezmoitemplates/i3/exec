@@ -1,0 +1,4 @@
+{{- if get . "cmd" }}
+{{- if lookPath .cmd }}
+bindsym {{.keybind}} exec {{get . "exec_args" | join " "}} {{.cmd}} {{get . "cmd_args" | join " "}}
+{{- end }}{{ end }}
