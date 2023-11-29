@@ -1,0 +1,49 @@
+#!/bin/env bash
+# Send a notification with the current volume from pactl
+
+control="${1:-sink}"
+
+# TODO: Templatize the icon groups and names
+case "${control^^*}" in
+SOURCE) icon_grp=notification-microphone-sensitivity ;;
+SINK) icon_grp=notification-audio-volume ;;
+*)
+	echo "Unknown control type '${control}'" >&2
+	exit 127
+	;;
+esac
+
+read -d'\n' VOL MUTE < <(
+	pactl get-${control,,*}-volume @DEFAULT_${control^^*}@ | grep -o '[0-9]\+%' | head -1
+	pactl get-${control,,*}-mute @DEFAULT_${control^^*}@ | cut -d' ' -f2
+)
+
+case $MUTE in
+yes)
+	icon=system-mute
+	;;
+no)
+	if ((${VOL%%%} < 33)); then
+		icon=low
+	elif ((${VOL%%%} < 67)); then
+		icon=medium
+	else
+		icon=high
+	fi
+	;;
+*)
+	echo "Unknown MUTE state '$MUTE'" >&2
+	icon_grp=system
+	icon=error
+	;;
+esac
+
+dunstify \
+	--appname="$0" \
+	--hints=string:x-dunst-stack-tag:read-${control,,*}-volume \
+	--replace=1001 \
+	--icon="${icon_grp}-${icon}" \
+	--urgency=low \
+	"$VOL"
+
+printf "CONTROL: %s\tVOL: %s\tMUTE: %s\n" ${control^^*} $VOL $MUTE >&2
