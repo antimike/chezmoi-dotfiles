@@ -1,14 +1,17 @@
+{{-
+$filesystem := dict
+  "cacheDir" ".cache"
+  "appData" (joinPath ".local" "share" )
+  "sourceDir" "Source"
+  "scriptDir" (joinPath ".local" "bin" )
+-}}
 data:
   email: "antihaynes@gmail.com"
   gpg:
     keys:
       signing: "AEB43E83657EFBEDB5D61B2862716B9F210A3233"
   filesystem:
-    cacheDir: {{ joinPath .chezmoi.homeDir ".cache" | quote }}
-    appData: {{ joinPath .chezmoi.homeDir ".local" "share" | quote }}
-    sourceDir: {{ joinPath .chezmoi.homeDir "Source" | quote }}
-    tmpDir: /tmp
-    scriptDir: {{ joinPath .chezmoi.homeDir ".local" "bin" | quote }}
+{{ $filesystem | toYaml | indent 4 }}
   terminal: kitty
   shell: {{ $zsh := lookPath "zsh" }}{{ if $zsh -}}
     {{ $zsh }}{{ else -}}
@@ -20,3 +23,11 @@ data:
   wallpaper:
     cache: {{ joinPath .filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
     library: {{ joinPath .filesystem.appData "wallpaper" }}
+  externals:
+{{ range $tmpl :=
+  joinPath .chezmoi.sourceDir ".chezmoitemplates" "externals.d" 
+    "*.{yml,yaml}" 
+  | glob
+-}}
+{{- includeTemplate $tmpl $filesystem | indent 4 }}
+{{ end -}}

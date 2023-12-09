@@ -1,0 +1,4 @@
+getnf:
+  dest: {{ joinPath .sourceDir "getnf" }}
+  type: "git-repo"
+  url: "https://github.com/ronniedroid/getnf.git"
