@@ -8,7 +8,7 @@ plugins:
     url: "$ASDF_DIR/asdf.sh"
     export:
       name: ASDF_DIR
-      value: {{ joinPath .chezmoi.homeDir ".asdf" | quote }}
+      value: {{ joinPath "$HOME" .externals.asdf.dest }}
   - args:
       - snippet
     ice:
