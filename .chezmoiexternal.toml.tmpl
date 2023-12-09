@@ -1,33 +1,29 @@
-{{- $zsh_exports := includeTemplate "zsh/exports.yaml" . | fromYaml | jq ".export | from_entries" | first }}
-{{- $kitty_dir := joinPath ".config" "kitty" -}}
-{{- $i3_dir := joinPath ".config" "i3" -}}
-[".pyenv"]
-  type = "git-repo"
-  url = "https://github.com/pyenv/pyenv.git"
-[".asdf"]
-  type = "archive"
-  url = "https://github.com/asdf-vm/asdf/archive/refs/tags/v0.13.1.tar.gz"
-[{{- joinPath .filesystem.sourceDir "getnf" | trimPrefix .chezmoi.homeDir | trimPrefix "/" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/ronniedroid/getnf.git"
-[{{- $zsh_exports.ZINIT_HOME | trimPrefix .chezmoi.homeDir | trimPrefix "/" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/zdharma-continuum/zinit.git"
-[{{- joinPath $i3_dir "betterlockscreen" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/betterlockscreen/betterlockscreen"
-[{{- joinPath $i3_dir "i3-wpd" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/antimike/i3-wpd"
-[{{- joinPath $i3_dir "i3altlayout" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/antimike/i3altlayout"
-[{{- joinPath $kitty_dir "kitty-themes" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/dexpota/kitty-themes.git"
-[{{- joinPath $kitty_dir "kitty_grab" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/yurikhan/kitty_grab"
-[{{- joinPath $kitty_dir "kitty_search" | quote -}}]
-  type = "git-repo"
-  url = "https://github.com/trygveaa/kitty-kitten-search"
+{{range $name, $data := .externals}}
+{{- if hasKey $data "dest" -}}
+{{
+  pick 
+    $data 
+      "type"
+      "encrypted"
+      "exact"
+      "exclude"
+      "executable"
+      "format"
+      "path"
+      "include"
+      "refreshPeriod"
+      "stripComponents"
+      "url"
+      "checksum.sha256"
+      "checksum.sha384"
+      "checksum.sha512"
+      "checksum.size"
+      "clone.args"
+      "filter.command"
+      "filter.args"
+      "pull.args"
+      "archive.extractAppleDouble"
+  | dict (get $data "dest") | toToml
+}}
+{{- end }}
+{{end}}

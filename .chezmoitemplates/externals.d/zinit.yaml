@@ -1,0 +1,5 @@
+zinit:
+  dest: {{ joinPath .appData "zinit" "zinit.git" }}
+  type: "git-repo"
+  url: "https://github.com/zdharma-continuum/zinit.git"
+  snippets: {{ joinPath .appData "zsh" }}
