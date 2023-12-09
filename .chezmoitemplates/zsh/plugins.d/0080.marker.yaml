@@ -1,4 +1,4 @@
-{{- if .zsh.use_marker -}}
+{{- if 0 -}}
 plugins:
   - args:
       - light
@@ -11,7 +11,7 @@ plugins:
     url: antimike/marker.git
     export:
       name: MARKER_DATA_HOME
-      value: {{ joinPath .filesystem.appData "marker" | quote }}
+      value: {{ joinPath "$HOME" .filesystem.appData "marker" | quote }}
     command: |
       bindkey '\em' _marker_mark_1
       bindkey '\ej' _marker_mark_2

@@ -10,7 +10,6 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 {{ $exports := list -}}
-{{- if hasKey . "export" }}{{ $exports = concat $exports .export }}{{ end -}}
 {{- range $toplevel_file := joinPath $zsh_tmpls "exports.{yml,yaml}" | glob -}}
   {{- $exports = includeTemplate $toplevel_file $data | fromYaml | jq ".export[]" | concat $exports -}}
 {{- end -}}
@@ -23,17 +22,18 @@ fi
 
 source "${ZINIT_HOME}/zinit.zsh"
 
-{{ if default false .zsh.profile_startup -}}
 # - - - - - - - - - - - - - - - - - - - -
 # Profiling Tools
 # - - - - - - - - - - - - - - - - - - - -
 
-zmodload zsh/zprof
-# http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html
-PS4=$'%D{%M%S%.} %N:%i> '
-exec 3>&2 2>${HOME}/.cache/logs/zinit.$$.log
-setopt xtrace prompt_subst
-{{- end }}
+if [[ "$PROFILE_STARTUP" == true ]]; then
+  zmodload zsh/zprof
+  # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html
+  PS4=$'%D{%M%S%.} %N:%i> '
+  exec 3>&2 2>${HOME}/.cache/logs/zinit.$$.log
+  setopt xtrace prompt_subst
+fi
+
 # - - - - - - - - - - - - - - - - - - - -
 # Zsh Core Configuration
 # - - - - - - - - - - - - - - - - - - - -
@@ -135,7 +135,6 @@ alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 
 setopt no_beep
 
-{{ if .zsh.profile_startup }}
 # - - - - - - - - - - - - - - - - - - - -
 # End Profiling Script
 # - - - - - - - - - - - - - - - - - - - -
@@ -145,7 +144,13 @@ if [[ "$PROFILE_STARTUP" == true ]]; then
     exec 2>&3 3>&-
     zprof > ~/zshprofile$(date +'%s')
 fi
-{{ end }}
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+zinit add-fpath {{ joinPath "$HOME" .externals.zinit.snippets "functions" | quote }}
+
+zinit wait lucid id-as"local-plugins" nocompile multisrc{{ joinPath "$HOME" .externals.zinit.snippets "snippets" "*.zsh" | quote }} atinit"autoload -Uz {{ joinPath "$HOME" .externals.zinit.snippets "functions" "*(:t)" }}" atpull'zinit creinstall -q {{ joinPath "$HOME" .externals.zinit.snippets "completion" }}' run-atpull for \
+    zdharma-continuum/null
+
+zinit snippet {{ joinPath "$HOME" .externals.zinit.snippets "local.plugin.zsh" | quote }}
