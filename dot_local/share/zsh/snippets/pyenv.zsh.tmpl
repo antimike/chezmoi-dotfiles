@@ -1,3 +1,4 @@
+{{ if not (lookPath "rtx") -}}
 {{ if $pyenv := findExecutable "pyenv" (joinPath .chezmoi.homeDir .externals.pyenv.dest "bin" | list) -}}
 #!/bin/zsh
 
@@ -9,4 +10,5 @@ export PYENV_ROOT={{joinPath "$HOME" .externals.pyenv.dest | quote}}
 
 # Output of pyenv virtualenv-init -
 {{ output $pyenv "virtualenv-init" "-" }}
+{{- end }}
 {{- end }}
