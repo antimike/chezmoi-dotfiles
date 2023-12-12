@@ -1,3 +1,0 @@
-#compdef pipx dephell
-
-_python_argcomplete
