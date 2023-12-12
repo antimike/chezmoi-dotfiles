@@ -1,4 +1,6 @@
+{{if not (lookPath "rtx") -}}
 pyenv:
   dest: ".pyenv"
   type: git-repo
   url: https://github.com/pyenv/pyenv.git
+{{- end}}
