@@ -7,3 +7,6 @@ plugins:
     url: https://raw.githubusercontent.com/junegunn/fzf-git.sh/main/fzf-git.sh
     comment: |
       FZF + git keybinds
+  - args: ["snippet"]
+    url: "https://raw.githubusercontent.com/junegunn/fzf/master/shell/key-bindings.zsh"
+    ice: ["wait", "blockf", "lucid"]
