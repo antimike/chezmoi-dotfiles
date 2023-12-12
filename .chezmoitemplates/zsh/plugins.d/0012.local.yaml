@@ -1,0 +1,23 @@
+plugins:
+  - args:
+      - "add-fpath"
+    url: {{ joinPath "$HOME" .externals.zinit.snippets "functions" | quote }}
+  - args:
+      - wait
+      - lucid
+      - id-as"local-plugins"
+      - nocompile
+      - multisrc{{ joinPath "$HOME" .externals.zinit.snippets "snippets" "*.zsh" | quote }}
+      - atinit"autoload -Uz {{ joinPath "$HOME" .externals.zinit.snippets "functions" "*(:t)" }}"
+      - atpull'zinit creinstall -q {{ joinPath "$HOME" .externals.zinit.snippets "completion" }}'
+      - run-atpull
+    for:
+      - url: zdharma-continuum/null
+  - args:
+      - snippet
+    url: {{ joinPath "$HOME" .externals.zinit.snippets "local.plugin.zsh" | quote }}
+{{- if lookPath "dephell" }}
+  - args:
+      - snippet
+    url: {{joinPath "$HOME" .filesystem.appData "dephell" "_dephell_zsh_autocomplete" | quote}}
+{{- end}}

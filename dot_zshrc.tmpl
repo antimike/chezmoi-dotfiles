@@ -147,10 +147,3 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-zinit add-fpath {{ joinPath "$HOME" .externals.zinit.snippets "functions" | quote }}
-
-zinit wait lucid id-as"local-plugins" nocompile multisrc{{ joinPath "$HOME" .externals.zinit.snippets "snippets" "*.zsh" | quote }} atinit"autoload -Uz {{ joinPath "$HOME" .externals.zinit.snippets "functions" "*(:t)" }}" atpull'zinit creinstall -q {{ joinPath "$HOME" .externals.zinit.snippets "completion" }}' run-atpull for \
-    zdharma-continuum/null
-
-zinit snippet {{ joinPath "$HOME" .externals.zinit.snippets "local.plugin.zsh" | quote }}
