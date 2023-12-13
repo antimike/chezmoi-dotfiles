@@ -1,0 +1,30 @@
+#!/bin/zsh -f
+# Edit or create a shell function in Chezmoi functions dir
+
+function chezmoi_commit() {
+    cd $(chezmoi source-path)
+    git add $@
+    git commit -m "Updated zsh autoload functions: $@"
+}
+
+cd $(chezmoi source-path)
+git diff --quiet && git diff --cached --quiet
+local -i git_status=$?
+
+local funks={{joinPath .chezmoi.sourceDir "dot_local" "share" "zsh" "functions" | quote}}
+if [[ ! -e ${funks}/${1} ]]; then
+    cat <<-FUNK >${funks}/${1}
+			#!/bin/zsh -f
+			# $1
+			
+			FUNK
+fi
+
+${EDITOR:-vim} ${funks}/${1}
+if ((git_status == 0)); then
+    print -u2 "Committing saved changes to ${funks}/${1}..."
+    chezmoi_commit ${funks}/${1}
+else
+    print -u2 "Repository is in an unclean state, unable to commit changes to ${funks}/${1}"
+fi
+chezmoi apply || print -u2 "Unable to apply changes"
