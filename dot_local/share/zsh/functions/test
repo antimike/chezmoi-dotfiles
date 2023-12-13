@@ -1,0 +1,4 @@
+#!/bin/zsh -f
+# test
+
+print -u2 test
