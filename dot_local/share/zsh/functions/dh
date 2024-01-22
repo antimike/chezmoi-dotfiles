@@ -3,4 +3,4 @@
 # CD into selected directory
 
 local dir
-dir="$(autojump -s | sed -n '1,/^$/p' | grep -v '^$' | awk '{for (i=2; i<=NF; ++i) print $i;}' | fzf --preview="lsd -la {}")" && cd "$dir"
+dir="$(autojump -s | sed -n '1,/^$/p' | grep -v '^$' | awk '{for (i=2; i<=NF; ++i) print $i;}' | fzf --preview="lsd -la --color always {}")" && cd "$dir"
