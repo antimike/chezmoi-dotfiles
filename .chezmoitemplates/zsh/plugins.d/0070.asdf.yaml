@@ -1,4 +1,4 @@
-{{if not (lookPath "rtx") -}}
+{{if not (lookPath "mise") -}}
 plugins:
   - args:
       - snippet
