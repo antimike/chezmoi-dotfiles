@@ -1,4 +1,4 @@
-{{if not (lookPath "rtx") -}}
+{{if not (lookPath "mise") -}}
 pyenv:
   dest: ".pyenv"
   type: git-repo

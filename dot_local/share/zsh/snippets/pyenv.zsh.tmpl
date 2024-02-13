@@ -1,4 +1,4 @@
-{{ if not (lookPath "rtx") -}}
+{{ if not (lookPath "mise") -}}
 {{ if $pyenv := findExecutable "pyenv" (joinPath .chezmoi.homeDir .externals.pyenv.dest "bin" | list) -}}
 #!/bin/zsh
 

@@ -1,4 +1,4 @@
-{{if not (lookPath "rtx") -}}
+{{if not (lookPath "mise") -}}
 asdf:
   dest: ".asdf"
   relative_to_root:
