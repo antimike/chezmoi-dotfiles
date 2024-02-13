@@ -1,6 +1,8 @@
 return {
   -- Syntax highlighting
   { "purescript-contrib/purescript-vim" },
+  -- Alternative to purescriptls
+  -- { "frigoeu/psc-ide-vim" },
 
   -- LspConfig
   {
@@ -16,6 +18,10 @@ return {
           settings = {
             purescript = {
               formatter = "purs-tidy",
+              addNpmPath = true,
+              addPscPackageSources = true,
+              addSpagoSources = true,
+              diagnosticsOnOpen = true,
             },
           },
         },
