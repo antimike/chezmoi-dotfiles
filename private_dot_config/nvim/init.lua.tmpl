@@ -1,0 +1,8 @@
+-- Ensure that neovim Python client runs in virtualenv
+vim.cmd([[
+  let g:python3_host_prog = {{ joinPath .chezmoi.homeDir ".venv" "neovim-3.11.8" | squote }}
+  let g:python2_host_prog = {{ joinPath .chezmoi.homeDir ".venv" "neovim-2.7.18" | squote }}
+]])
+
+-- bootstrap lazy.nvim, LazyVim and your plugins
+require("config.lazy")
