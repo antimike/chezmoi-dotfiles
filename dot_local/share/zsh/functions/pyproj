@@ -12,6 +12,8 @@ mkdir -p $(dirname $dest)
 
 cp -r $project_template $dest
 cd $dest
-git init .
-print -l ".envrc" ".ipython" ".direnv" >>./.git/info/exclude
+git init . &&
+  print -l ".envrc" ".ipython" ".direnv" >>./.git/info/exclude &&
+  git add .gitignore && git commit -m "Ignore swapfiles and __pycache__" &&
+  git add requirements.txt && git commit -m "Add standard dependencies"
 direnv allow . && pip install --upgrade pip && pip install -r requirements.txt
