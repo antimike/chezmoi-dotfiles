@@ -2,12 +2,13 @@
 # Edit or create a shell function in Chezmoi functions dir
 
 function chezmoi_commit() {
-    cd $(chezmoi source-path)
+    pushd $(chezmoi source-path)
     git add $@
     git commit $@ -m "Updated zsh autoload functions: $@"
+    popd
 }
 
-cd $(chezmoi source-path)
+pushd $(chezmoi source-path)
 git diff --quiet && git diff --cached --quiet
 local -i git_status=$?
 
@@ -24,3 +25,4 @@ ${EDITOR:-vim} ${funks}/${1}
 print -u2 "Committing saved changes to ${funks}/${1}..."
 chezmoi_commit ${funks}/${1}
 chezmoi apply && autoload -Uz $1 || print -u2 "Unable to apply changes"
+popd
