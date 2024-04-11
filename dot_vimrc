@@ -7,3 +7,4 @@ set sw=4
 set expandtab
 set linebreak
 set wrap
+set nohlsearch
