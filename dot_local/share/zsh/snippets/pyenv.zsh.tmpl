@@ -6,9 +6,9 @@ export PYENV_ROOT={{joinPath "$HOME" .externals.pyenv.dest | quote}}
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 
 # Output of pyenv init -
-{{ output $pyenv "init" "-" }}
+{{ output "sh" "-c" (includeTemplate "safe-output.sh") "sh" $pyenv "init" "-" }}
 
 # Output of pyenv virtualenv-init -
-{{ output $pyenv "virtualenv-init" "-" }}
+{{ output "sh" "-c" (includeTemplate "safe-output.sh") "sh" $pyenv "virtualenv-init" "-" }}
 {{- end }}
 {{- end }}

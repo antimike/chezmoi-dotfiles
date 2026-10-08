@@ -1,0 +1,1 @@
+"$@" || { echo "chezmoi: '$*' failed (exit $?); output skipped" >&2; exit 0; }

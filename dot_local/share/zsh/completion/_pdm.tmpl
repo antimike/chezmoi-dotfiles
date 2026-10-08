@@ -1,3 +1,6 @@
+{{/* safe-output.sh: a broken pdm (e.g. its venv lost after a Python
+     upgrade) renders empty with a warning instead of aborting chezmoi;
+     an empty result makes chezmoi remove the completion file. */ -}}
 {{if lookPath "pdm" -}}
-{{output "pdm" "completion" "zsh"}}
-{{- end}}
+{{output "sh" "-c" (includeTemplate "safe-output.sh") "sh" "pdm" "completion" "zsh"}}
+{{- end -}}
