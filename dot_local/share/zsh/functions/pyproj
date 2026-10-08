@@ -1,33 +1,59 @@
 #!/bin/zsh -f
 # project
 
-# for options parsing
-zmodload zsh/zutil
-
 function print_help() {
   print -u2 -l \
     "Usage: pyproj -n PROJECT_NAME [-u GITHUB_USER]" \
     "" \
     "Options:" \
     "  -n, --name       project name (required)" \
-    "  -u, --user       GitHub username (optional; default is antimike)"
+    "  -u, --user       GitHub username (optional, default is antimike)"
 }
 
+# for options parsing
+zmodload zsh/zutil
 local -A opts=([--user]=antimike)
 
-local name=$1 project_template=~/Source/.project-template/
-local dest=~/Source/$name
+zparseopts -D -F -M -K -A opts -- n:=-name u:=-user -name: -user:
+
+if [[ ! $? -eq 0 ]]; then
+  print_help
+  return 1
+elif [[ ! -v opts[--name] ]]; then
+  print -u2 "Error: please provide project name"
+  print_help
+  return 2
+fi
+
+local name=$(tr '[:blank:]' '_' <<<${opts[--name]})
+project_template=~/Source/.project-template/
+local dest=~/Source/pyprojects/$name
 
 if [[ -e $dest ]]; then
-  print -u2 "Unable to create project ${name}: ${dest} already exists"
-  return 1
+  print -u2 "Error: unable to create project ${name}: ${dest} already exists"
+  return 3
 fi
 mkdir -p $(dirname $dest)
 
 cp -r $project_template $dest
 cd $dest
+rm -rf .git
 git init . &&
-  print -l ".envrc" ".ipython" ".direnv" ".jukit" >>./.git/info/exclude &&
+  print -l ".envrc" ".ipython" ".direnv" ".jukit" ".ripgreprc" >>./.git/info/exclude &&
   git add .gitignore && git commit -m "Ignore swapfiles and __pycache__" &&
   git add requirements.txt && git commit -m "Add standard dependencies"
-direnv allow . && pip install --upgrade pip && pip install -r requirements.txt
+
+if [[ -v opts[--user] ]]; then
+  local user=${opts[--user]:l}
+  print "export GITHUB_USER='$user'" >>.envrc
+  if [[ $user == antimike ]]; then
+    print -l \
+      'export GITHUB_TOKEN="$(pass show professional/github/tokens/zbook | head -1)"' \
+      'export GH_TOKEN="$GITHUB_TOKEN"' >>.envrc
+  else
+    print -u2 "GitHub username $user not recognized; no token added to .envrc"
+  fi
+fi
+
+direnv allow .
+pip install --upgrade pip && pip install -r requirements.txt
