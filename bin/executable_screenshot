@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -euf -o pipefail
+
+savedir=~/Pictures/screenshots
+mkdir -p "$savedir"
+
+cmd="${1:-desktop}"
+shift || true
+filename="$*"
+target=
+
+case "$cmd" in
+desktop)
+	target="${savedir}/${filename:-$(date -Iseconds).jpg}"
+	maim -u -m 9 "$target"
+	notify-send -i camera-photo "Desktop screenshot" "Saved to ${target##*/}"
+	echo -n "$target" | xclip -selection clipboard
+	;;
+window)
+	if [[ -n "$filename" ]]; then
+		target="${savedir}/${filename}"
+		maim -u -s -b 5 -l -c 0.3,0.4,0.6,0.4 >"$target"
+	else
+		target=clipboard
+		maim -u -s -b 5 -l -c 0.3,0.4,0.6,0.4 |
+			xclip -selection clipboard -t image/png
+	fi
+	notify-send -i camera-photo "Screenshot" "Saved to ${target##*/}"
+	;;
+*)
+	notify-send -i camera-photo "Unknown screenshot type '${cmd}'"
+	;;
+esac

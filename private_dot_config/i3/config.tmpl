@@ -261,8 +261,9 @@ bindsym $mod+Escape exec "loginctl lock-session"
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 bindsym $mod+Shift+Ctrl+e exec "i3-msg exit"
 
-bindsym Print exec --no-startup-id exec ~/.config/i3/bin/screenshot window
-bindsym $mod+Print exec --no-startup-id exec ~/.config/i3/bin/screenshot desktop
+bindsym Print exec --no-startup-id exec ~/bin/screenshot window
+bindsym $mod+Print exec i3-input -F 'exec --no-startup-id exec ~/bin/screenshot window %s' -P "Save screenshot to file: "
+bindsym $mod+Shift+Print exec --no-startup-id exec ~/bin/screenshot desktop
 
 # Get info about container/workspace
 bindsym $mod+i nop "container-info"
