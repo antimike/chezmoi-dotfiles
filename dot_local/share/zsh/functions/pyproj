@@ -1,6 +1,20 @@
 #!/bin/zsh -f
 # project
 
+# for options parsing
+zmodload zsh/zutil
+
+function print_help() {
+  print -u2 -l \
+    "Usage: pyproj -n PROJECT_NAME [-u GITHUB_USER]" \
+    "" \
+    "Options:" \
+    "  -n, --name       project name (required)" \
+    "  -u, --user       GitHub username (optional; default is antimike)"
+}
+
+local -A opts=([--user]=antimike)
+
 local name=$1 project_template=~/Source/.project-template/
 local dest=~/Source/$name
 
