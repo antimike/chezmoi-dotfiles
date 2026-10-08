@@ -2,5 +2,5 @@
 #!/bin/env zsh
 # Output of `direnv hook zsh`
 
-{{output "direnv" "hook" "zsh"}}
+{{output "sh" "-c" (includeTemplate "safe-output.sh") "sh" "direnv" "hook" "zsh"}}
 {{- end}}

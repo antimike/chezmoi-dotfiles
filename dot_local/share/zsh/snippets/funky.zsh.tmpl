@@ -2,5 +2,5 @@
 #!/bin/env zsh
 # Output of funky --init zsh
 
-{{ output "funky" "--init" "zsh" }}
+{{ output "sh" "-c" (includeTemplate "safe-output.sh") "sh" "funky" "--init" "zsh" }}
 {{- end }}
