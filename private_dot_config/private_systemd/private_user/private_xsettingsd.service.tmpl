@@ -1,9 +1,17 @@
 {{- $exec := lookPath "xsettingsd" -}}
 {{- if $exec -}}
 {{- $tmpl := includeTemplate "systemd/xsettingsd.yaml" . | fromYaml -}}
-{{- if and (stat $tmpl.script) (stat $tmpl.config) -}}
-{{- $script := list .chezmoi.homeDir $tmpl.script | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
-{{- $output := list .chezmoi.homeDir $tmpl.output | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
+{{- /* .filesystem.* paths may be home-relative; anchor them to the home
+       dir so stat and realpath don't resolve them against chezmoi's cwd */ -}}
+{{- $abs := dict -}}
+{{- range $key := list "script" "config" "output" -}}
+{{-   $p := get $tmpl $key -}}
+{{-   if not (osIsAbs $p) }}{{ $p = joinPath $.chezmoi.homeDir $p }}{{ end -}}
+{{-   $_ := set $abs $key $p -}}
+{{- end -}}
+{{- if and (stat $abs.script) (stat $abs.config) -}}
+{{- $script := list .chezmoi.homeDir $abs.script | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
+{{- $output := list .chezmoi.homeDir $abs.output | includeTemplate "cmd/relpath" | joinPath "%h" | trim -}}
 [Unit]
 Description=XSETTINGS daemon
 PartOf=graphical-session.target
