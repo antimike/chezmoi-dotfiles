@@ -16,8 +16,7 @@ Tick an item once a `run_` script or managed file reproduces it from scratch.
 ## Known gaps
 
 - `tofi` is in the Debian list but not in Fedora's repos; nothing uses it yet.
-- `neovim` is pinned to 0.9.4 (what `stable` resolved to in 2024); LazyVim
-  likely wants a newer release. Bump deliberately.
+- `neovim` floats on `latest` in `.tool-versions` (MH choice); run `mise upgrade neovim` to bump.
 - `java` is pinned to the `23-loom+2-48.0.0` early-access build that `latest`
   resolved to. Replace with a real LTS if java is still needed.
 - `~/.tool-versions` pins `golang 1.21.4` while `~/.config/mise/config.toml`

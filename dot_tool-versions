@@ -1,4 +1,4 @@
-neovim 0.9.4
+neovim latest
 chezmoi 2.73.0
 golang 1.21.4
 cue 0.7.0
