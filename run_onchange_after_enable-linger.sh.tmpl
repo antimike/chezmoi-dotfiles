@@ -1,0 +1,28 @@
+{{- if .enable_user_lingering -}}
+#!/bin/sh
+# run_onchange_after_enable-linger.sh.tmpl — enable systemd user lingering so
+# user timers fire without an active login session. Only rendered on hosts
+# with enable_user_lingering set in .chezmoi.yml.tmpl.
+#
+# Lingering state lives in /var/lib/systemd/linger/<user> (not /etc), so
+# chezmoi, not etckeeper, owns it. Idempotent.
+set -eu
+
+user="${USER:-$(id -un)}"
+
+if [ "$(loginctl show-user "$user" -p Linger --value 2>/dev/null)" = "yes" ]; then
+  echo "linger: already enabled for $user" >&2
+  exit 0
+fi
+
+# Polkit normally lets an active local session set its own linger flag.
+if loginctl enable-linger "$user" 2>/dev/null; then
+  :
+elif sudo -n loginctl enable-linger "$user" 2>/dev/null; then
+  :
+else
+  echo "linger: could not enable automatically. Run:  sudo loginctl enable-linger $user" >&2
+  exit 1
+fi
+echo "linger: enabled for $user" >&2
+{{- end }}
