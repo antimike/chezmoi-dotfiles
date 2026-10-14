@@ -1,0 +1,13 @@
+# Pinned dolt release, consumed by run_onchange_install-dolt.sh.tmpl.
+#
+# dolt (https://github.com/dolthub/dolt) is needed for beads server mode.
+# Only linux_amd64 is pinned. To bump:
+#   1. version: new upstream tag, "v"-prefixed
+#   2. checksums.linux_amd64:
+#        curl -fsSL https://github.com/dolthub/dolt/releases/download/<tag>/dolt-linux-amd64.tar.gz | sha256sum
+#   3. commit; the rendered script changes, so the installer re-runs on apply.
+
+dolt:
+  version: "v2.4.0"
+  checksums:
+    linux_amd64: "cd08696de8d185aa194c930f62cdf4a3599084534e589fbcb0d2207d1bc37370"
