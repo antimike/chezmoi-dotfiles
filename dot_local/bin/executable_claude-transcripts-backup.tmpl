@@ -1,0 +1,26 @@
+{{- if lookPath "restic" -}}
+#!/usr/bin/env bash
+# Back up ~/.claude/projects (transcripts + memory) to a restic repo on the
+# PortableSSD. Run by claude-transcripts-backup.timer, which is conditional on
+# the drive being mounted. The restic password lives in `pass` (backup/restic-zbook).
+set -euo pipefail
+
+export RESTIC_REPOSITORY="${CLAUDE_TRANSCRIPTS_REPO:-/run/media/$USER/PortableSSD/backups/{{ .chezmoi.hostname }}/claude-transcripts}"
+export RESTIC_PASSWORD_COMMAND="${RESTIC_PASSWORD_COMMAND:-pass show backup/restic-{{ .chezmoi.hostname }}}"
+notify="$HOME/.claude/scripts/notify"
+stamp="${XDG_STATE_HOME:-$HOME/.local/state}/claude-transcripts-backup/last-check"
+
+trap '[ -x "$notify" ] && "$notify" --urgent "claude-transcripts-backup failed" "see: journalctl --user -u claude-transcripts-backup" || true' ERR
+
+restic cat config >/dev/null 2>&1 || { echo "no restic repo at $RESTIC_REPOSITORY" >&2; false; }
+
+restic backup --tag scheduled --exclude-caches "$HOME/.claude/projects"
+restic forget --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune
+
+# Integrity check at most every 30 days.
+mkdir -p "$(dirname "$stamp")"
+if [ ! -e "$stamp" ] || [ -n "$(find "$stamp" -mtime +30)" ]; then
+    restic check
+    touch "$stamp"
+fi
+{{- end }}

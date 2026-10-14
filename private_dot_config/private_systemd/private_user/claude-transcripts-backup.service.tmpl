@@ -1,0 +1,14 @@
+{{ if lookPath "restic" -}}
+[Unit]
+Description=Back up Claude transcripts to the PortableSSD (restic)
+Documentation=file://%h/.local/share/chezmoi/dot_local/bin/executable_claude-transcripts-backup.tmpl
+# Removable drive: silently skip while it is unplugged; Persistent=true on the
+# timer catches up on the next trigger after it is mounted.
+ConditionPathIsMountPoint=/run/media/%u/PortableSSD
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/claude-transcripts-backup
+Nice=15
+IOSchedulingClass=idle
+{{- end }}

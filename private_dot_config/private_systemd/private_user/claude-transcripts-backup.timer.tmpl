@@ -1,0 +1,12 @@
+{{ if lookPath "restic" -}}
+[Unit]
+Description=Daily backup of Claude transcripts (restic)
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+{{- end }}
