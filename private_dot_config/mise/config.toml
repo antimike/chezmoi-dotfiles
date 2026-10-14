@@ -1,0 +1,20 @@
+# Global mise toolset. Every pin is exact; bump deliberately with
+# `mise use -g <tool>@<version>`, then `chezmoi re-add ~/.config/mise/config.toml`.
+# ~/.tool-versions (dot_tool-versions) takes precedence inside $HOME.
+[tools]
+bun = "1.4.3"
+uv = "0.13.0"
+just = "1.58.0"
+mani = "0.32.1"
+ghq = "1.11.2"
+go = "1.21.7"
+"go:github.com/doronbehar/pistol/cmd/pistol" = "0.5.3"
+glow = "1.5.1"
+groovy = "4.0.19"
+java = "23-loom+2-48.0.0"
+purescript = "0.15.14"
+spago = "0.21.0"
+terraform = "1.8.2"
+
+[settings]
+experimental = true
