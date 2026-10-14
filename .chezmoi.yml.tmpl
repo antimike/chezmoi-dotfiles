@@ -25,6 +25,24 @@ data:
     {{- else if lookPath "vim" }}vim
     {{- else }}vi{{ end }}
   enable_systemd_session_services: {{ eq .chezmoi.hostname "voidmobile" }}
+  # Hosts with systemd-user lingering (loginctl enable-linger), so user timers
+  # fire without an active login session. Distinct from
+  # enable_systemd_session_services, which only selects the systemd-managed i3
+  # session in ~/.xsession.
+  enable_user_lingering: {{ has .chezmoi.hostname (list "zbook") }}
+  # Desktop-notification client behind ~/.claude/scripts/notify. Under WSL2,
+  # D-Bus advertises org.freedesktop.Notifications but no daemon runs, so stock
+  # notify-send blocks; use the wsl-notify-send shim there when its chezmoi
+  # source is present (stat, not lookPath, so it works before first apply).
+  notifier: {{ if (.chezmoi.kernel.osrelease | lower | contains "wsl") -}}
+    {{- if stat (joinPath .chezmoi.sourceDir "dot_local/bin/executable_wsl-notify-send.tmpl") -}}
+      "wsl-notify-send"
+    {{- else -}}
+      "notify-send"
+    {{- end -}}
+  {{- else -}}
+    "notify-send"
+  {{- end }}
   wallpaper:
     cache: {{ joinPath .filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
     library: {{ joinPath .filesystem.appData "wallpaper" }}
