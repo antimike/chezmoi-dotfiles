@@ -31,7 +31,7 @@ Arguments: $ARGUMENTS
   pointing at `<target>`. Both names may be written with or without a
   leading `/`; Claude strips it.
 - `/add-command-alias <alias> <target> --global` — default; writes to
-  `~/.local/share/chezmoi/home/dot_claude/commands/symlink_<alias>.md`
+  `~/.local/share/chezmoi/dot_claude/commands/symlink_<alias>.md`
   with contents `<target>.md`. After `chezmoi apply`, the live file at
   `~/.claude/commands/<alias>.md` is a symlink to `<target>.md`.
 - `/add-command-alias <alias> <target> --local` — writes a plain
@@ -62,7 +62,7 @@ Mutually exclusive: `--global` vs. `--local`.
 
 3. **Verify the target exists.**
    - `--global`: check
-     `~/.local/share/chezmoi/home/dot_claude/commands/<target>.md`.
+     `~/.local/share/chezmoi/dot_claude/commands/<target>.md`.
    - `--local`: check `<project-root>/.claude/commands/<target>.md`.
    - If the target doesn't exist in the same scope, **halt and suggest
      `/add-command <target>` first.** Cross-scope aliasing (global alias
@@ -79,7 +79,7 @@ Mutually exclusive: `--global` vs. `--local`.
 
 5. **Create the alias.**
    - `--global`: write a new file at
-     `~/.local/share/chezmoi/home/dot_claude/commands/symlink_<alias>.md`
+     `~/.local/share/chezmoi/dot_claude/commands/symlink_<alias>.md`
      whose contents are exactly:
      ```
      <target>.md

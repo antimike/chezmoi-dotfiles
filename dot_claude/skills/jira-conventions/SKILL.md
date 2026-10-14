@@ -84,7 +84,7 @@ The `~/.claude/references/jira-adf-reference.md` file is the canonical reference
 - `~/.claude/references/jira-mention-convention.md` — `@{Display Name}` syntax, resolution rules.
 - `~/.claude/references/jira-adf-reference.md` — ADF node patterns for mentions, links, nested bullets.
 - `~/.claude/agents/jira-comment-drafter.md` — subagent that loads this skill; embeds the engagement's account-ID table via chezmoi template.
-- `~/.local/share/chezmoi/home/.chezmoidata/atlassian.yaml` — account-ID source of truth.
+- `.chezmoidata/atlassian.yaml` — account-ID source of truth (kept in the private `antimike/chezmoi-boco` repo, not in this public one).
 
 ## When to invoke this skill autonomously
 

@@ -68,10 +68,10 @@ with the same name as a global one; invoke it; observe which fires.
 
    | Kind | Project-local | Global | Chezmoi source (upstream) |
    |---|---|---|---|
-   | command | `<project-root>/.claude/commands/<name>.md` | `~/.claude/commands/<name>.md` | `~/.local/share/chezmoi/home/dot_claude/commands/<name>.md` |
-   | skill | `<project-root>/.claude/skills/<name>/SKILL.md` | `~/.claude/skills/<name>/SKILL.md` | `~/.local/share/chezmoi/home/dot_claude/skills/<name>/SKILL.md` |
-   | agent | `<project-root>/.claude/agents/<name>.md` | `~/.claude/agents/<name>.md` | `~/.local/share/chezmoi/home/dot_claude/agents/<name>.md` (or `.md.tmpl`) |
-   | keybinding | — | `~/.claude/keybindings.json` (search for binding matching `<name>`) | `~/.local/share/chezmoi/home/dot_claude/keybindings.json` |
+   | command | `<project-root>/.claude/commands/<name>.md` | `~/.claude/commands/<name>.md` | `~/.local/share/chezmoi/dot_claude/commands/<name>.md` |
+   | skill | `<project-root>/.claude/skills/<name>/SKILL.md` | `~/.claude/skills/<name>/SKILL.md` | `~/.local/share/chezmoi/dot_claude/skills/<name>/SKILL.md` |
+   | agent | `<project-root>/.claude/agents/<name>.md` | `~/.claude/agents/<name>.md` | `~/.local/share/chezmoi/dot_claude/agents/<name>.md` (or `.md.tmpl`) |
+   | keybinding | — | `~/.claude/keybindings.json` (search for binding matching `<name>`) | `~/.local/share/chezmoi/dot_claude/keybindings.json` |
 
    Additionally check for:
    - **MCP plugin skills** (names prefixed with `<plugin>:`) — these are
@@ -103,7 +103,7 @@ with the same name as a global one; invoke it; observe which fires.
    Shadowed:
      /home/user/.claude/commands/foo.md
        (global; active when not in a project with a local override)
-       ↳ chezmoi source: /home/user/.local/share/chezmoi/home/dot_claude/commands/foo.md
+       ↳ chezmoi source: /home/user/.local/share/chezmoi/dot_claude/commands/foo.md
        ↳ chezmoi diff:   clean
 
    Alias of: (none)
@@ -122,7 +122,7 @@ with the same name as a global one; invoke it; observe which fires.
    Name:    start
 
    Active source: /home/user/.claude/commands/start.md  (global)
-     ↳ chezmoi source: /home/user/.local/share/chezmoi/home/dot_claude/commands/start.md
+     ↳ chezmoi source: /home/user/.local/share/chezmoi/dot_claude/commands/start.md
      ↳ chezmoi diff:   clean
 
    Shadowed: (none)

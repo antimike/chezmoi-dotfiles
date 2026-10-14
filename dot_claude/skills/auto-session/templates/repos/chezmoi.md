@@ -26,7 +26,7 @@ Both dimensions are pinned because **either** alone is insufficient. `clone` alo
 Clone lands at `<session-dir>/clones/chezmoi/`. All chezmoi commands in the session must use `--source=<clone-path>` to point chezmoi at the clone:
 
 ```bash
-chezmoi --source=$SESSION_CLONE execute-template home/dot_claude/skills/foo/SKILL.md.tmpl
+chezmoi --source=$SESSION_CLONE execute-template dot_claude/skills/foo/SKILL.md.tmpl
 chezmoi --source=$SESSION_CLONE apply --dry-run --destination=/tmp/chezmoi-test-dest
 chezmoi --source=$SESSION_CLONE diff
 ```

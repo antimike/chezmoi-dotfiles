@@ -56,7 +56,7 @@ Autonomous sessions are self-contained: each session dir carries its own hooks, 
 
 `install.sh` is **TTY-only** — it refuses to run from a non-interactive shell. Modes: `install` (default), `uninstall`, `status`. Idempotent; re-running detects existing wiring and either confirms or surfaces drift.
 
-If the user is chezmoi-managed and declares the symlink in `home/dot_claude/agents/symlink_session-reviewer.md`, `chezmoi apply` handles it and `install.sh` detects the pre-existing symlink as already-installed.
+If the user is chezmoi-managed and declares the symlink in `dot_claude/agents/symlink_session-reviewer.md`, `chezmoi apply` handles it and `install.sh` detects the pre-existing symlink as already-installed.
 
 The scaffold script also symlinks the agent into each session's local `.claude/agents/`, so `install.sh` is not strictly required — it just makes `session-reviewer` usable outside auto-sessions.
 

@@ -45,7 +45,7 @@ Mutually exclusive: `--global` vs. `--local`.
 
 3. **Locate the live file.**
    - `--global`: check for `<name>.md` and `<name>.md.tmpl` in
-     `~/.local/share/chezmoi/home/dot_claude/agents/`. If both exist,
+     `~/.local/share/chezmoi/dot_claude/agents/`. If both exist,
      **halt and ask** (abnormal — investigate first).
    - `--local`: `<project-root>/.claude/agents/<name>.md` (no templates
      in local scope).

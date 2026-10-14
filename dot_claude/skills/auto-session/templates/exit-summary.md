@@ -100,9 +100,9 @@ Do NOT list every file touched; list deliverables a human reviewer would want to
 -->
 
 - **New skills/commands/agents (chezmoi)**:
-  - `home/dot_claude/<path>` — <purpose>
+  - `dot_claude/<path>` — <purpose>
 - **New references**:
-  - `home/dot_claude/references/<name>.md` — <purpose>
+  - `dot_claude/references/<name>.md` — <purpose>
 - **Project docs updated** (e.g., CLAUDE.md, docs/*):
   - <path> — <change summary>
 - **Checkpoint / summary files written**:

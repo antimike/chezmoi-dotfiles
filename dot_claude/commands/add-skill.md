@@ -31,7 +31,7 @@ Arguments: $ARGUMENTS
 - `/add-skill <name> --trigger="<description>"` — minimum. `--trigger` is
   required; it anchors the skill's auto-invocation logic.
 - `/add-skill <name> --trigger="<desc>" --global` — default; writes to
-  `~/.local/share/chezmoi/home/dot_claude/skills/<name>/SKILL.md`, then
+  `~/.local/share/chezmoi/dot_claude/skills/<name>/SKILL.md`, then
   `chezmoi apply`.
 - `/add-skill <name> --trigger="<desc>" --local` — writes to
   `<project-root>/.claude/skills/<name>/SKILL.md`; no chezmoi.
@@ -81,7 +81,7 @@ Mutually exclusive groups:
 
 3. **Determine destination.**
    - Global source:
-     `~/.local/share/chezmoi/home/dot_claude/skills/<name>/SKILL.md`.
+     `~/.local/share/chezmoi/dot_claude/skills/<name>/SKILL.md`.
      Live after `chezmoi apply`: `~/.claude/skills/<name>/SKILL.md`.
    - Local: `<project-root>/.claude/skills/<name>/SKILL.md`. Create
      `.claude/skills/<name>/` if missing. If the current directory doesn't

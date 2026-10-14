@@ -65,7 +65,7 @@ These thresholds are deliberately generous. A file at 110% of the cap is a *cand
 5. **Present the recommendation list**, organized by file, with an estimated line-delta per item (e.g. `-12 lines: extract "bd-timew migration note" to a dated archive file`). Order by impact within each file.
 6. **Iterate.** Accept user edits — drop items, re-scope items, add ones you missed.
 7. **Execute approved edits.** For each:
-   - Edit the chezmoi source (`~/.local/share/chezmoi/home/dot_claude/...`) when the target is chezmoi-managed.
+   - Edit the chezmoi source (`~/.local/share/chezmoi/dot_claude/...`) when the target is chezmoi-managed.
    - Edit the live file directly when it is not (auto-memory `MEMORY.md` index files are NOT chezmoi-managed and live under `~/.claude/projects/<slug>/memory/`).
 8. **Verify + commit + push + apply** for any chezmoi-managed edits. Standard protocol: `chezmoi diff` clean against the targets, conventional commit in the chezmoi repo with `Co-Authored-By` trailer, `git push`, `chezmoi apply --force <target>` for each target touched.
 

@@ -49,7 +49,7 @@ Mutually exclusive: `--global` vs. `--local`.
 2. **Parse flags.** Reject unknowns. Enforce mutual-exclusion.
 
 3. **Locate the live file.**
-   - `--global`: `~/.local/share/chezmoi/home/dot_claude/commands/<name>.md`.
+   - `--global`: `~/.local/share/chezmoi/dot_claude/commands/<name>.md`.
    - `--local`: `<project-root>/.claude/commands/<name>.md`.
    - Neither: auto-detect. If both exist, **halt and ask.**
    - No file found: **halt.** Nothing to remove.
