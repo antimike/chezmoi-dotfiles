@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# notify: host-portable desktop notification front end for Claude tooling.
+#
+# Accepts the wsl-notify-send shim's interface plus the --urgent/--sound flags
+# that some callers assume, and translates it for this host's notifier (chezmoi
+# data `notifier`; rendered as: {{ get . "notifier" | default "notify-send" }}).
+#
+# Usage: notify [flags] <title> [body]
+#        notify [flags] --config <file|->     # JSON config; '-' reads stdin
+#
+# Flags (both `--flag value` and `--flag=value` are accepted):
+#   --scenario <default|reminder|alarm|incomingCall>
+#   --group <id>             replace rather than stack (where supported)
+#   --image <path>           icon/image (local paths only on Linux)
+#   --header <id=title>      wsl-notify-send only; ignored elsewhere
+#   --button <label=action>  wsl-notify-send only; ignored elsewhere (repeatable)
+#   --urgent                 persistent/critical notification
+#   --sound <name>           BurntToast sound name (Default, IM, Mail, Reminder,
+#                            SMS, Alarm, Looping.*); mapped to a freedesktop
+#                            sound hint on Linux, dropped for wsl-notify-send
+#   --config <file|->        JSON keys: title, body, scenario, group, image,
+#                            header, buttons. CLI values win over config.
+#
+# Exits non-zero if the notifier is missing or fails, so callers can fall back.
+
+set -euo pipefail
+
+NOTIFIER={{ get . "notifier" | default "notify-send" | quote }}
+
+scenario="" group="" image="" header="" sound="" config="" urgent=false
+buttons=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --*=*)  flag="${1%%=*}"; val="${1#*=}"; shift; set -- "$flag" "$val" "$@" ;;
+        --scenario) scenario="$2"; shift 2 ;;
+        --group)    group="$2";    shift 2 ;;
+        --image)    image="$2";    shift 2 ;;
+        --header)   header="$2";   shift 2 ;;
+        --button)   buttons+=("$2"); shift 2 ;;
+        --sound)    sound="$2";    shift 2 ;;
+        --config)   config="$2";   shift 2 ;;
+        --urgent)   urgent=true;   shift ;;
+        -h|--help)  sed -n '/^# Usage:/,/^# Exits/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --)         shift; break ;;
+        -*)         echo "notify: unknown flag: $1" >&2; exit 2 ;;
+        *)          break ;;
+    esac
+done
+
+title="${1:-}" body="${2:-}"
+
+if [[ -n "$config" ]]; then
+    command -v jq >/dev/null 2>&1 || { echo "notify: --config requires jq" >&2; exit 2; }
+    if [[ "$config" == "-" ]]; then cfg="$(cat)"; else cfg="$(cat -- "$config")"; fi
+    fld() { jq -r --arg k "$1" '.[$k] // empty' <<<"$cfg"; }
+    [[ -n "$title"    ]] || title="$(fld title)"
+    [[ -n "$body"     ]] || body="$(fld body)"
+    [[ -n "$scenario" ]] || scenario="$(fld scenario)"
+    [[ -n "$group"    ]] || group="$(fld group)"
+    [[ -n "$image"    ]] || image="$(fld image)"
+    [[ -n "$header"   ]] || header="$(fld header)"
+    mapfile -t cfg_buttons < <(jq -r '(.buttons // [])[]' <<<"$cfg")
+    buttons=("${cfg_buttons[@]}" "${buttons[@]}")
+fi
+
+[[ -n "$title" ]] || { echo "notify: a title is required" >&2; exit 2; }
+command -v "$NOTIFIER" >/dev/null 2>&1 || { echo "notify: $NOTIFIER not found on PATH" >&2; exit 1; }
+
+case "$NOTIFIER" in
+    wsl-notify-send)
+        # The shim has no --urgent/--sound; express urgency as a scenario.
+        [[ "$urgent" == true && -z "$scenario" ]] && scenario="alarm"
+        args=()
+        [[ -n "$scenario" ]] && args+=(--scenario "$scenario")
+        [[ -n "$group"    ]] && args+=(--group "$group")
+        [[ -n "$image"    ]] && args+=(--image "$image")
+        [[ -n "$header"   ]] && args+=(--header "$header")
+        for b in "${buttons[@]}"; do args+=(--button "$b"); done
+        exec wsl-notify-send "${args[@]}" -- "$title" ${body:+"$body"}
+        ;;
+    *)
+        # notify-send (libnotify) and compatible clients.
+        urgency="normal"
+        case "$scenario" in alarm|incomingCall) urgency="critical" ;; esac
+        [[ "$urgent" == true ]] && urgency="critical"
+        args=(-u "$urgency" -a "Claude Code")
+        [[ -n "$group" ]] && args+=(-h "string:x-canonical-private-synchronous:$group")
+        [[ -n "$image" && -e "$image" ]] && args+=(-i "$image")
+        if [[ -n "$sound" ]]; then
+            case "$sound" in
+                IM|SMS)              snd="message-new-instant" ;;
+                Mail)                snd="message-new-email" ;;
+                Reminder|Alarm*|Looping.*) snd="alarm-clock-elapsed" ;;
+                *)                   snd="message" ;;
+            esac
+            args+=(-h "string:sound-name:$snd")
+        fi
+        exec "$NOTIFIER" "${args[@]}" -- "$title" ${body:+"$body"}
+        ;;
+esac

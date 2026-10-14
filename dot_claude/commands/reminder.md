@@ -1,24 +1,24 @@
 ---
 name: reminder
-description: Schedule a Windows toast notification at a future time or on a recurring interval
+description: Schedule a desktop notification at a future time or on a recurring interval
 argument-hint: "<time> <message>  e.g. 10m \"Drink water\"  |  \"at 2pm\" \"Meeting prep\"  |  \"every 90m\" \"Screen break\""
 author: Michael Haynes
 scope: global
-tags: [notifications, wsl, chezmoi, systemd]
+tags: [notifications, chezmoi, systemd]
 timestamps:
   - action: created
     at: 2026-04-21T00:00:00-05:00
     actor: Michael Haynes
 comments:
   - "Origin: /reminder slash command + BurntToast upgrade to wsl-notify-send."
-  - "Backend: systemd transient timers (--on-active for relative, --on-calendar for absolute, background loop for --every). Notification delivery via wsl-notify-send shim → BurntToast (preferred) or wsl-notify-send.exe (fallback)."
+  - "Backend: systemd transient timers (--on-active for relative, --on-calendar for absolute, background loop for --every). Notification delivery via ~/.claude/scripts/notify, which renders per host: notify-send on Linux, the wsl-notify-send shim (BurntToast) under WSL."
   - "Recurring reminders (--every) run as persistent systemd units; stop with /reminder --stop <unit> or reminder --stop <unit> from a terminal."
 related: [/start, /stop, /status]
 ---
 
-# /reminder — Schedule a Windows toast notification
+# /reminder — Schedule a desktop notification
 
-Schedules a toast notification using a systemd transient timer and delivers it via `wsl-notify-send` (BurntToast when installed).
+Schedules a desktop notification using a systemd transient timer and delivers it via `~/.claude/scripts/notify` (notify-send on Linux; the wsl-notify-send shim under WSL).
 
 Arguments: `<time-or-cadence> <message> [--scenario ...] [--group ...] [--button ...]`
 
@@ -35,7 +35,7 @@ Arguments: `<time-or-cadence> <message> [--scenario ...] [--group ...] [--button
 Optional notify flags (appended after the message):
 - `--scenario reminder|alarm|incomingCall|default`
 - `--group <id>` — replacement group; same id replaces rather than stacks
-- `--button "label=action"` — action button (dismiss | snooze | url)
+- `--button "label=action"` — action button (dismiss | snooze | url); WSL only, ignored by notify-send
 
 ## Instructions
 
@@ -63,8 +63,8 @@ Optional notify flags (appended after the message):
    Use the message as the title. If the message is long enough to split naturally (subject + detail), put the subject as title and the detail as body.
 
    If `reminder` exits non-zero, surface the error verbatim. Common causes:
-   - `systemd-run` not available — WSL2 with systemd disabled; tell the user to enable systemd in `/etc/wsl.conf`.
-   - `wsl-notify-send` not found — shim not deployed; suggest `chezmoi apply`.
+   - `systemd-run` not available — no systemd user session (under WSL2: enable systemd in `/etc/wsl.conf`).
+   - `~/.claude/scripts/notify` not found — not deployed yet; suggest `chezmoi apply`.
 
 5. **Confirm.** Print a one-line confirmation echoing back what was scheduled and when:
    ```

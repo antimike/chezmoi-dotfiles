@@ -39,8 +39,8 @@ pid_file="$STATE_DIR/nag-${session_id:-$AUTOSESSION_SLUG}.pid"
 
 # Fire the initial (soft) toast.
 # Sound: prefer IM (soft chime); fall back to Reminder if shim's ValidSet is narrower.
-if ! wsl-notify-send --sound=IM "Claude Code [$AUTOSESSION_SLUG]: $message" 2>/dev/null; then
-  wsl-notify-send --sound=Reminder "Claude Code [$AUTOSESSION_SLUG]: $message" 2>/dev/null || true
+if ! "$HOME/.claude/scripts/notify" --sound=IM "Claude Code [$AUTOSESSION_SLUG]: $message" 2>/dev/null; then
+  "$HOME/.claude/scripts/notify" --sound=Reminder "Claude Code [$AUTOSESSION_SLUG]: $message" 2>/dev/null || true
 fi
 
 # If a nag-repeater is already running for this session, leave it alone.

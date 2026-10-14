@@ -312,8 +312,8 @@ Two categories, driven by session-scoped hooks + direct invocation. The active `
 Fired automatically by the session's `Notification` hook when Claude Code needs user input (tool approval, idle prompt). Because hooks are session-scoped (the hook lives in `<session-dir>/.claude/settings.local.json`), the dispatcher fires unconditionally — no marker-gating.
 
 Characteristics:
-- Soft sound (`IM` via BurntToast v1.1.0 `-Sound`; falls back to `Reminder` if the shim's ValidSet is narrower)
-- Non-urgent; ephemeral on-screen; migrates to Action Center
+- Soft sound (`IM`; `~/.claude/scripts/notify` maps it to a freedesktop sound hint on Linux; the WSL shim has no sound flag)
+- Non-urgent; ephemeral on-screen (notification center / Action Center)
 - **Re-nag on 60s cadence** while blocked, via `scripts/lib/nag-repeater.sh` (detached)
 - Hard cap: 30 re-nag iterations (30 minutes)
 - Nag killed by `PreToolUse` hook's `scripts/lib/preuse-cancel-nag.sh` (= user responded; a tool call is about to proceed)
@@ -323,11 +323,11 @@ Characteristics:
 Fired directly by the coordinator when it writes a decision-log entry with `blocking: true`:
 
 ```sh
-wsl-notify-send --urgent --sound=Alarm "Claude Code [$AUTOSESSION_SLUG]: Decision needed: <short title>"
+~/.claude/scripts/notify --urgent --sound=Alarm "Claude Code [$AUTOSESSION_SLUG]: Decision needed: <short title>"
 ```
 
 Characteristics:
-- Urgent BurntToast (`-Urgent`) → persistent on-screen until dismissed
+- Urgent (`notify-send -u critical`; `--scenario alarm` under WSL) → persistent on-screen until dismissed
 - Alarm sound
 - Single fire, no re-nag (persistence makes re-nag redundant)
 

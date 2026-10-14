@@ -30,9 +30,9 @@ for i in $(seq 1 "$MAX_ITERATIONS"); do
   fi
 
   prefix="Still waiting ($((i * INTERVAL_SECONDS / 60))m)"
-  if ! wsl-notify-send --sound=IM "Claude Code [$SLUG]: $prefix — $MESSAGE" 2>/dev/null; then
-    wsl-notify-send --sound=Reminder "Claude Code [$SLUG]: $prefix — $MESSAGE" 2>/dev/null || true
+  if ! "$HOME/.claude/scripts/notify" --sound=IM "Claude Code [$SLUG]: $prefix — $MESSAGE" 2>/dev/null; then
+    "$HOME/.claude/scripts/notify" --sound=Reminder "Claude Code [$SLUG]: $prefix — $MESSAGE" 2>/dev/null || true
   fi
 done
 
-wsl-notify-send --sound=Reminder "Claude Code [$SLUG]: nag cap reached; waiting silently from here." 2>/dev/null || true
+"$HOME/.claude/scripts/notify" --sound=Reminder "Claude Code [$SLUG]: nag cap reached; waiting silently from here." 2>/dev/null || true

@@ -10,15 +10,15 @@
 #                     re-nag on a fixed cadence until cancelled by next PreToolUse.
 #   decision_block  — coordinator logged a blocking decision (decision.md entry
 #                     with `blocking: true`). Fired directly by the coordinator
-#                     via `wsl-notify-send --urgent`. Urgent/persistent. No re-nag.
+#                     via `~/.claude/scripts/notify --urgent`. Urgent/persistent. No re-nag.
 #   compaction      — SessionStart:compact hook fired; coordinator is rehydrating
 #                     context. Informational.
 #   session_end     — coordinator ran shutdown successfully. Informational.
 #
-# Sound values must be from the wsl-notify-send shim's ValidSet. As of 2026-04-21,
-# BurntToast v1.1.0 exposes: Default, IM, Mail, Reminder, SMS, Alarm, Looping.Alarm,
-# Looping.Alarm2..10, Looping.Call, Looping.Call2..10. The shim's current ValidSet
-# is narrower; see ~/.local/bin/wsl-notify-send.
+# Sound values use BurntToast names: Default, IM, Mail, Reminder, SMS, Alarm,
+# Looping.Alarm*, Looping.Call*. ~/.claude/scripts/notify maps them to freedesktop
+# sound hints on Linux (IM/SMS → message-new-instant, Mail → message-new-email,
+# Reminder/Alarm*/Looping.* → alarm-clock-elapsed); the WSL shim drops them.
 
 notifications:
 

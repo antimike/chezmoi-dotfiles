@@ -1,7 +1,7 @@
 ---
 name: work-queue
 description: Iterate a bd-track queue scope — peek the head bead, decide if it is autonomously executable, rotate transient blockers to the tail and park operator-required beads, execute + verify + close executable ones (bd-track-tracked), and repeat until the scope is empty, all remaining beads need an operator, or the queue deadlocks. Wraps `bd-track queue` primitives + `/start`/`/stop`. TRIGGER on `/work-queue`, "work the <scope> queue", "run the autonomous pool".
-argument-hint: "[<scope>] [--full-auto] [--worktrees] [--max=<n>] [--notify=wsl|ntfy|none] [--ntfy-topic=<t>] [--operator-status=<status>] [--done-status=<status>] [--dry-run]"
+argument-hint: "[<scope>] [--full-auto] [--worktrees] [--max=<n>] [--notify=desktop|ntfy|none] [--ntfy-topic=<t>] [--operator-status=<status>] [--done-status=<status>] [--dry-run]"
 author: Michael Haynes
 scope: global
 tags: [beads, queue, autonomous, bd-track, notifications]
@@ -26,7 +26,7 @@ Work through an ordered `.beads/queue.yaml` scope: execute the beads that can be
 | positional `<scope>` | `$BD_TIMEW_SCOPE` then `default` | Which queue scope to work. |
 | `--full-auto` | off | Remove the per-bead checkpoint: execute → verify → commit → close → pop → stop → advance with no pause. Without it, pause for confirmation before each `bd close`. |
 | `--max=<n>` | unlimited | Stop after `n` successful bead closes (safety cap for unattended runs). |
-| `--notify=<wsl\|ntfy\|none>` | `wsl` | Per-event notification backend. `none` disables event toasts. |
+| `--notify=<desktop\|ntfy\|none>` | `desktop` | Per-event notification backend (`wsl` accepted as an alias for `desktop`). `none` disables event notifications. |
 | `--ntfy-topic=<t>` | — | Required when `--notify=ntfy`. |
 | `--operator-status=<status>` | `auto` | Status set on a parked, operator-required bead. `auto` resolves per Step 2b. |
 | `--done-status=<status>` | `auto` | Status a finished bead lands in. `auto` resolves per Step 2b (prefer a review status, else hard close). |
@@ -168,7 +168,7 @@ Per-event toasts. Title/body by event:
 | `run-complete` | `work-queue: <scope> done` | `closed N, parked M, remaining K — <stop reason>` |
 
 Dispatch by backend:
-- `wsl`: `wsl-notify-send "<title>" "<body>"`
+- `desktop` (or `wsl`): `~/.claude/scripts/notify "<title>" "<body>"`
 - `ntfy`: `curl -s -H "Title: <title>" -d "<body>" "https://ntfy.sh/<topic>"`
 - `none`: skip.
 

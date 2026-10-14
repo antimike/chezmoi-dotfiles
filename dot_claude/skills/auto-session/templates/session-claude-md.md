@@ -66,7 +66,7 @@ detail):
 - **io_block:** fired automatically by the session's Notification hook. Soft sound.
   Re-nags every 60s up to 30 iterations until you resume.
 - **decision_block:** fired by you directly when logging a blocking decision:
-  `wsl-notify-send --urgent --sound=Alarm "Decision needed: <short title>"`.
+  `~/.claude/scripts/notify --urgent --sound=Alarm "Decision needed: <short title>"`.
   Persistent on-screen. Halt after firing; resume only when the user has written
   `Resolution:` into the decision-log entry.
 

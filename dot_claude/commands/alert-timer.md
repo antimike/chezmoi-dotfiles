@@ -1,10 +1,10 @@
 ---
 name: alert-timer
-description: Timer loop with conditional out-of-session notifications via wsl-notify-send or ntfy.sh — extends /reminder for when the user may have stepped away
-argument-hint: "[<cadence>] [<message>] [--start=<time>] [--stop-at=<time>] [--stop-when=<cond>]... [--action=<prompt>] [--result=<spec>] [--alert-when=<cond>]... [--alert-message=<text>] [--backend=wsl|ntfy|<path>] [--topic=<ntfy-topic>] [--once]"
+description: Timer loop with conditional out-of-session notifications via desktop notification or ntfy.sh — extends /reminder for when the user may have stepped away
+argument-hint: "[<cadence>] [<message>] [--start=<time>] [--stop-at=<time>] [--stop-when=<cond>]... [--action=<prompt>] [--result=<spec>] [--alert-when=<cond>]... [--alert-message=<text>] [--backend=desktop|ntfy|<path>] [--topic=<ntfy-topic>] [--once]"
 author: Michael Haynes
 scope: global
-tags: [notifications, timer, loop, wsl, ntfy, monitoring]
+tags: [notifications, timer, loop, ntfy, monitoring]
 timestamps:
   - action: created
     at: "2026-04-23T00:00:00-05:00"
@@ -14,7 +14,7 @@ comments:
     Generalizes the M365 watch-loop pattern (ScheduleWakeup + conditional notification) into a
     reusable command."
   - "Motivation: /reminder covers 'user is watching the terminal'; /alert-timer covers 'user is
-    in a different window' (wsl-notify-send toast) and 'user stepped away' (ntfy.sh push to phone).
+    in a different window' (desktop notification) and 'user stepped away' (ntfy.sh push to phone).
     Also supports loop-action-based conditional alerting (check X, alert if Y)."
   - "Projected use: 'alert me when the build finishes', 'every 15m check the queue depth and notify
     me if > 100', 'remind me at 5pm via phone'. Simple time+message requests that look like /reminder
@@ -44,7 +44,7 @@ Extract from `$ARGUMENTS`:
 | `--result=<spec>` | `Result(<spec>)` | How to extract a scalar from the action output for use in alert conditions |
 | `--alert-when=<cond>` | `AlertWhen(<cond>)` | Condition that triggers the notification; multiple = OR; omit for "always alert" |
 | `--alert-message=<text>` | | Fixed notification body; if absent, Claude composes from iteration context |
-| `--backend=<id>` | | `wsl`, `ntfy`, or an absolute path to an executable |
+| `--backend=<id>` | | `desktop` (`wsl` accepted as an alias), `ntfy`, or an absolute path to an executable |
 | `--topic=<topic>` | | ntfy.sh topic name; required when backend is `ntfy` |
 | `--once` / `--onetime` | | Stop the loop after the first alert fires |
 | `--detached` | `--background`, `--mode=detached` | Run as a zero-token background process via the `poll_until` engine instead of ScheduleWakeup. Mechanical (shell-decidable) conditions only — see Step 4c. |
@@ -75,7 +75,7 @@ Ask:
 > This looks like a straightforward timer. Will you be watching this Claude session while
 > the timer runs, or might you step away?
 >
-> - **Watching** → `/reminder` is sufficient (Windows toast, no loop needed).
+> - **Watching** → `/reminder` is sufficient (desktop notification, no loop needed).
 >   I'll translate this for you.
 > - **Stepping away** → continue with `/alert-timer` to push via `<backend>`.
 
@@ -86,7 +86,7 @@ and stop. Do not proceed with the loop setup.
 
 If `--backend` was not specified, infer:
 - If the request mentions phone, mobile, push, or away → `ntfy`
-- Otherwise → `wsl` (visible+audible toast; the same channel as `/reminder`)
+- Otherwise → `desktop` (visible desktop notification; the same channel as `/reminder`)
 
 If `ntfy` is selected (inferred or explicit) and `--topic` was not provided, ask for the topic
 before continuing.
@@ -101,12 +101,12 @@ confirmation **before starting the loop**. Do not start any ScheduleWakeup until
 
 ### Draft format by backend
 
-**`wsl` (wsl-notify-send → BurntToast):**
+**`desktop` (`~/.claude/scripts/notify` → notify-send, or wsl-notify-send under WSL):**
 ```
 Title:    <title>
 Body:     <body>
 Scenario: reminder   (or alarm if cadence-less one-shot)
-Command:  wsl-notify-send -t "<title>" "<body>"
+Command:  ~/.claude/scripts/notify --scenario reminder "<title>" "<body>"
 ```
 
 **`ntfy` (ntfy.sh HTTP push):**
@@ -179,7 +179,7 @@ $HOME/.claude/scripts/poll_until.py \
   --timeout <stop_at_seconds or default 3600> \
   --notify-title "<confirmed title>" \
   --notify-body "<confirmed body>" \
-  --backend <wsl|ntfy|path> \
+  --backend <desktop|ntfy|path> \
   [--ntfy-topic <topic>]
 ```
 
@@ -300,7 +300,7 @@ Call ScheduleWakeup:
   --_result="<spec or empty>" \
   --_alert_when="<cond1>" --_alert_when="<cond2>" \
   --_alert_message="<text or empty>" \
-  --_backend="<wsl|ntfy|path>" \
+  --_backend="<desktop|ntfy|path>" \
   --_topic="<topic or empty>" \
   --_once=<true|false> \
   --_title="<confirmed title>" \

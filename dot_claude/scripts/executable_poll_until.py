@@ -98,8 +98,9 @@ def get_cli_arguments() -> argparse.Namespace:
         help="Notification title if the timeout is reached (default: derived).",
     )
     parser.add_argument(
-        "--backend", default="wsl",
-        help="Notification backend: 'wsl', 'ntfy', or an absolute path to an "
+        "--backend", default="desktop",
+        help="Notification backend: 'desktop' (~/.claude/scripts/notify; 'wsl' "
+        "is accepted as an alias), 'ntfy', or an absolute path to an "
         "executable called as `<path> <title> <body>`.",
     )
     parser.add_argument(
@@ -162,8 +163,8 @@ def run_check(cmd: str, timeout: int) -> tuple[str, int]:
 
 
 def notify(backend: str, title: str, body: str, ntfy_topic: str | None) -> None:
-    if backend == "wsl":
-        cmd = [os.path.expanduser("~/.local/bin/wsl-notify-send"), title, body]
+    if backend in ("desktop", "wsl"):
+        cmd = [os.path.expanduser("~/.claude/scripts/notify"), title, body]
     elif backend == "ntfy":
         if not ntfy_topic:
             sys.exit("poll_until: --backend ntfy requires --ntfy-topic")

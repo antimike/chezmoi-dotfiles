@@ -45,8 +45,12 @@ cleanup_cmd='sid=$(jq -r '\''.session_id // empty'\''); [ -n "$sid" ] && rm -f "
 # /alert-timer Step 4 is the safety gate.
 poll_until_allow="Bash($HOME/.claude/scripts/poll_until.py:*)"
 
-# Desktop notifier for this host (chezmoi data `notifier`; notify-send by default).
+# Desktop notifier for this host (chezmoi data `notifier`; notify-send by default),
+# plus the host-portable adapter Claude tooling calls (both path spellings, since
+# prefix matching is literal).
 notifier_allow="Bash({{ $notifier }} *)"
+notify_allow="Bash($HOME/.claude/scripts/notify *)"
+notify_allow_tilde="Bash(~/.claude/scripts/notify *)"
 
 printf '%s\n' "$input" | jq \
   --arg track_cmd        "$track_cmd" \
@@ -54,6 +58,8 @@ printf '%s\n' "$input" | jq \
   --arg cleanup_cmd      "$cleanup_cmd" \
   --arg poll_until_allow "$poll_until_allow" \
   --arg notifier_allow   "$notifier_allow" \
+  --arg notify_allow     "$notify_allow" \
+  --arg notify_allow_tilde "$notify_allow_tilde" \
   '.hooks = {
      "SessionEnd": [
        {"hooks": [{"type": "command", "command": $track_cmd}]},
@@ -66,6 +72,8 @@ printf '%s\n' "$input" | jq \
    .permissions.allow = [
      "Bash(curl -H * ntfy.sh/*)",
      $notifier_allow,
+     $notify_allow,
+     $notify_allow_tilde,
      $poll_until_allow
    ] |
    # Transcripts are swept after cleanupPeriodDays (default 30); keep history.
