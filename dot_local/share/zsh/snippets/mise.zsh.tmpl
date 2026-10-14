@@ -1,5 +1,8 @@
 {{if lookPath "mise" -}}
-{{output "sh" "-c" (includeTemplate "safe-output.sh") "sh" "mise" "activate" "zsh"}}
+# Evaluated at shell startup rather than rendered by chezmoi: `mise activate`
+# output embeds a snapshot of $PATH (and session-teardown code when generated
+# inside an already-activated shell), so a stored copy goes stale and pins PATH.
+eval "$(mise activate zsh)"
 
 alias asdf=mise
 alias rtx=mise
