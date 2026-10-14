@@ -1,0 +1,77 @@
+#!/bin/sh
+# chezmoi modify_ script: surgically set managed keys in ~/.claude/settings.json.
+# Claude Code mutates this file at runtime (model, effortLevel, plugin state,
+# etc.), so chezmoi does not own the whole file.
+#
+# Always overwritten with the values below:
+#   hooks, permissions.allow, cleanupPeriodDays
+# Set only if absent (defaults for a fresh machine; /config and /model
+# changes survive later applies):
+#   model, effortLevel, editorMode, autoCompactEnabled, awaySummaryEnabled
+# Not touched: enabledPlugins / extraKnownMarketplaces. claude-mem is on hold
+# pending re-evaluation; re-add it here if it stays.
+#
+# Guards:
+#   1. jq must be on PATH; if missing, pass stdin through unchanged.
+#   2. Empty stdin → emit '{}' as a safe bootstrap base.
+{{- $notifier := get . "notifier" | default "notify-send" }}
+
+set -eu
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "modify_settings.json: jq not on PATH; leaving ~/.claude/settings.json unchanged" >&2
+  exec cat
+fi
+
+input="$(cat)"
+[ -z "$input" ] && input='{}'
+
+# SessionEnd: warn if this session still has an open bd-track interval.
+# bd-track reports via log output (exit status is always 0), so match on its
+# "Tracking:" line. Silent no-op outside a beads project or without bd-track.
+track_cmd='command -v bd-track >/dev/null 2>&1 || exit 0; sid=$(jq -r '\''.session_id // empty'\''); bd-track status ${sid:+--session-id "$sid"} 2>&1 | grep -q "Tracking:" && echo "⚠ bd-track interval still open for this session — /stop if done" || true'
+
+# Notification hook: sentinel-aware desktop notification (per-session opt-in).
+notify_cmd="$HOME/.claude/scripts/hooks/on-notification.sh"
+
+# SessionEnd cleanup: remove the per-session notification sentinel if present.
+# Reads the hook event JSON on stdin to extract session_id; safe no-op if absent.
+cleanup_cmd='sid=$(jq -r '\''.session_id // empty'\''); [ -n "$sid" ] && rm -f "$HOME/.local/state/claude/notifications/$sid.jq" || true'
+
+# poll_until engine: allow the detached poll-and-notify loop (and its internal
+# read-only check subprocess) to launch with no permission prompt. Scoped to the
+# engine path only — NOT a blanket grant on snow/bd/etc., so unsupervised loops
+# can't run arbitrary mutating commands. The one-time setup confirmation in
+# /alert-timer Step 4 is the safety gate.
+poll_until_allow="Bash($HOME/.claude/scripts/poll_until.py:*)"
+
+# Desktop notifier for this host (chezmoi data `notifier`; notify-send by default).
+notifier_allow="Bash({{ $notifier }} *)"
+
+printf '%s\n' "$input" | jq \
+  --arg track_cmd        "$track_cmd" \
+  --arg notify_cmd       "$notify_cmd" \
+  --arg cleanup_cmd      "$cleanup_cmd" \
+  --arg poll_until_allow "$poll_until_allow" \
+  --arg notifier_allow   "$notifier_allow" \
+  '.hooks = {
+     "SessionEnd": [
+       {"hooks": [{"type": "command", "command": $track_cmd}]},
+       {"hooks": [{"type": "command", "command": $cleanup_cmd}]}
+     ],
+     "Notification": [
+       {"hooks": [{"type": "command", "command": $notify_cmd}]}
+     ]
+   } |
+   .permissions.allow = [
+     "Bash(curl -H * ntfy.sh/*)",
+     $notifier_allow,
+     $poll_until_allow
+   ] |
+   # Transcripts are swept after cleanupPeriodDays (default 30); keep history.
+   .cleanupPeriodDays = 36500 |
+   .model              //= "opusplan" |
+   .effortLevel        //= "medium" |
+   .editorMode         //= "vim" |
+   .autoCompactEnabled //= false |
+   .awaySummaryEnabled //= false'
