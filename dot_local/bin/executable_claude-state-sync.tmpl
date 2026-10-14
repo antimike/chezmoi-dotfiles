@@ -1,0 +1,35 @@
+{{- if lookPath "git" -}}
+#!/usr/bin/env bash
+# Commit and push Claude auto-memory (~/.claude/projects, memory/ dirs only).
+# Idempotent; safe to run when there is nothing to do or no remote yet.
+# Run by claude-state-sync.timer.
+set -euo pipefail
+
+repo="${CLAUDE_STATE_DIR:-$HOME/.claude/projects}"
+notify="$HOME/.claude/scripts/notify"
+
+fail() {
+    echo "claude-state-sync: $*" >&2
+    [ -x "$notify" ] && "$notify" --urgent "claude-state-sync failed" "$*" || true
+    exit 1
+}
+
+[ -d "$repo/.git" ] || { echo "claude-state-sync: $repo is not a git repo; skipping"; exit 0; }
+cd "$repo"
+
+git add -A
+if ! git diff --cached --quiet; then
+    # Memory files can quote anything: refuse to commit secrets.
+    command -v gitleaks >/dev/null 2>&1 || fail "gitleaks not installed; refusing to commit"
+    gitleaks protect --staged --redact --no-banner || fail "gitleaks found secrets in staged memory files; commit aborted"
+    git commit -q -m "chore(memory): sync $(hostname) $(date -u +%Y-%m-%dT%H:%MZ)" \
+        || fail "git commit failed"
+fi
+
+if git remote get-url origin >/dev/null 2>&1; then
+    git pull --rebase --autostash -q || fail "git pull --rebase failed; resolve in $repo"
+    git push -q origin HEAD || fail "git push failed"
+else
+    echo "claude-state-sync: no origin remote; committed locally only"
+fi
+{{- end }}
