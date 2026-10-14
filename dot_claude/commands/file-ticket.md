@@ -27,7 +27,7 @@ The project registry lives at `~/.claude/file-ticket-registry.yaml`. Shape:
 
 ```yaml
 projects:
-  bd-track: ~/.local/src/bd-timew          # the bd-track dev repo
+  bd-track: ~/.local/src/bd-track          # the bd-track dev repo
   chezmoi: ~/.local/share/chezmoi          # dotfiles
   myproj: ~/Source/myproj                  # add your projects here
 ```

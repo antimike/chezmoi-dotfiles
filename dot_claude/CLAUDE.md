@@ -65,10 +65,6 @@ Before invoking the Agent tool, use the `spawn-agents` skill — predict tools e
 - When a design decision is significant enough to affect the project's direction, flag it and suggest adding it to the project's decision log
 - Do not soften feedback to be polite; clarity matters more than comfort
 
-### bd-timew → bd-track migration note (2026-06, remove after 2026-09)
-
-`bd-timew` is a deprecated alias for `bd-track` (v0.5.0+, Timewarrior backend removed, JSONL event log only). Update references in new/edited files; the alias's stderr warning is the transition signal for legacy scripts — do not add a blocking hook.
-
 ### Beads (bd) Performance
 
 - **Slow `bd` commands** (5-30s): caused by journal bloat or commit history growth in the embedded Dolt store. Fix: `bd compact --days 7 --force && bd gc --skip-decay --force`. Nuclear reset: `bd flatten --force && bd gc --skip-decay --force`. See `~/.claude/references/beads-performance.md`.

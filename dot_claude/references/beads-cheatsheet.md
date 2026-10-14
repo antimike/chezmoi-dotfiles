@@ -28,7 +28,7 @@ Comprehensive command reference. The short "Beads (bd) Gotchas" section in `~/.c
 - `bd defer <id> [--until <date>]` -- hide from `bd ready` until the specified date (or indefinitely if no `--until`). Date formats: `+1d`, `+2w`, `tomorrow`, `next monday`, `2026-06-01`.
 - `bd undefer <id>` -- restore a deferred bead to `open`.
 - **Gotcha**: `bd defer` is distinct from `bd update --status=deferred` -- the former is a richer "snooze" mechanism with a wake date; the latter just sets the status string. Prefer `defer` unless you specifically need the status value for filtering.
-- **Gotcha**: `bd-timew queue clean` removes both `closed` AND `deferred` beads from queues. If you want a paused bead to survive auto-clean while waiting on something, use status `blocked` instead of `deferred`. (See bd memory `beads-dir-envvar-contamination` for the unrelated env-var issue.)
+- **Gotcha**: `bd-track queue clean` removes both `closed` AND `deferred` beads from queues. If you want a paused bead to survive auto-clean while waiting on something, use status `blocked` instead of `deferred`. (See bd memory `beads-dir-envvar-contamination` for the unrelated env-var issue.)
 
 ### Memory store
 
@@ -65,7 +65,7 @@ Categories (workflow stages):
 
 Status name regex: `[a-z][a-z0-9_-]*` (lowercase only, letter-first, hyphens and underscores OK, no spaces, no caps). Hierarchical-feeling names require hyphens: `review-local:wip`, `review-pr:wip` -- the colon does NOT separate sub-names.
 
-bd-timew sidecar mirroring: `~/.config/bd-timew/repos.yaml` has `repos[].statuses` as a free-text array. Keep it aligned with bd's `status.custom` (minus the `:category` suffix) so `bd-timew` recognizes the same status names.
+bd-track sidecar mirroring: `~/.config/bd-track/repos.yaml` has `repos[].statuses` as a free-text array. Keep it aligned with bd's `status.custom` (minus the `:category` suffix) so `bd-timew` recognizes the same status names.
 
 ## Dependency edge type semantics
 
@@ -146,4 +146,4 @@ This reference is intended to evolve. When non-obvious bd functionality requires
 
 If a finding is purely about one project (e.g., one project's specific label taxonomy), put it in that project's CLAUDE.md or a project-local memory file instead. Global reference is for multi-project conventions.
 
-Source of truth for this file: `~/.local/share/chezmoi/home/dot_claude/references/beads-cheatsheet.md`. Edit there, then `chezmoi apply` or copy to `~/.claude/references/beads-cheatsheet.md`.
+Source of truth for this file: `~/.local/share/chezmoi/dot_claude/references/beads-cheatsheet.md`. Edit there, then `chezmoi apply` or copy to `~/.claude/references/beads-cheatsheet.md`.

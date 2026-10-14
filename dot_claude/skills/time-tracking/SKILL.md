@@ -84,7 +84,7 @@ Query patterns: `bd list --label-pattern='est-h:*'` etc.
 
 ## References
 
-- `bd-track` source: `~/.local/bin/bd-track` (Chezmoi: `home/dot_local/bin/executable_bd-timew.tmpl` until ive lands)
+- `bd-track` source: its own repo (`~/.local/src/bd-track`), installed with pipx; the CLI lands at `~/.local/bin/bd-track`
 - Sidecar schema example: `<project>/.beads/bd-track.yaml`
 - Full convention + rationale: auto-memory `feedback-time-tracking.md`
 - Label taxonomy (Option B prefix-namespaced): auto-memory `reference-beads-label-taxonomy.md`

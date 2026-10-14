@@ -42,7 +42,7 @@ Apply these to all Python utility and automation scripts unless the user has exp
 
 Every script with CLI args uses a `get_cli_arguments()` function, a combined `HelpFormatter`, and always exposes `--loglevel`. Avoid `click`, `typer`, and other heavy CLI frameworks — argparse is stdlib, zero-install, zero-surprise.
 
-**Use the Rich-powered formatter by default.** Inherit from `rich_argparse.RawDescriptionRichHelpFormatter` so `--help` gets colorized, readable styling, then mix in `argparse.ArgumentDefaultsHelpFormatter` to keep defaults shown. `rich` is already the logging dependency (see below), and `rich-argparse` is a small companion. Add both via `uv add rich rich-argparse`. Mirror the `~/.local/src/bd-timew/src/bd_timew/util.py` setup.
+**Use the Rich-powered formatter by default.** Inherit from `rich_argparse.RawDescriptionRichHelpFormatter` so `--help` gets colorized, readable styling, then mix in `argparse.ArgumentDefaultsHelpFormatter` to keep defaults shown. `rich` is already the logging dependency (see below), and `rich-argparse` is a small companion. Add both via `uv add rich rich-argparse`. Mirror the `~/.local/src/bd-track/src/bd_track/util.py` setup.
 
 ```python
 import argparse
@@ -185,7 +185,7 @@ Regex is fine for genuinely unstructured text or cheap one-off extraction. For a
 
 ## Reference exemplars
 
-- **`~/.local/bin/bd-track`** — Beads time-tracking CLI. Demonstrates: argparse subcommands with required `dest`, a `run()` subprocess wrapper, YAML config resolution with `safe_load`, clean `sys.exit("prog: msg")` errors, dry-run variant (`resolve`). Source in Chezmoi: `home/dot_local/bin/executable_bd-timew.tmpl` (to be renamed to `executable_bd-track.tmpl` when bead bd-timew-ive lands).
+- **`~/.local/bin/bd-track`** — Beads time-tracking CLI. Demonstrates: argparse subcommands with required `dest`, a `run()` subprocess wrapper, YAML config resolution with `safe_load`, clean `sys.exit("prog: msg")` errors, dry-run variant (`resolve`). Source: its own repo (`~/.local/src/bd-track`), installed with pipx.
 - **A single-command Snowflake utility from a past client project** (not public). Demonstrates: `HelpFormatter` inheriting from `RawDescription` + `ArgumentDefaults`, `description=__doc__` so the module docstring becomes the `--help` preamble, library-native Snowflake config via `connection_name=`, `RichHandler` for log output, `sqlglot` for SQL parsing, mutually exclusive connection arg groups.
 
 ## Source of truth

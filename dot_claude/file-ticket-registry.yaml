@@ -5,4 +5,4 @@
 # See: ~/.claude/commands/file-ticket.md
 
 projects:
-  bd-track: ~/.local/src/bd-timew     # bd-track dev repo (bd issue prefix: bd-timew-)
+  bd-track: ~/.local/src/bd-track     # bd-track dev repo (bd issue prefix: bd-timew-)

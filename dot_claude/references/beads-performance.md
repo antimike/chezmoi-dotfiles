@@ -72,28 +72,28 @@ bd config set no-push true             # suppress Dolt SQL auto-push (git-level 
 
 **`no-push = true`**: suppresses the Dolt SQL server's auto-push after commits. If a Dolt SQL remote is misconfigured (wrong repo), this also prevents spurious push errors. The outer `.beads/` git repo handles backup sync to the configured `sync.remote`.
 
-## Automated maintenance (systemd timer + bd-timew)
+## Automated maintenance (systemd timer + bd-track)
 
-`bd-timew` (at `~/.local/bin/bd-timew`) encapsulates the full maintenance workflow.
+`bd-track` (at `~/.local/bin/bd-track`) encapsulates the full maintenance workflow.
 
 **One-time project setup:**
 ```bash
 # In the project directory:
-bd-timew init-project --no-git-ops --install-systemd
+bd-track init-project --no-git-ops --install-systemd
 # --no-git-ops: recommended when .beads/ is a nested git repo
 # --install-systemd: creates a single shared systemd user timer (idempotent)
-# Additional projects: bd-timew init-project --path ~/Source/Other --days 14
+# Additional projects: bd-track init-project --path ~/Source/Other --days 14
 ```
 
-This writes `~/.config/bd-timew/repos.yaml` (multi-project registry) and installs
-`~/.config/systemd/user/bd-timew-cleanup.{service,timer}` if not already present.
+This writes `~/.config/bd-track/repos.yaml` (multi-project registry) and installs
+`~/.config/systemd/user/bd-track-cleanup.{service,timer}` if not already present.
 The timer fires daily (`Persistent=true` catches up missed runs on WSL2 wake).
 
 **Manual cleanup:**
 ```bash
-bd-timew cleanup               # defaults: --days 7
-bd-timew cleanup --days 14 --project-dir ~/Source/Other
-bd-timew cleanup --skip-commit # skip dolt commit if working set is clean
+bd-track cleanup               # defaults: --days 7
+bd-track cleanup --days 14 --project-dir ~/Source/Other
+bd-track cleanup --skip-commit # skip dolt commit if working set is clean
 ```
 
 **What cleanup does:**
@@ -101,9 +101,9 @@ bd-timew cleanup --skip-commit # skip dolt commit if working set is clean
 2. `bd compact --days N --force` — squashes commits older than N days; keeps oldgen small
 3. `bd gc --skip-decay --force` — compacts the journal into `.darc` chunk tables
 
-Cleanup logs go to `~/.cache/bd-timew/cleanup.log` (1MB rotating, 3 backups).
+Cleanup logs go to `~/.cache/bd-track/cleanup.log` (1MB rotating, 3 backups).
 
-**Per-repo cadence config** (`~/.config/bd-timew/repos.yaml`):
+**Per-repo cadence config** (`~/.config/bd-track/repos.yaml`):
 ```yaml
 global:
   check_interval: daily   # systemd OnCalendar value
@@ -114,7 +114,7 @@ repos:
 ```
 
 The timer fires at `check_interval`; per-repo cadence is enforced by checking
-`~/.cache/bd-timew/cleanup-state.json` (last_run timestamps) in the service script.
+`~/.cache/bd-track/cleanup-state.json` (last_run timestamps) in the service script.
 
 ## Emergency recovery (already slow)
 
