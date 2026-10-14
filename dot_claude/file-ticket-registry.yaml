@@ -1,0 +1,8 @@
+# /file-ticket project registry
+# Maps short project names to their root dirs.
+# Used by /file-ticket to run `bd create` against another project without
+# cd-ing into it or tripping BEADS_DIR contamination.
+# See: ~/.claude/commands/file-ticket.md
+
+projects:
+  bd-track: ~/.local/src/bd-timew     # bd-track dev repo (bd issue prefix: bd-timew-)
