@@ -1,0 +1,82 @@
+---
+name: stop
+description: Stop the current bd-track interval, optionally transitioning the active bead to a target status
+argument-hint: "[--status <state>]"
+author: Michael Haynes
+scope: global
+tags: [time-tracking, bd-track]
+timestamps:
+  - action: created
+    at: 2026-04-20T00:35:06-05:00
+    actor: Michael Haynes
+  - action: updated
+    at: 2026-04-21T12:30:00-05:00
+    actor: Michael Haynes
+    note: "Added argument-hint: \"\" (no-argument command; consistency pass)"
+  - action: updated
+    at: 2026-04-21T23:00:00-05:00
+    actor: Michael Haynes
+    note: "Added --status <state> flag to transition the active bead to a target status (e.g. review, testing, blocked) in the same action as stopping the timer. Motivated by custom status additions (review, testing) on 2026-04-21."
+  - action: updated
+    at: 2026-04-27T22:00:00-05:00
+    actor: Michael Haynes
+    note: "Always resolve active bead ID before stopping and pass it explicitly to bd-timew stop <id>, preventing concurrent-session cross-contamination (bd-timew stop with no args stops ALL active timew intervals)."
+  - action: updated
+    at: 2026-04-28T21:30:00-05:00
+    actor: Michael Haynes
+    note: "Step 2 now exits early for both 'no interval' and 'untagged interval' cases, with explicit instruction never to call bd-timew stop without an ID. Removes the bare fallback that could stop all sessions."
+comments:
+  - "Source: Wave 1 time-tracking bundle (2026-04-20). Companion to /start, /switch, /status."
+  - "Motivation: breaks, end-of-day, context-switching to non-bead work all need a clean timer stop. Independent of bead status so that in-progress beads stay in-progress when the user steps away. --status added 2026-04-21 for the common pattern 'this chunk of work is done, move it to review/testing' — previously required a separate bd update after /stop."
+  - "Projected use: invoke at breaks, end of session, when switching to untracked work, or when finishing a unit of work that needs review/testing before close."
+related: [/start, /switch, /status, /time-report]
+---
+
+# /stop — Stop the current bd-track interval
+
+Thin wrapper over `bd-track stop`. Ends the active interval for this session. With `--status <state>`, also transitions the active bead to the given status in the same action.
+
+Arguments: $ARGUMENTS
+
+## Instructions
+
+1. **Parse arguments.** Recognize `--status <state>` (or `--status=<state>`). Any other tokens → print:
+   ```
+   /stop: unrecognized argument
+   usage: /stop [--status <state>]
+   ```
+   and stop. If no arguments, proceed to step 2 with `target_status` unset.
+
+2. **Resolve the active bead.** Run `bd-track status` via Bash and parse the `Tracking:` line to extract the bead ID. Save it as `active_id`.
+   - If the output contains "no active interval" → `active_id = None` (no interval running at all).
+   - If the output contains "no bead tag found" → `active_id = None` (interval running but untagged).
+   - If `active_id` is None for any reason, print:
+     ```
+     /stop: no active bd-track interval with a bead tag for this session.
+     ```
+     and stop. Do not guess the bead from recent activity.
+
+3. **Stop the interval.** Run `bd-track stop <active_id>`. Report the output (the interval summary — start, end, duration, tags).
+
+4. **Transition the bead (only if `--status` was given and step 2 found a bead).** Run `bd update <active_id> --status=<state>` via Bash. Report the output. If bd rejects the status (invalid for this workspace — e.g., not a built-in and not in `status.custom`), surface the error verbatim so the user can correct it or register the custom status. Do not retry with a fallback.
+
+5. **Do not claim or close the bead automatically.** `--status` only performs the one transition the user asked for. If the user wants `closed`, they can pass `--status=closed`; the command treats it like any other status.
+
+## What this does *not* do
+
+- **Does not close the bead by default.** Without `--status`, the bead stays claimed and `in_progress`.
+- **Does not validate the status locally.** bd is the source of truth for which statuses are valid (built-in plus `status.custom` config). The command passes `--status` through and surfaces any rejection.
+- **Does not update memory or generate a checkpoint.** Those are separate commands.
+
+## Examples
+
+- `/stop` — plain stop; no bead change.
+- `/stop --status=review` — stop the timer and move the active bead to `review`.
+- `/stop --status blocked` — same, space-separated form.
+- `/stop --status=closed` — stop and close in one step (equivalent to `/stop` + `bd close`).
+
+## Related
+
+- `/start`, `/switch`, `/status` — the rest of the time-tracking family.
+- `/switch <bead> --status <state>` — same status-transition flag on the outgoing bead when switching.
+- `bd config set status.custom <csv>` — register custom statuses accepted by `--status`.
