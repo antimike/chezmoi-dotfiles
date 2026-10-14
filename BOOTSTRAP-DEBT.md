@@ -9,8 +9,9 @@ Tick an item once a `run_` script or managed file reproduces it from scratch.
       `run_onchange_install-packages.sh.tmpl`; delete this line once it has run
       on a clean host.
 - [x] `gitleaks`, `restic`: now in `.chezmoidata/packages.yaml`.
-- [ ] `~/.local/bin/bd`, `dolt`: see step 6.2 (installers).
-- [ ] `bd-track` (pipx editable from `~/.local/src/bd-track`): step 6.3.
+- [x] `~/.local/bin/bd` and `dolt`: now `run_onchange_install-{beads,dolt}.sh.tmpl`.
+- [ ] `bd-track`: installed by hand via `just install-dev`; becomes
+      `run_onchange_install-bd-track.sh.tmpl` once the `v0.5.0` tag exists upstream.
 
 ## Known gaps
 
