@@ -1,0 +1,48 @@
+#!/bin/bash
+# run_onchange_install-packages.sh.tmpl — install the distro packages listed
+# in .chezmoidata/packages.yaml for this host's os-release ID.
+#
+# Only Fedora is handled. Needs root: if sudo can't run non-interactively the
+# script prints the command and exits 1, so the next `chezmoi apply` retries.
+{{- $distro := .chezmoi.osRelease.id }}
+{{- $wanted := dig "packages" $distro (list) . }}
+# hash: {{ $wanted | toJson | sha256sum }}
+set -euo pipefail
+
+DISTRO={{ $distro | quote }}
+wanted=(
+{{- range $wanted }}
+  {{ . | quote }}
+{{- end }}
+)
+
+if [[ ${#wanted[@]} -eq 0 ]]; then
+  echo "install-packages: no packages.${DISTRO} list in .chezmoidata/packages.yaml; skipping" >&2
+  exit 0
+fi
+
+if [[ "$DISTRO" != "fedora" ]] || ! command -v dnf >/dev/null 2>&1; then
+  echo "install-packages: no installer for distro '${DISTRO}'; add one here" >&2
+  exit 1
+fi
+
+to_install=()
+for p in "${wanted[@]}"; do
+  rpm -q --whatprovides "$p" >/dev/null 2>&1 || to_install+=("$p")
+done
+
+if [[ ${#to_install[@]} -eq 0 ]]; then
+  echo "install-packages: all ${#wanted[@]} packages already installed" >&2
+  exit 0
+fi
+
+cmd=(dnf install -y "${to_install[@]}")
+if [[ $EUID -ne 0 ]]; then
+  if ! sudo -n true 2>/dev/null; then
+    echo "install-packages: need root. Run:  sudo ${cmd[*]}" >&2
+    exit 1
+  fi
+  cmd=(sudo "${cmd[@]}")
+fi
+echo "install-packages: installing ${#to_install[@]} package(s): ${to_install[*]}" >&2
+"${cmd[@]}"

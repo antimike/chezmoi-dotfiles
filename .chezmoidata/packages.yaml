@@ -1,0 +1,58 @@
+# Distro packages the dotfiles and tooling depend on, keyed by os-release ID.
+# Consumed by run_onchange_install-packages.sh.tmpl. Curated: base-system,
+# firmware, font and desktop-default packages are deliberately left out.
+packages:
+  fedora:
+    # CLI essentials
+    - bat
+    - bc
+    - curl
+    - direnv
+    - fd-find
+    - fzf
+    - git
+    - git-crypt
+    - jq
+    - lsd
+    - ranger
+    - ripgrep
+    - rlwrap
+    - socat
+    - tmux
+    - vim-enhanced
+    - wget2-wget
+    - zsh
+    # Secrets, signing, VPN
+    - gh
+    - gitleaks
+    - gnupg2
+    - openvpn
+    - pass
+    - pass-otp
+    - restic
+    # Desktop helpers (i3 / notifications / clipboard)
+    - dunst
+    - ImageMagick
+    - kitty
+    - libnotify
+    - rofi
+    - wl-clipboard
+    - xclip
+    - xdotool
+    # Dev toolchain and python build deps (for mise-built interpreters)
+    - bzip2-devel
+    - cargo
+    - gcc
+    - libffi-devel
+    - luarocks
+    - make
+    - openssl-devel
+    - pipx
+    - podman
+    - python3-pip
+    - readline-devel
+    - sqlite
+    - sqlite-devel
+    - xz-devel
+    # Misc
+    - logrotate
