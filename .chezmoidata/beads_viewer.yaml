@@ -1,0 +1,24 @@
+# Pinned beads_viewer (bv) release, consumed by run_onchange_install-beads_viewer.sh.tmpl.
+#
+# bv (https://github.com/Dicklesworthstone/beads_viewer) ships per-OS/arch
+# tarballs alongside an upstream checksums.txt; the SHA256s below are verbatim
+# copies. bv powers `bv --robot-triage` in /next (which falls back to
+# `bd ready` when bv is absent).
+#
+# LICENSE NOTE: upstream LICENSE is MIT-with-rider restricting OpenAI/Anthropic
+# and parties "acting on behalf of" them. Risk accepted by the user for
+# personal-tooling use (2026-04-20). Revisit before relying on it elsewhere.
+#
+# To bump:
+#   1. version:   upstream tag without the "v"
+#   2. checksums: rows from
+#      https://github.com/Dicklesworthstone/beads_viewer/releases/download/v<version>/checksums.txt
+#   3. commit; the rendered script changes, so the installer re-runs on apply.
+
+beadsViewer:
+  version: "0.25.1"
+  checksums:
+    linux_amd64:  "54b8d51ae29c0c6d6b63ee66ba48ba1eeeb0447b174a88f554d94cdaae17732d"
+    linux_arm64:  "eed05bab601d0daed90c1f2898d4d00549d22c7a3447a156fb7174cfb59d465d"
+    darwin_amd64: "877ca19bcf03bb7b045e838f099550c8836ca27840c78dd8f2eb80f4897c817f"
+    darwin_arm64: "8fcfe93f09affc6715fd5c0864e370d5906af26ba960cd63de9c255ac6828ebc"
