@@ -100,8 +100,12 @@ Verified empirically: with `.chezmoiroot = home`, `.chezmoi.sourceDir` is `<repo
 `.chezmoi.workingTree` is `<repo>`, so every `joinPath .chezmoi.sourceDir ...` keeps working *if the file it
 points at moves into `home/`*. After this, BOCO paths map 1:1 (`home/X` to `home/X`), which also makes
 provenance trailers and diffs trivial.
-- Before starting: settle the other branches (`AddKittyConfig`, `AddSystemdConfigs`, `main`, `pyproj-options`):
-  a mass rename makes later merges painful. Merge or abandon them first, and stop other work in the repo.
+- Before starting, settle branches (checked 2026-10-15: `AddSystemdConfigs`, `pyproj-options`, `main` and the
+  local-only `AddKittyConfig` are all **already ancestors of `BOCO-migration`**, i.e. nothing is unmerged). Strategy:
+  fast-forward `main` to `BOCO-migration` (push needs the YubiKey; ask MH), then delete the four merged branches
+  locally and on the remote, and also `BOCO-migration` once `main` has it. Each phase then gets its own
+  `boco-merge/<phase>` branch off `main`, merged back (fast-forward or merge commit) when its checklist passes.
+  Stop other work in the repo during the rename.
 - Add `.chezmoiroot` (content `home`) at the repo root. `git mv` every source entry into `home/`
   (including `.chezmoidata`, `.chezmoitemplates`, `.chezmoiignore`, `.chezmoiexternal.toml.tmpl`,
   `.chezmoi.yml.tmpl`, `bin/`, `lazyvim-lock.json`). Stay at the root: `.git*`, `.envrc`, `.ripgreprc`,
@@ -126,6 +130,11 @@ provenance trailers and diffs trivial.
   what each does and who sources it; after: re-add any piece still used, rename `completion` to
   `completions` (or the reverse) consistently, and test with `zsh -i -c exit` (no errors, startup time)
   and a diff of `env` before/after. Keep a rollback copy of the live `~/.zshrc`/`~/.zshenv`/`~/.zprofile`.
+  **No second machine needed:** render into a scratch home first (`chezmoi apply --destination "$S" --source ...`
+  with `--config` pointing at a copy of the config), then run `HOME="$S" ZDOTDIR="$S" zsh -i -c exit` and exercise a few
+  functions/widgets there, and only then apply to the real `$HOME`. Do the real apply from a shell that stays open
+  (`bash`/`zsh -f` as the fallback), keep a terminal session open while you open a new one to test, and
+  `chsh` stays untouched. Optional clean-room: a Fedora container (`podman run -it fedora zsh`) with the repo bind-mounted.
 - **Git/GPG/SSH config.** `~/.gitconfig` is unmanaged here and managed in BOCO (`dot_gitconfig.tmpl`):
   merge by hand with signing key `9F049F34…` and *this* identity, work identity guarded by `work_tooling`. Same for
   `gpg-agent.conf` (here: `enable-ssh-support`; `gpg.conf` `default-key` is also unmanaged) and `~/.ssh/config`
@@ -199,5 +208,4 @@ keep message data out of the repo.
 ## Open questions
 
 1. When should the Atlassian/Jira redaction pass happen, and who reviews it? (Held items.)
-2. zsh rollback plan: any machine other than this one to test the switch-over on first?
-3. Phase 0a: are `AddKittyConfig`, `AddSystemdConfigs` and `pyproj-options` merged, or can they be dropped?
+2. Approve fast-forwarding `main`, pushing it and deleting the merged branches (needs the YubiKey for the pushes).
