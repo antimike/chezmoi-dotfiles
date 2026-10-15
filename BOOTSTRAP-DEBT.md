@@ -5,13 +5,15 @@ Tick an item once a `run_` script or managed file reproduces it from scratch.
 
 ## Installed by hand
 
-- [ ] `sudo dnf install git-crypt rlwrap pass-otp cargo luarocks`: covered by
-      `run_onchange_install-packages.sh.tmpl`; delete this line once it has run
-      on a clean host.
+- [x] `sudo dnf install git-crypt rlwrap pass-otp cargo luarocks`: installed by
+      hand on zbook 2026-10-14 and covered by
+      `run_onchange_install-packages.sh.tmpl`; delete this line once that script
+      has run on a clean host.
 - [x] `gitleaks`, `restic`: now in `.chezmoidata/packages.yaml`.
 - [x] `~/.local/bin/bd` and `dolt`: now `run_onchange_install-{beads,dolt}.sh.tmpl`.
-- [ ] `bd-track`: installed by hand via `just install-dev`; becomes
-      `run_onchange_install-bd-track.sh.tmpl` once the `v0.5.0` tag exists upstream.
+- [ ] `bd-track`: installed by hand via `just install-dev`. The installer
+      (`run_onchange_install-bd-track.sh.tmpl`, pinned to `v0.5.1`) is in place;
+      tick this once it has run on a clean host.
 
 ## Known gaps
 
