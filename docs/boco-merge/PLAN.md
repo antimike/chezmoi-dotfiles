@@ -1,7 +1,7 @@
 # Merging the BOCO chezmoi config into this repo
 
 Planning document for future sessions. Survey date: 2026-10-14; decisions recorded the same day.
-Work happens in this repo (`~/.local/share/chezmoi`); the BOCO repo is a **read-only reference
+Work happens in this repo (`~/.local/share/chezmoi`; after Phase 0a its source root is `home/`); the BOCO repo is a **read-only reference
 clone** at `~/Source/chezmoi-boco` (source root `home/`, 256 commits, private mirror on `antimike`).
 Context: `~/claude-migration-plan.md` (D13, Q11) and `BOOTSTRAP-DEBT.md`.
 
@@ -14,9 +14,16 @@ Context: `~/claude-migration-plan.md` (D13, Q11) and `BOOTSTRAP-DEBT.md`.
    cross-machine management. Machine-specific items are *guarded*, not dropped (see Guards).
 3. **WSL-specific items are copied over**, template-guarded to install only on WSL hosts, for a future
    work laptop.
-4. Mail accounts in use: the personal and the professional Gmail accounts. BOCO's mail files
-   contain only personal-domain accounts (`professional`, `csu`, `personal`), so port them whole.
-5. `sync-repos`: keep BOCO's script as the engine; add `mani` for interactive status (see Phase 3).
+4. Mail accounts in use: the personal and the professional Gmail accounts. BOCO's mail files contain no employer
+   account (`professional`, `csu`, `personal`). **The CSU account is dropped** (access lost): omit its
+   `mbsync`/`msmtp`/`neomutt` blocks and the CSU signature and template files; port the rest whole.
+5. **Adopt BOCO's `.chezmoiroot = home` layout** here (Phase 0a).
+6. **WSL guards are inline template logic** checking the OS directly, not a data flag plus `.chezmoiignore`
+   (see Guards). `work_tooling` stays as a data flag, default false.
+7. **Atlassian data and the Jira agent are held back** pending a review and redaction pass (see Held items).
+8. **Secret scanning is done by gitleaks pre-commit hooks in each repo that needs it**, not inside
+   `sync-repos` (Phase 3).
+9. `sync-repos` itself is low priority: its only BOCO use-case (a timewarrior data repo) is obsolete (Phase 3).
 
 ### Keep-ours list (BOCO does not win here)
 Files already adapted for Fedora or fixed on this machine; re-diff but do not overwrite:
@@ -40,25 +47,36 @@ Files already adapted for Fedora or fixed on this machine; re-diff but do not ov
 
 ## Guards (how BOCO-only things stay inert elsewhere)
 
-- **WSL:** add `is_wsl` to `.chezmoi.yml.tmpl` (same test the `notifier` logic already uses:
-  `.chezmoi.kernel.osrelease | lower | contains "wsl"`), and list WSL-only targets in
-  `.chezmoidata/wsl.yaml`. In `.chezmoiignore`, `{{ if not .is_wsl }}` ignore that list (works for plain
-  files like the `*.exe` shims and for `run_` scripts; **verify with `chezmoi managed` on this host**).
-  Use a `.tmpl` + `{{ if .is_wsl }}` body only where a file must render conditionally.
-- **Employer-specific tooling** (VPN stack, `rano`, Atlassian/Jira): same mechanism with a `work_tooling`
-  data flag, default false here.
+- **WSL:** wrap WSL-specific files in template logic that tests the OS directly. Rename the source file to
+  `*.tmpl` and put the body inside the guard. A file that renders empty is not managed, and the same
+  holds for `run_` scripts. This is what the repo already does for tool presence (`lookPath`). Use one shared
+  helper so the test is written once: `.chezmoitemplates/is-wsl` emitting `true`/`false` from
+  `.chezmoi.kernel.osrelease | lower | contains "wsl"` (the test `notifier` already uses), used as
+  `{{ if eq (includeTemplate "is-wsl" .) "true" -}} ... {{- end }}`.
+  Costs to watch: files that are copied verbatim must be renamed to `.tmpl` (record that in the provenance
+  trailer), and a directory whose files all render empty may still be created, so check
+  `chezmoi managed` for stray empty dirs.
+- **Employer-specific tooling** (VPN stack, `rano`): same inline guard on `.work_tooling`, a data key in
+  `.chezmoi.yml.tmpl`, default false here, true on a future work laptop.
 - **Tool present:** keep the existing `lookPath` guards on units and scripts.
-- Acceptance: on this host, `chezmoi managed | grep -iE 'wsl|\.exe|vpn'` is empty and `chezmoi diff` is quiet
-  for guarded items. Add a dry-run render with `--override-data` (`is_wsl: true`) to prove the WSL side still renders.
+- Acceptance: on this host, `chezmoi managed | grep -iE 'wsl|\.exe|vpn|rano'` is empty and `chezmoi diff` is quiet
+  for guarded items. Prove the other side by rendering one guarded file with
+  `chezmoi execute-template --override-data '{"chezmoi":{"kernel":{"osrelease":"x-microsoft-wsl2"}}}'`
+  (or on a WSL host); the body must appear.
 
 ## Employer-specific content (needs MH's attention)
 
 "Keep everything" collides with "public repo" in one place: content that identifies the employer's
-systems or other people. Tooling *code* is fine once generic. Keep the following private
-(default: leave in `antimike/chezmoi-boco`; or add a private data layer, e.g. a second source via
-`.chezmoiexternal` from a private repo): Atlassian data/template and `jira-comment-drafter` (colleague
-names, emails, account IDs); employer hostnames, VPN profiles and tenant IDs; the work gitconfig identity;
-`rano` internals if they reference employer systems. Check each file when porting.
+systems or other people. Tooling *code* is fine once generic. Check each file when porting for:
+employer hostnames, VPN profiles and tenant IDs, the work gitconfig identity, and `rano` internals that
+reference employer systems. Anything that cannot be made generic stays in private `antimike/chezmoi-boco`.
+
+### Held items (do not port until MH has reviewed and approved a redaction pass)
+- `.chezmoidata/atlassian.yaml`, `.chezmoitemplates/atlassian-boco-context`, the `jira-comment-drafter` agent,
+  and `.config/.jira/.config.yml`: they contain colleague names, emails and account IDs and employer tenant details.
+- Procedure when MH schedules it: read each file with MH, list every identifying value, replace with data keys or
+  placeholders, show the redaction diff, run gitleaks and the employer-term grep, and only then commit.
+  The Jira skills and commands already imported are dormant and generic; they stay as they are.
 
 ## Survey (by target path)
 
@@ -76,9 +94,32 @@ Regenerate with `compare-trees.py` (this directory).
 Order matters: Phase 0 unblocks the timers.
 
 ### Phase 0: prerequisites
+
+**0a. Restructure to the `home/` layout (do this first; one mechanical commit, then a fix-up commit).**
+Verified empirically: with `.chezmoiroot = home`, `.chezmoi.sourceDir` is `<repo>/home` and
+`.chezmoi.workingTree` is `<repo>`, so every `joinPath .chezmoi.sourceDir ...` keeps working *if the file it
+points at moves into `home/`*. After this, BOCO paths map 1:1 (`home/X` to `home/X`), which also makes
+provenance trailers and diffs trivial.
+- Before starting: settle the other branches (`AddKittyConfig`, `AddSystemdConfigs`, `main`, `pyproj-options`):
+  a mass rename makes later merges painful. Merge or abandon them first, and stop other work in the repo.
+- Add `.chezmoiroot` (content `home`) at the repo root. `git mv` every source entry into `home/`
+  (including `.chezmoidata`, `.chezmoitemplates`, `.chezmoiignore`, `.chezmoiexternal.toml.tmpl`,
+  `.chezmoi.yml.tmpl`, `bin/`, `lazyvim-lock.json`). Stay at the root: `.git*`, `.envrc`, `.ripgreprc`,
+  `docs/`, `BOOTSTRAP-DEBT.md`, `TODO.md`, `.chezmoiroot`. (`.chezmoiignore` entries for root-only files
+  are then unnecessary: files outside `home/` are not managed at all.)
+- Commit the pure renames separately (no content changes) so `git log --follow` works.
+- Fix-up commit: re-insert `home/` into the ~40 hard-coded source paths of the form
+  `~/.local/share/chezmoi/dot_*` (undoing the step 4.7 stripping) in the `/add-*`, `/edit-*`, `/remove-*`
+  commands, `trim-claude-config`, `auto-session`, `CLAUDE.md`, `chezmoi-systemd-timers.md`, unit `Documentation=`
+  lines, `beads-cheatsheet.md`; and `.chezmoi.yml.tmpl`'s `stat` of `dot_local/bin/...` (works unchanged, as
+  `sourceDir` includes `home`). The nvim `lazy-lock.json` symlink target uses `sourceDir/lazyvim-lock.json`: it must live in `home/`.
+- Check: `chezmoi init` (regenerates config), then `chezmoi diff` is **identical to before** (record it before
+  starting: `chezmoi diff > /tmp/pre.diff`), `chezmoi managed | wc -l` unchanged, `chezmoi doctor` has no new errors.
+  The worktree workflow in `dot_claude/CLAUDE.md` (`--source ~/Source/chezmoi-features`) needs `--source <worktree>/home`.
+
 - Port `run_onchange_after_reload-systemd-user.sh.tmpl` (documented as missing in
   `dot_claude/references/chezmoi-systemd-timers.md`). Fix its known gap: removed timers are never disabled.
-- Add `is_wsl`, `work_tooling`, `.chezmoidata/wsl.yaml` and the `.chezmoiignore` block (Guards).
+- Add the `is-wsl` helper template and the `work_tooling` data key (Guards).
 - **zsh switch-over (high regression risk).** BOCO's `.chezmoitemplates/zsh` and `.local/share/zsh`
   become the base. This repo has extra pieces BOCO lacks (`exports.d`, `ensure_resource`,
   `set_options.zsh`, `profile.zsh`, `widgets`, the `completion` dir name). Before replacing: record
@@ -106,20 +147,30 @@ running `:Lazy restore`/`sync` on a clean profile. Skip `*.bak`. `mason.lua` is 
 Port `run_once_install_neovim_deps` for Fedora.
 
 ### Phase 3: timers and services (needs Phase 0)
-- **`sync-repos`**: BOCO's script is an auto-commit + push engine for dirty working trees; neither `mani`
-  nor `git for-each-repo` does that (they run a command per repo), so **keep the script, don't replace it**.
-  Port script/timer/`sync-repos-list` (host-aware list, generic paths). Two improvements: a gitleaks gate before
-  auto-commit (as in `claude-state-sync`), and a `dirty/ahead/behind` summary.
-  Add `mani` for interactive use: a templated `mani.yaml` generated from the same list, giving
-  `mani run status --all` ("what needs pushing?"). Use `git for-each-repo` only for read-only maintenance
-  (e.g. `git for-each-repo --config=maintenance.repo fetch`).
+- **`sync-repos` (low priority).** Its use-case in BOCO history was a single entry: a daily auto-commit and push of
+  `~/.timewarrior` (the timewarrior data directory), to get off-machine history for a data repo nobody commits by
+  hand. timew is obsolete (bd-track keeps its own event log) and `nb`/`dstask` handle their own git sync, so there
+  is currently **no concrete use for it here**. Port it anyway as BOCO tooling (script + timer + `sync-repos-list`),
+  with an **empty** repo list on this host; revisit when a real data repo qualifies. Auto-committing unreviewed
+  content is only safe with a secret scan, which is handled by hooks, not by this script (below).
+  It does not need replacing: `mani`/`git for-each-repo` run a command per repo but don't auto-commit.
+  Add a templated `mani.yaml` for interactive `mani run status --all` ("what needs pushing?") if wanted.
+- **gitleaks pre-commit hooks in every repo that needs them** (replaces a scan inside `sync-repos`; a hook also
+  fires on the auto-commit, and a failing hook just leaves that repo dirty and logged). Pattern: the
+  `.pre-commit-config.yaml` used in `claude-state` (a `local`/`system` gitleaks hook) plus `pre-commit install`.
+  Roll out to: all public repos (`chezmoi-dotfiles`, `bd-track`, `claude-config`, `chess_trainer`, `resume-builder`),
+  any repo on the sync list, and `claude-state` (done). Make it repeatable with a `mani` task that installs the hook
+  across tagged repos. Hooks are per clone, so a fresh machine needs the task re-run. Optional safety net: a chezmoi-managed
+  `init.templateDir` whose `hooks/pre-commit` runs `gitleaks protect --staged`, so every new clone gets a hook.
+  Watch for conflicts: `pre-commit install` refuses if `core.hooksPath` is set (unset in the repos checked on
+  2026-10-14), and `bd hooks install` also writes `.git/hooks/*`; pre-commit chains existing hooks as `.legacy`.
 - Also: `dstask-notify` (use the `notify` adapter), `rano` units (guarded `work_tooling`).
 - Not ported (superseded by bd-track): `timew-autostop`, `timew-nudge`. `claude-mem-cleanup` stays held with claude-mem.
 
 ### Phase 4: mail stack (all of it)
-neomutt (15 files), `mbsync`, `msmtp`, `procmail`, `mailcap`, notmuch, `graph-send-mail`. Accounts: `professional` and
-`personal` (active), `csu` (university; keep, mark inactive in data). Template one block per account from
-`.chezmoidata/mail.yaml` so accounts toggle cleanly. Credentials only via `pass`. Verify with a real sync before committing;
+neomutt, `mbsync`, `msmtp`, `procmail`, `mailcap`, notmuch, `graph-send-mail`. Accounts: `professional` and
+`personal` only; **omit `csu`** (blocks in `.mbsyncrc`/`msmtp/config`, `signatures/{.signature-csu,csu}`, any
+CSU templates). Template one block per account from `.chezmoidata/mail.yaml`. Credentials only via `pass`. Verify with a real sync before committing;
 keep message data out of the repo.
 
 ### Phase 5: reconcile the 39 differing non-Claude files (BOCO wins unless on keep-ours)
@@ -128,11 +179,11 @@ keep message data out of the repo.
 - Data: `.chezmoiexternal.toml` (merge), `.chezmoidata/zsh.yaml`, `.chezmoi.yml` (hand-merge)
 
 ### Phase 6: WSL and employer-specific items (copy, guarded)
-- **WSL (`is_wsl`):** `.wslconfig`, `.config/etc/{wsl,resolv}.conf`, the `*.exe` shims, `wsl-notify-send`, `winpath`,
+- **WSL (inline `is-wsl` guard):** `.wslconfig`, `.config/etc/{wsl,resolv}.conf`, the `*.exe` shims, `wsl-notify-send`, `winpath`,
   `getwinip`, `getlocalhost`, `sync-nfs`, `.local/PowerShell/*`, `symlink-wayland-socket.service`, `install-burnttoast`,
   `check-wsl-lso`, `apply-wslconfig`, `apply-etc-config`, `install-wslu-repo` equivalents.
 - **Employer tooling (`work_tooling`):** namespaced-VPN stack (`vpn-*`, `dual-vpn`, `namespaced-openvpn`,
-  `install-vpn-symlinks`), `rano`, and (private only) Atlassian/Jira. Apply "Employer-specific content" first.
+  `install-vpn-symlinks`), and `rano`. Apply "Employer-specific content" first. Atlassian/Jira: see Held items.
 - Still excluded: client-project material (list in `~/claude-migration-plan.md`, D3), `claude-mem-*`,
   `time-report`, `fewer-permission-prompts`, `auto-session/.transcripts`.
 
@@ -147,6 +198,6 @@ keep message data out of the repo.
 
 ## Open questions
 
-1. How to hold employer-specific data: leave in private `chezmoi-boco`, or a private data layer? (See above.)
-2. Is `csu` mail still wanted active, or inactive-but-kept?
-3. zsh rollback plan: any machine other than this one to test the switch-over on first?
+1. When should the Atlassian/Jira redaction pass happen, and who reviews it? (Held items.)
+2. zsh rollback plan: any machine other than this one to test the switch-over on first?
+3. Phase 0a: are `AddKittyConfig`, `AddSystemdConfigs` and `pyproj-options` merged, or can they be dropped?
