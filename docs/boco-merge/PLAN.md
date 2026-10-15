@@ -130,6 +130,9 @@ provenance trailers and diffs trivial.
   what each does and who sources it; after: re-add any piece still used, rename `completion` to
   `completions` (or the reverse) consistently, and test with `zsh -i -c exit` (no errors, startup time)
   and a diff of `env` before/after. Keep a rollback copy of the live `~/.zshrc`/`~/.zshenv`/`~/.zprofile`.
+  Fallbacks: a plain `bash` terminal works for most failures (errors in `.zshrc`). It does not help when zsh
+  hangs or `exec`s away at startup, or when a broken `.zshenv` breaks tools that spawn `zsh -c` (including
+  Claude Code's own shell), so the scratch-home test below is still worth the few minutes.
   **No second machine needed:** render into a scratch home first (`chezmoi apply --destination "$S" --source ...`
   with `--config` pointing at a copy of the config), then run `HOME="$S" ZDOTDIR="$S" zsh -i -c exit` and exercise a few
   functions/widgets there, and only then apply to the real `$HOME`. Do the real apply from a shell that stays open
@@ -195,6 +198,11 @@ keep message data out of the repo.
   `install-vpn-symlinks`), and `rano`. Apply "Employer-specific content" first. Atlassian/Jira: see Held items.
 - Still excluded: client-project material (list in `~/claude-migration-plan.md`, D3), `claude-mem-*`,
   `time-report`, `fewer-permission-prompts`, `auto-session/.transcripts`.
+
+## Related plan: Sway
+
+Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned in `~/ricing-plan.md`, section 1,
+not here, to keep one source of truth. Sequencing: do Phase 0a (`home/` layout) first; Sway work then lands under `home/`.
 
 ## Per-phase checklist
 
