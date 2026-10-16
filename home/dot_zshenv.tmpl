@@ -1,5 +1,5 @@
 # Temp dir
-export TMPDIR=/tmp
+export TMPDIR={{ get .filesystem "tmpDir" | default "/tmp" | quote }}
 
 export SHELL={{ .shell }}
 
@@ -10,10 +10,23 @@ then
 fi
 export PATH
 
-# Text editor: NVim
+# Text editor: {{ .editor }}
 export EDITOR={{ .editor }}
 export VISUAL={{ .editor }}
 
-# SSH
+# SSH (YubiKey auth through gpg-agent's SSH socket)
 export SSH_AUTH_SOCK=$(gpgconf --list-dirs agent-ssh-socket)
 gpgconf --launch gpg-agent
+{{ if eq (includeTemplate "is-wsl" .) "true" }}
+# Browser (WSL): hand links to Windows. BOCO falls back to BROWSER=w3m on other hosts;
+# that is left out so tools on a desktop open the GUI browser.
+{{ if lookPath "wslview" -}}
+export BROWSER=wslview
+{{ else if lookPath "powershell.exe" -}}
+export BROWSER="powershell.exe -c Start-Process"
+{{ else if lookPath "cmd.exe" -}}
+export BROWSER="cmd.exe /c start ''"
+{{ else if lookPath "explorer.exe" -}}
+export BROWSER=explorer.exe
+{{ end -}}
+{{ end -}}
