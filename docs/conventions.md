@@ -20,7 +20,7 @@ updated: 2026-10-15
 - Never print secrets (`pass show`, `gpg -d`): redirect or pipe, or they land in the transcript.
 
 ## Chezmoi
-- `$PC` = this repo (source `~/.local/share/chezmoi`, becoming `…/home` after Phase 0a). Never `chezmoi init/apply` against the reference clone `~/Source/chezmoi-boco`.
+- `$PC` = this repo (chezmoi source root `~/.local/share/chezmoi/home` since Phase 0a; docs and `CLAUDE.md` stay at the repo root). Never `chezmoi init/apply` against the reference clone `~/Source/chezmoi-boco`.
 - Propagate source edits with `chezmoi apply --force <target>`; never `cp`. Apply named targets, then check `chezmoi status`. `chezmoi apply` takes literal paths, not globs.
 - Chezmoi ignores source mode bits: scripts invoked by path need an `executable_` prefix.
 - Template guards: tool present = `lookPath`; WSL = shared `is-wsl` helper; employer-only = `work_tooling` (D25).

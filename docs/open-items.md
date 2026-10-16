@@ -11,14 +11,15 @@ updated: 2026-10-15
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| BOCO chezmoi merge, starting with Phase 0a (`home/` layout) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| Approve merge + push of `boco-merge/0a-home-layout` (Phase 0a done) | MH approval | YubiKey needed for the push |
+| BOCO chezmoi merge, rest of Phase 0 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Atlassian/Jira review and redaction pass | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), "Held items" |
 
 ## Plans waiting on a start
 | Item | Who | Where |
 |---|---|---|
-| Sway session, then shared WM config fragment | Claude | [plans/sway.md](plans/sway.md) (after Phase 0a) |
+| Sway session, then shared WM config fragment | Claude | [plans/sway.md](plans/sway.md) (Phase 0a done; unblocked) |
 | claude-mem evaluation (about 30 min requirements, ~1 week trial in `CLAUDE_CONFIG_DIR=~/.claude-trial`) | MH + Claude | deferred; evidence so far favors dropping it |
 | gitleaks pre-commit hook rollout across public repos | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
 | zsh switch-over test (scratch-home render first) | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 0 |

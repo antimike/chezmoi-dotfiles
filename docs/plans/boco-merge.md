@@ -1,6 +1,6 @@
 ---
 summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
-status: planned; Phase 0a is next
+status: Phase 0a done (2026-10-15); rest of Phase 0 is next
 updated: 2026-10-15
 ---
 
@@ -101,17 +101,18 @@ Order matters: Phase 0 unblocks the timers.
 
 ### Phase 0: prerequisites
 
-**0a. Restructure to the `home/` layout (do this first; one mechanical commit, then a fix-up commit).**
+**0a. Restructure to the `home/` layout. DONE 2026-10-15 on `boco-merge/0a-home-layout` (4 commits: `.chezmoiroot`, pure renames, `.chezmoiignore` cleanup, path fix-up).**
 Verified empirically: with `.chezmoiroot = home`, `.chezmoi.sourceDir` is `<repo>/home` and
 `.chezmoi.workingTree` is `<repo>`, so every `joinPath .chezmoi.sourceDir ...` keeps working *if the file it
 points at moves into `home/`*. After this, BOCO paths map 1:1 (`home/X` to `home/X`), which also makes
 provenance trailers and diffs trivial.
-- Before starting, settle branches (checked 2026-10-15: `AddSystemdConfigs`, `pyproj-options`, `main` and the
-  local-only `AddKittyConfig` are all **already ancestors of `BOCO-migration`**, i.e. nothing is unmerged). Strategy:
-  fast-forward `main` to `BOCO-migration` (push needs the YubiKey; ask MH), then delete the four merged branches
-  locally and on the remote, and also `BOCO-migration` once `main` has it. Each phase then gets its own
-  `boco-merge/<phase>` branch off `main`, merged back (fast-forward or merge commit) when its checklist passes.
-  Stop other work in the repo during the rename.
+- Branches: nothing to settle (checked 2026-10-15: `main` is the only branch, local and remote; see D26). Each phase
+  gets its own `boco-merge/<phase>` branch off `main`, merged back (fast-forward or merge commit) when its checklist
+  passes. Stop other work in the repo during the rename.
+- Gotchas found in 0a: `chezmoi diff` is not byte-identical after the move. Two targets embed `sourceDir`
+  (the nvim `lazy-lock.json` symlink and the `funk` function); `chezmoi apply --force` those two. The live
+  `~/.claude.json` hunk (trailing newline from the `modify_` script) is baseline drift, not a regression.
+  `chezmoi doctor` output differs only in the `~/.local/share/chezmoi/home/` path text.
 - Add `.chezmoiroot` (content `home`) at the repo root. `git mv` every source entry into `home/`
   (including `.chezmoidata`, `.chezmoitemplates`, `.chezmoiignore`, `.chezmoiexternal.toml.tmpl`,
   `.chezmoi.yml.tmpl`, `bin/`, `lazyvim-lock.json`). Stay at the root: `.git*`, `.envrc`, `.ripgreprc`,
@@ -221,4 +222,4 @@ Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned i
 ## Open questions
 
 1. When should the Atlassian/Jira redaction pass happen, and who reviews it? (Held items.)
-2. Approve fast-forwarding `main`, pushing it and deleting the merged branches (needs the YubiKey for the pushes).
+2. Approve merging `boco-merge/0a-home-layout` into `main` and pushing it (push needs the YubiKey).
