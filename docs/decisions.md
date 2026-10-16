@@ -59,6 +59,12 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | D29 | Add a Sway session beside GNOME. Units are scoped to their session target, not excluded per host. Keep dunst and use gammastep. One shared WM config fragment drives both i3 and Sway. |
 | D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. |
 
+## Tooling (proposed)
+
+| # | Decision |
+|---|---|
+| D32 (**draft**, awaiting MH) | Make package installation distro-agnostic with a **logical-name package map** in `home/.chezmoidata/packages.yaml`: one entry per tool, per-manager overrides only where names differ, a single derived manager key, and one installer that does the lookup. Tools that are not natively packaged (or whose native package is a different program) use a fallback *method* in the same map (`pipx`, `mise`, `cargo`, or the repo's pinned-release installer), plus an optional `verify:` check. Conditionals do **not** go in individual templates. Nix derivations were rejected for now: they need a Nix install and a second package ecosystem on every host, solve a problem `mise` backends and the existing pinned installers already cover, and add a new language to maintain. Detail: [open-items.md](open-items.md#detail-package-map-refactor). Note: the table above already contains two rows numbered D30; renumber when convenient. |
+
 ## Documentation
 
 | # | Decision |
