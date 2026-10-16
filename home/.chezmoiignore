@@ -1,5 +1,3 @@
 *.swp
 .keep
 lazyvim-lock.json
-docs/
-CLAUDE.md
