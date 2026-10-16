@@ -1,0 +1,44 @@
+# User-defined fzf keybindings, consumed by snippets/fzf-integration.zsh.tmpl.
+# (BOCO also pins an fzf release and checksums here for its installer; that comes
+# with the Phase 1 installer. Here fzf comes from dnf for now.)
+#
+# Keybindings notes:
+#   fzf's own `--zsh` output already binds ^T, ^R, and \ec in all three
+#   keymaps (emacs, vicmd, viins). The `keybindings:` list below is for
+#   ADDITIONAL bindings you want to add or for explicit overrides — it
+#   does NOT need to duplicate fzf's defaults.
+#
+#   Each entry has: key, widget, and (optional) keymaps list.
+#   If keymaps is omitted, the binding applies to the current keymap
+#   (i.e., `bindkey "<key>" <widget>` without -M).
+#
+#   Example:
+#     - key: "^X^F"
+#       widget: fzf-file-widget
+#       keymaps: [emacs, vicmd, viins]
+
+fzf:
+  # keybindings:
+  #   # Bind in multiple keymaps — expands to three `bindkey -M <map> ...`
+  #   # lines, one per keymap in the list.
+  #   - key: "^X^F"
+  #     widget: fzf-file-widget
+  #     keymaps: [emacs, vicmd, viins]
+  #
+  #   # Alt-key example. Use \e prefix for meta/alt; YAML requires a
+  #   # double-backslash since \e is not a standard YAML escape sequence.
+  #   - key: "\\eg"
+  #     widget: fzf-cd-widget
+  #     keymaps: [emacs]
+  #
+  #   # Omit keymaps to bind in the current/default keymap only
+  #   # (emits `bindkey "<key>" <widget>` with no -M flag).
+  #   - key: "^X^Q"
+  #     widget: some-custom-widget
+  keybindings:
+    # `fzf --zsh` binds Tab to fzf-completion (its ** trigger) in the insert keymap, which
+    # replaces fzf-tab's Tab binding. Re-bind fzf-tab here: this list is appended after
+    # the fzf output in the same generated file, so it always wins.
+    - key: "^I"
+      widget: fzf-tab-complete
+      keymaps: [viins]
