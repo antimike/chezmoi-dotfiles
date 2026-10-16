@@ -10,15 +10,15 @@ plugins:
       - url: OMZ::lib/diagnostics.zsh
       - url: OMZ::lib/git.zsh
       - url: OMZ::lib/grep.zsh
+      # Kept (not in BOCO) until the keybinding manifest replaces it: Home/End/Delete,
+      # Ctrl-arrow word movement, Shift-Tab, Up/Down prefix history search. See D33.
       - url: OMZ::lib/key-bindings.zsh
       - url: OMZ::lib/misc.zsh
       - url: OMZ::lib/spectrum.zsh
       - url: OMZ::lib/termsupport.zsh
       - url: OMZ::plugins/colored-man-pages/colored-man-pages.plugin.zsh
-      - url: OMZ::plugins/fzf/fzf.plugin.zsh
       - url: OMZ::plugins/safe-paste/safe-paste.plugin.zsh
       - url: OMZ::plugins/sudo/sudo.plugin.zsh
-      - url: OMZ::plugins/autojump/autojump.plugin.zsh
       - url: OMZ::plugins/extract/extract.plugin.zsh
       - url: OMZ::plugins/dirhistory/dirhistory.plugin.zsh
       - url: OMZ::plugins/copybuffer/copybuffer.plugin.zsh
@@ -27,7 +27,6 @@ plugins:
       - url: OMZ::plugins/systemd/systemd.plugin.zsh
         ice:
           - as"completion"
-      - url: OMZ::plugins/vi-mode/vi-mode.plugin.zsh
       - url: zdharma-continuum/zbrowse
       - url: MenkeTechnologies/zsh-tig-plugin
       - url: willghatch/zsh-snippets
@@ -41,3 +40,7 @@ plugins:
       - url: OMZ::plugins/pip/pip.plugin.zsh
         ice:
           - as"completion"
+      # fzf integration moved to ~/.local/share/zsh/snippets/fzf-integration.zsh
+      # (templated from `fzf --zsh` + .chezmoidata/fzf.yaml keybindings) —
+      # avoids OMZ's path-auto-discovery which doesn't find a
+      # chezmoi-installed ~/.local/bin/fzf without companion shell/ files.
