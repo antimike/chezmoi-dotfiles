@@ -1,0 +1,10 @@
+# chezmoi source repo (zbook)
+
+Dotfiles and Claude Code config for this machine, managed with chezmoi. **Public repo**: no secrets, client names or
+employer identifiers (see docs/conventions.md; pattern list is in the private repo `~/Source/chezmoi-boco/docs/zbook-migration/`).
+
+- Docs map: `docs/README.md`. Current state and next actions: @docs/STATUS.md
+- Rules: `docs/conventions.md`. Decisions: `docs/decisions.md`. Open items: `docs/open-items.md`.
+- This file and `docs/` are chezmoi-ignored (not deployed). After the `home/` restructure (BOCO merge Phase 0a) this file stays at the repo root, outside the managed source.
+- Confirm with the user before pushing, deleting branches, or other outward-facing actions.
+- At session end, update `docs/STATUS.md` and `docs/open-items.md`.
