@@ -30,7 +30,7 @@ BOCO's plugin lists won where they differ (decision: MH, 2026-10-14). Plugins ma
 
 ### Kept despite BOCO (MH, 2026-10-16)
 
-- **`marlonrichert/zcolors`:** `GREP_COLOR(S)`, a fixed `zle_highlight`, a `less` colour theme (`LESS=--use-color -DSkY$DPWb`), and the functions `zcolors`, `lscolor`, `color`. Downsides: `LESS` ends up **without `-R`** (BOCO has `LESS=-R`); the README says LS_COLORS theme values must be 3/4-bit and this `LS_COLORS` uses 8-bit colours, and nothing here runs the `zcolors` function (it only autoloads), so the LS_COLORS-derived completion/command-line theme is not applied; `fast-syntax-highlighting` is not themed by it (the README names `zsh-syntax-highlighting`).
+- **`marlonrichert/zcolors`:** `GREP_COLOR(S)`, a fixed `zle_highlight`, a `less` colour theme (`LESS=--use-color -DSkY$DPWb`), and the functions `zcolors`, `lscolor`, `color`. Downsides: `LESS` ended up without `-R` (BOCO has `LESS=-R`), now fixed in `snippets/keybinds-interim.zsh`; the README says LS_COLORS theme values must be 3/4-bit and this `LS_COLORS` uses 8-bit colours, and nothing here runs the `zcolors` function (it only autoloads), so the LS_COLORS-derived completion/command-line theme is not applied; `fast-syntax-highlighting` is not themed by it (the README names `zsh-syntax-highlighting`).
 - **`0030.direnv`:** `DIRENV_WARN_TIMEOUT=60s` is exported always; the zinit build of direnv stays behind `not lookPath "direnv"` (BOCO builds unconditionally). Required letting the shared `plugin` template emit export-only entries.
 
 ### Tried and rejected

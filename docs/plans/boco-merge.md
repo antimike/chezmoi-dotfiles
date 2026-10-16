@@ -152,7 +152,7 @@ provenance trailers and diffs trivial.
   Removed: `asdf` plugin, `voidmobile` block, `profile.zsh`, `0115.fzf.yaml` (BOCO's `fzf` files arrive in Phase 1; fzf is
   unused meanwhile). Widgets `command-prefixes.zsh` and `twf.zsh` are parked in `docs/parked/zsh-widgets/`, not loaded.
   Sequence on branch `boco-merge/0c-zsh`: (1) inventory and baseline (done); (2) `completion` to `completions` rename;
-  (3) data and templates; (4) `zshenv`; (5) `zshrc`; (6) cleanup commit (removals above); (7) docs. Each commit is rendered
+  (3) data and templates; (4) `zshenv`; (5) `zshrc`; (6) cleanup commit (removals above); (7) preserve the scratch-home harness as `tools/zsh-probe/` at the repo root (MH, 2026-10-16; not `docs/tools/`) in its own commit: no hard-coded paths (repo root via `git rev-parse`, scratch dir under `${XDG_CACHE_HOME:-~/.cache}/zsh-probe`), a `--baseline <git-rev>` option that builds the temporary worktree, `drive.py` conformed to the python-scripting conventions, and a README with the lessons (a pty is required for turbo plugins, a clean `env -i` environment, wait for the zinit scheduler queue, normalise random ids); update the root-layout notes in `CLAUDE.md` and `docs/README.md`, and consider moving `docs/tools/compare-trees.py` there too; (8) docs. Each commit is rendered
   and tested in a scratch home first; the pass criterion is the baseline's stderr (not empty: p10k gitstatus prints
   errors without a TTY), startup within about 20% of 0.145 s, and intended-only diffs of `env`, `alias`, `fpath`, `options`
   and `bindkey -L`. Apply `zshrc` first and `zshenv` last, with a rollback script that runs under `env -i bash --noprofile --norc`.
