@@ -28,7 +28,7 @@ Raw baseline files (not in the repo): `~/.local/state/claude-migration-backups/z
 | `SSH_AUTH_SOCK` + `gpgconf --launch gpg-agent` | **only here**, in `zshenv`; YubiKey SSH auth depends on it | keep in the merged `zshenv` |
 | `ZCOMP_CACHE` directory | BOCO exports the path but **never creates it**; here `ensure_resource` runs `mkdir -p` | add `mkdir -p "$ZCOMP_CACHE"` to the merged `zshrc` |
 | History size | BOCO `HISTSIZE=999999999`, `SAVEHIST=$HISTSIZE`; here 100000 / 5000 | BOCO wins (flag: a much larger history file) |
-| Completion `rehash` | BOCO `false`; here `true` (new executables completed immediately) | BOCO wins (flag: run `rehash` after installing a tool) |
+| Completion `rehash` | BOCO `false`; here `true` (new executables completed immediately) | **Gate on `is-wsl`: `false` on WSL hosts, `true` elsewhere** (MH, 2026-10-16). BOCO set `false` in `76a997a` (2026-04-09) for latency; on WSL2 a `$PATH` rescan crosses into the Windows filesystem. Here a full rescan plus table rebuild measures 2.0-3.0 ms (31 `PATH` entries, 3731 commands). Done in the `zstyle.zsh` change (sub-step 3) |
 
 ## Options: nothing is lost
 
