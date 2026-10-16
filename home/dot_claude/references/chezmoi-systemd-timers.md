@@ -69,7 +69,7 @@ fi
 
 ## The reload script
 
-`home/run_onchange_after_reload-systemd-user.sh.tmpl` (ported from BOCO) runs `systemctl --user daemon-reload` and enables the managed timers after any change under `private_dot_config/private_systemd/private_user/`. The `run_onchange_after_` prefix plus a hash-comments block (one `# hash:` line per unit source file) makes chezmoi re-run it when a source file changes. The hash covers raw source, so a unit flipping between rendering and rendering empty (tool appeared or vanished) does not re-trigger it by itself; run `chezmoi apply --include=scripts --force` after such a change, or touch any unit source.
+`home/run_onchange_after_reload-systemd-user.sh.tmpl` (ported from BOCO) runs `systemctl --user daemon-reload` and enables the managed timers after any change under `private_dot_config/private_systemd/private_user/`. The `run_onchange_after_` prefix plus a hash-comments block (one `# hash:` line per unit source file) makes chezmoi re-run it when a source file changes. The hash covers raw source, so a unit flipping between rendering and rendering empty (tool appeared or vanished) does not re-trigger it by itself; run the script by hand after such a change: `chezmoi execute-template < ~/.local/share/chezmoi/home/run_onchange_after_reload-systemd-user.sh.tmpl | bash`.
 
 Behaviour:
 - Enables (`enable --now`) every managed timer that exists in `~/.config/systemd/user/` **and has an `[Install]` section**. Static timers (no `[Install]`, started by their session target, e.g. `wallpaper.timer`, `polybar-weather.timer`) are skipped; enabling them would fail and start them outside their session.
