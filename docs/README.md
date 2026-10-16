@@ -1,7 +1,7 @@
 ---
 summary: Index of docs/ for Claude and humans: what each file is and when to read it
 status: current
-updated: 2026-10-15
+updated: 2026-10-16
 ---
 
 # docs/ index
@@ -17,6 +17,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [decisions.md](decisions.md) | Decision log D1–D31 | before changing a design; append new decisions |
 | [open-items.md](open-items.md) | All open items with owner and pointer | choosing what to do next |
 | [bootstrap-debt.md](bootstrap-debt.md) | Hand-installed tools and known gaps chezmoi should own | touching installers or packages |
+| [zsh-plugins.md](zsh-plugins.md) | zsh plugins dropped, abandoned or worth investigating, with what each provided | dropping or adding a zsh plugin; missing a shell feature |
 | [todo.md](todo.md) | Older checklist of files to add to chezmoi | porting dotfiles (partly superseded by the BOCO merge plan) |
 | [plans/boco-merge.md](plans/boco-merge.md) | Phased plan to merge the employer-era chezmoi repo here | working on the merge, `home/` layout, guards |
 | [plans/sway.md](plans/sway.md) | Sway session plan and i3 → Sway mapping | desktop/Wayland work |

@@ -49,6 +49,10 @@ BOCO `opts.zsh` = this repo's `set_options.zsh` (identical, line for line) + the
 | `snippets/{chezmoi,funky,memo,pyenv}.zsh.tmpl`, `functions/usage` | `snippets/*.zsh` glob / autoload | here-only, no conflict; **keep** (confirm) |
 | `snippets/{mise,direnv}.zsh.tmpl`, `functions/pyproj` | same | keep-ours list |
 
+## Plugin decisions (MH, 2026-10-16)
+
+Full list with what each plugin provided: [../zsh-plugins.md](../zsh-plugins.md). BOCO's plugin lists are adopted except `0030.direnv` (this repo's file is a fallback that builds direnv only when it is not installed; BOCO's is unconditional and would double-hook with the kept `snippets/direnv.zsh.tmpl`) and `0080.marker` (inert in both). Keeping OMZ `lib/key-bindings.zsh` was tried and reverted: its `bindkey -e` switches the main keymap to emacs and disables vi mode. For a vi-mode user the real binding losses are only vicmd `Delete`, vicmd `Shift-Tab`, `Ctrl-Delete` and vicmd `vv`; they go to the keybinding manifest (D33). The long list of lost bindings in the first scratch render was almost all the emacs keymap.
+
 ## Plugin differences (BOCO wins; these change behaviour)
 
 Here-only plugins that BOCO's list does not load: `zsh-learn`, `zsh-git-acp`, `zsh-sed-sub`, `zplugin-crasis`, `zui`, `zi-console`, `zcolors`, OMZ `lib/key-bindings.zsh`, OMZ `fzf`, `autojump` and `vi-mode`. The `0025.vim` plugin loses `wait` and the `bindkey -v '^R' fzf-history-widget` hook and gains `MODE_CURSOR_*` settings; `0050.syntax-highlighting` loses `atinit"zicompinit; zicdreplay"`. `0030.direnv` here is guarded by `lookPath "direnv"`; BOCO's exports `DIRENV_WARN_TIMEOUT=60s`. `0080.marker` is inert in both. Dropping OMZ `key-bindings` and `vi-mode` changes the key bindings, which the `bindkey` baseline will quantify.
