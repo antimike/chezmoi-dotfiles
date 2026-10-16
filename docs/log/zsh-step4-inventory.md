@@ -49,6 +49,10 @@ BOCO `opts.zsh` = this repo's `set_options.zsh` (identical, line for line) + the
 | `snippets/{chezmoi,funky,memo,pyenv}.zsh.tmpl`, `functions/usage` | `snippets/*.zsh` glob / autoload | here-only, no conflict; **keep** (confirm) |
 | `snippets/{mise,direnv}.zsh.tmpl`, `functions/pyproj` | same | keep-ours list |
 
+## Switch-over results (2026-10-16, scratch pty render, clean environment)
+
+`zshenv` switch: shell state identical to before. `zshrc` switch (`3b44920`): environment, options, aliases, `fpath`, `zstyle`, widgets and completions identical; warm startup about 0.14 s (was 0.18 s); stderr empty (was three `dephell` realpath errors); 50 fewer zinit-internal functions (loaded before only because of the `dephell` snippet); `^X^R` is `redisplay` instead of `_read_comp` (not traced; rarely used). Cleanup commit: removing `0115.fzf.yaml` drops `^R`, `Tab` (fzf-tab), `^T` and `^G*` until Phase 1 (80 functions, 46 widgets). Corrections to the first draft of this file: the BOCO `compinit` line quotes its glob qualifier, so its dump is never refreshed (kept unquoted here; `m-20` is days, not hours); BOCO's `filesystem` values are absolute while this repo's are relative, so the template is anchored with `$HOME`.
+
 ## Plugin decisions (MH, 2026-10-16)
 
 Full list with what each plugin provided: [../zsh-plugins.md](../zsh-plugins.md). BOCO's plugin lists are adopted except `0030.direnv` (this repo's file is a fallback that builds direnv only when it is not installed; BOCO's is unconditional and would double-hook with the kept `snippets/direnv.zsh.tmpl`) and `0080.marker` (inert in both). Keeping OMZ `lib/key-bindings.zsh` was tried and reverted: its `bindkey -e` switches the main keymap to emacs and disables vi mode. For a vi-mode user the real binding losses are only vicmd `Delete`, vicmd `Shift-Tab`, `Ctrl-Delete` and vicmd `vv`; they go to the keybinding manifest (D33). The long list of lost bindings in the first scratch render was almost all the emacs keymap.

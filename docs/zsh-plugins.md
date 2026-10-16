@@ -24,8 +24,9 @@ BOCO's plugin lists won where they differ (decision: MH, 2026-10-14). Plugins ma
 | OMZ `plugins/fzf` | `FZF_DEFAULT_COMMAND=fd --type f --hidden --exclude .git`, fzf key bindings and completion loader | BOCO replaces it with `fzf --zsh` + `.chezmoidata/fzf.yaml` (Phase 1). **Gap until Phase 1:** `FZF_DEFAULT_COMMAND` is unset; check whether BOCO's `fzf.yaml` sets it |
 | OMZ `plugins/autojump` | the `j` command (a wrapper for the `autojump` tool) | BOCO |
 | OMZ `plugins/vi-mode` | vi-mode bindings, including `vv` (edit command line) in command mode | MH remembers it interacting badly with other plugins; BOCO relies on `softmoth/zsh-vim-mode` instead |
-| `plugins.d/0070.asdf.yaml` | an asdf fallback, active only when `mise` is not installed | inert here (`mise` installed); removed with the switch-over cleanup |
-| `plugins.d/0115.fzf.yaml` | fzf-tab, fzf-git.sh and a fetch of fzf's `key-bindings.zsh` from `master` | superseded by BOCO's `0015.fzf.yaml` + `fzf --zsh` in Phase 1; removed with the cleanup |
+| `plugins.d/0070.asdf.yaml` | an asdf fallback, active only when `mise` is not installed | inert here (`mise` installed); removed |
+| `dephell` completion snippet (`zinit snippet ~/.local/share/dephell/_dephell_zsh_autocomplete`) | tab completion for `dephell` (installed with pipx) | it lived in `plugins.d/0012.local.yaml`, which BOCO's inline snippet block replaces; BOCO has no equivalent. Re-add as a local snippet if wanted |
+| `plugins.d/0115.fzf.yaml` | fzf-tab (Tab completion picker), fzf-git.sh (`^G` bindings) and a fetch of fzf's `key-bindings.zsh` from `master` (`^R` history widget, `^T` file widget) | superseded by BOCO's `0015.fzf.yaml` + `fzf --zsh` in Phase 1. **Until then** Ctrl-R is zsh's default incremental search, Tab uses zsh's own menu, and `^T` and `^G*` are unbound (MH accepted the gap, 2026-10-16) |
 | `widgets/command-prefixes.zsh`, `widgets/twf.zsh` | `Alt-h` (toggle `run-help`) in vi keymaps; `^T` (`twf` file picker) | loaded only by a hostname block that never ran here; `^T` clashes with fzf; `twf` not installed; `.toggle-command-prefix` is defined nowhere. **Parked** in [parked/zsh-widgets/](parked/zsh-widgets/) |
 
 ### Kept despite BOCO (MH, 2026-10-16)
@@ -53,7 +54,7 @@ Changed, not lost: Up/Down arrows become prefix history search. `^N`/`^P` in ins
 | `joepvd/zsh-hints` | installed under `~/.local/share/zinit/plugins` but referenced by no plugin file in either repo |
 | zinit annexes (`declare-zsh`, `zinit-annex-bin-gem-node`, `zinit-annex-submods`) | behind `.zsh.use_old_annexes`, `false` in both repos |
 | `pindexis/marker` | behind `.zsh.use_marker` (BOCO) or `if 0` (here); inert in both |
-| `dephell` completion snippet | loaded only if `dephell` is on `PATH` |
+| `dephell` completion snippet | see section 1: dropped with `0012.local.yaml` |
 
 ## 3. To investigate (MH's list; add here)
 
