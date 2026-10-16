@@ -145,6 +145,26 @@ provenance trailers and diffs trivial.
   functions/widgets there, and only then apply to the real `$HOME`. Do the real apply from a shell that stays open
   (`bash`/`zsh -f` as the fallback), keep a terminal session open while you open a new one to test, and
   `chsh` stays untouched. Optional clean-room: a Fedora container (`podman run -it fedora zsh`) with the repo bind-mounted.
+  **Step 4 decisions (MH, 2026-10-16)** and findings: [../log/zsh-step4-inventory.md](../log/zsh-step4-inventory.md).
+  Goal: replicate the BOCO *rendered* config here, and note ways to simplify how it is configured. BOCO is not a drop-in
+  (data-schema mismatch, undefined `filesystem.tmpDir`, Debian-only `bat` alias, hard-coded foreign home path), and
+  the keep-list includes the `SSH_AUTH_SOCK` + `gpgconf --launch gpg-agent` lines in `zshenv` (YubiKey SSH auth).
+  Removed: `asdf` plugin, `voidmobile` block, `profile.zsh`, `0115.fzf.yaml` (BOCO's `fzf` files arrive in Phase 1; fzf is
+  unused meanwhile). Widgets `command-prefixes.zsh` and `twf.zsh` are parked in `docs/parked/zsh-widgets/`, not loaded.
+  Sequence on branch `boco-merge/0c-zsh`: (1) inventory and baseline (done); (2) `completion` to `completions` rename;
+  (3) data and templates; (4) `zshenv`; (5) `zshrc`; (6) cleanup commit (removals above); (7) docs. Each commit is rendered
+  and tested in a scratch home first; the pass criterion is the baseline's stderr (not empty: p10k gitstatus prints
+  errors without a TTY), startup within about 20% of 0.145 s, and intended-only diffs of `env`, `alias`, `fpath`, `options`
+  and `bindkey -L`. Apply `zshrc` first and `zshenv` last, with a rollback script that runs under `env -i bash --noprofile --norc`.
+- **Keybinding manifest (after Step 4, separate item; D33 draft).** One YAML manifest of keybinds, generalising BOCO's
+  `.chezmoidata/fzf.yaml :: fzf.keybindings` (`key`, `keymaps`, `widget`, plus an `unbind` action). It renders to a
+  single snippet that loads **after** every plugin (including `wait`ed ones, via `atload` or a one-shot first-prompt
+  hook), so the manifest wins by construction. Render-time check: fail on a duplicate `(keymap, key)` pair. Runtime audit
+  script: starts `zsh -ic` with a `bindkey` wrapper that logs keymap, key, widget and caller (`$funcfiletrace`), then reports
+  (a) manifest entries overridden later, (b) entries whose widget is undefined (`zle -la`), (c) unclaimed bindings that differ
+  from a bare `zsh -f` `bindkey -L` baseline (plugin-added binds, with source). Caveats: one key has several encodings
+  (`^[OA` vs `^[[A`, terminfo names), so compare using zsh's canonical `bindkey -L`; `builtin bindkey` bypasses the wrapper.
+  Step 4 seeds it by capturing the `bindkey -L` baseline and diffing it after the render.
 - **Git/GPG/SSH config.** `~/.gitconfig` is unmanaged here and managed in BOCO (`dot_gitconfig.tmpl`):
   merge by hand with signing key `9F049F34…` and *this* identity, work identity guarded by `work_tooling`. Same for
   `gpg-agent.conf` (here: `enable-ssh-support`; `gpg.conf` `default-key` is also unmanaged) and `~/.ssh/config`

@@ -14,6 +14,7 @@ updated: 2026-10-16
 | BOCO chezmoi merge, rest of Phase 0 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
+| zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
 | Atlassian/Jira review and redaction pass | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), "Held items" |
 
 ## Plans waiting on a start
