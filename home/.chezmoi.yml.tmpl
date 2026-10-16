@@ -48,8 +48,8 @@ data:
   # work laptop. Use as {{ "{{ if .work_tooling }}" }} inline guards.
   work_tooling: false
   wallpaper:
-    cache: {{ joinPath .filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
-    library: {{ joinPath .filesystem.appData "wallpaper" }}
+    cache: {{ joinPath $filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
+    library: {{ joinPath $filesystem.appData "wallpaper" }}
   externals:
 {{ range $tmpl :=
   joinPath .chezmoi.sourceDir ".chezmoitemplates" "externals.d" 
