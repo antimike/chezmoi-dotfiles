@@ -21,12 +21,12 @@ BOCO's plugin lists won where they differ (decision: MH, 2026-10-14). Plugins ma
 | `MenkeTechnologies/zsh-sed-sub` | `basicSedSub` function, binding `^F^P` | BOCO |
 | `zdharma-continuum/zplugin-crasis` | loaded on demand when a command starting with `cras` was typed; purpose not recorded | BOCO |
 | `zdharma-continuum/zui`, `z-shell/zi-console` | zinit UI library and console: `ziconsole`, `zpconsole`, bindings `^O^J`, `^O^Z`, `^[Q` (`zi-browse-symbol`) | BOCO |
-| OMZ `plugins/fzf` | `FZF_DEFAULT_COMMAND=fd --type f --hidden --exclude .git`, fzf key bindings and completion loader | BOCO replaces it with `fzf --zsh` + `.chezmoidata/fzf.yaml` (Phase 1). **Gap until Phase 1:** `FZF_DEFAULT_COMMAND` is unset; check whether BOCO's `fzf.yaml` sets it |
+| OMZ `plugins/fzf` | `FZF_DEFAULT_COMMAND=fd --type f --hidden --exclude .git`, fzf key bindings and completion loader | BOCO replaces it with `fzf --zsh` + `.chezmoidata/fzf.yaml`. BOCO does not set `FZF_DEFAULT_COMMAND`; `snippets/fzf-env.zsh` does |
 | OMZ `plugins/autojump` | the `j` command (a wrapper for the `autojump` tool) | BOCO |
 | OMZ `plugins/vi-mode` | vi-mode bindings, including `vv` (edit command line) in command mode | MH remembers it interacting badly with other plugins; BOCO relies on `softmoth/zsh-vim-mode` instead |
 | `plugins.d/0070.asdf.yaml` | an asdf fallback, active only when `mise` is not installed | inert here (`mise` installed); removed |
 | `dephell` completion snippet (`zinit snippet ~/.local/share/dephell/_dephell_zsh_autocomplete`) | tab completion for `dephell` (installed with pipx) | it lived in `plugins.d/0012.local.yaml`, which BOCO's inline snippet block replaces; BOCO has no equivalent. Re-add as a local snippet if wanted |
-| `plugins.d/0115.fzf.yaml` | fzf-tab (Tab completion picker), fzf-git.sh (`^G` bindings) and a fetch of fzf's `key-bindings.zsh` from `master` (`^R` history widget, `^T` file widget) | superseded by BOCO's `0015.fzf.yaml` + `fzf --zsh` in Phase 1. **Until then** Ctrl-R is zsh's default incremental search, Tab uses zsh's own menu, and `^T` and `^G*` are unbound (MH accepted the gap, 2026-10-16) |
+| `plugins.d/0115.fzf.yaml` | fzf-tab (Tab completion picker), fzf-git.sh (`^G` bindings) and a fetch of fzf's `key-bindings.zsh` from `master` (`^R` history widget, `^T` file widget) | superseded by BOCO's `0015.fzf.yaml` + `fzf --zsh` snippets, pulled forward from Phase 1 on 2026-10-16 (MH uses Ctrl-R, Tab, `^T` and `^G*` daily). Verified in a scratch render: all bound as before, plus `^X^L`. Tab needs an explicit re-bind to `fzf-tab-complete` in `.chezmoidata/fzf.yaml` because `fzf --zsh` binds it to `fzf-completion`; `FZF_DEFAULT_COMMAND` is set by `snippets/fzf-env.zsh` |
 | `widgets/command-prefixes.zsh`, `widgets/twf.zsh` | `Alt-h` (toggle `run-help`) in vi keymaps; `^T` (`twf` file picker) | loaded only by a hostname block that never ran here; `^T` clashes with fzf; `twf` not installed; `.toggle-command-prefix` is defined nowhere. **Parked** in [parked/zsh-widgets/](parked/zsh-widgets/) |
 
 ### Kept despite BOCO (MH, 2026-10-16)
@@ -60,4 +60,4 @@ Changed, not lost: Up/Down arrows become prefix history search. `^N`/`^P` in ins
 
 _Empty. Add a plugin with one line on what it would replace or add, and why it is worth a trial._
 
-Candidates already implied by the gaps above: a manifest-driven answer for the vicmd keys in section 1 (see D33), and `FZF_DEFAULT_COMMAND` once Phase 1 lands.
+Candidates already implied by the gaps above: a manifest-driven answer for the vicmd keys in section 1 (see D33), (`FZF_DEFAULT_COMMAND` is handled).
