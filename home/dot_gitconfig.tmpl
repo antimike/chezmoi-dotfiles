@@ -1,0 +1,81 @@
+[user]
+	name = Michael Haynes
+	email = {{ .email }}
+	signingkey = {{ .gpg.keys.signing }}
+
+[init]
+	defaultBranch = main
+
+[alias]
+	stag = "!id=`git rev-parse --verify HEAD`; git tag -s Mike_${id:0:8} -m \"Tag for commit $id\""
+	vtag = !git tag -v `git describe`
+	difft = difftool difftastic
+
+[core]
+	editor = nvr --remote-wait-silent
+	pager = delta
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true       # use n and N to move between diff sections
+	dark = true           # or light = true, or omit for auto-detection
+	side-by-side = true
+	line-numbers = true
+
+[pager]
+	difftool = true
+
+[diff]
+	tool = delta
+
+[difftool]
+	prompt = true
+
+[difftool "delta"]
+	cmd = delta \"$LOCAL\" \"$REMOTE\"
+
+[difftool "difftastic"]
+	cmd = difft \"$LOCAL\" \"$REMOTE\"
+
+[merge]
+	tool = diffconflicts
+	conflictstyle = zdiff3
+
+[mergetool]
+	keepBackup = false
+
+[mergetool "diffconflicts"]
+	cmd = nvr -s -c DiffConflicts \"$MERGED\" \"$BASE\" \"$LOCAL\" \"$REMOTE\"
+	trustExitCode = true
+
+[commit]
+	gpgSign = false
+
+[tag]
+	gpgSign = true
+
+[hub]
+	protocol = ssh
+
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+{{ if lookPath "nbdime" }}
+# nbdime: Jupyter notebook diff/merge drivers
+[diff "jupyternotebook"]
+	command = git-nbdiffdriver diff
+
+[merge "jupyternotebook"]
+	driver = git-nbmergedriver merge %O %A %B %L %P
+	name = jupyter notebook merge driver
+
+[difftool "nbdime"]
+	cmd = git-nbdifftool diff \"$LOCAL\" \"$REMOTE\" \"$BASE\"
+
+[mergetool "nbdime"]
+	cmd = git-nbmergetool merge \"$BASE\" \"$LOCAL\" \"$REMOTE\" \"$MERGED\"
+{{- end }}
