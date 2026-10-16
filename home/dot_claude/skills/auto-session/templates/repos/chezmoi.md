@@ -23,12 +23,12 @@ Both dimensions are pinned because **either** alone is insufficient. `clone` alo
 
 ## Working-copy location
 
-Clone lands at `<session-dir>/clones/chezmoi/`. All chezmoi commands in the session must use `--source=<clone-path>` to point chezmoi at the clone:
+Clone lands at `<session-dir>/clones/chezmoi/`. All chezmoi commands in the session must use `--source=<clone-path>/home` to point chezmoi at the clone:
 
 ```bash
-chezmoi --source=$SESSION_CLONE execute-template dot_claude/skills/foo/SKILL.md.tmpl
-chezmoi --source=$SESSION_CLONE apply --dry-run --destination=/tmp/chezmoi-test-dest
-chezmoi --source=$SESSION_CLONE diff
+chezmoi --source=$SESSION_CLONE/home execute-template dot_claude/skills/foo/SKILL.md.tmpl
+chezmoi --source=$SESSION_CLONE/home apply --dry-run --destination=/tmp/chezmoi-test-dest
+chezmoi --source=$SESSION_CLONE/home diff
 ```
 
 The coordinator should export `SESSION_CLONE=<session-dir>/clones/chezmoi` once at launch and re-use it.
@@ -37,13 +37,13 @@ The coordinator should export `SESSION_CLONE=<session-dir>/clones/chezmoi` once 
 
 These commands are safe during the session (they don't mutate the user's live dotfiles):
 
-- `chezmoi --source=<clone> execute-template <file>` — render a `.tmpl` file's output; pure function of source + chezmoi data
-- `chezmoi --source=<clone> apply --dry-run` — compute the diff chezmoi *would* apply; does not write
-- `chezmoi --source=<clone> apply --dry-run --destination=<throwaway-dir>` — same, but targeting a temp dir for inspection
-- `chezmoi --source=<clone> diff` — show differences between chezmoi source and destination
-- `chezmoi --source=<clone> status` — list files chezmoi would manage
-- `chezmoi --source=<clone> data` — dump the template data context
-- `chezmoi --source=<clone> managed` — list files under chezmoi's management
+- `chezmoi --source=<clone>/home execute-template <file>` — render a `.tmpl` file's output; pure function of source + chezmoi data
+- `chezmoi --source=<clone>/home apply --dry-run` — compute the diff chezmoi *would* apply; does not write
+- `chezmoi --source=<clone>/home apply --dry-run --destination=<throwaway-dir>` — same, but targeting a temp dir for inspection
+- `chezmoi --source=<clone>/home diff` — show differences between chezmoi source and destination
+- `chezmoi --source=<clone>/home status` — list files chezmoi would manage
+- `chezmoi --source=<clone>/home data` — dump the template data context
+- `chezmoi --source=<clone>/home managed` — list files under chezmoi's management
 
 Git operations on the clone are safe (branch ops, commits, diffs, log). These do not affect the canonical repo until shutdown push.
 
@@ -52,7 +52,7 @@ Git operations on the clone are safe (branch ops, commits, diffs, log). These do
 **Never run any of these during an autonomous session**, even with `--dry-run` variations not listed:
 
 - `chezmoi apply` **without** `--dry-run` — mutates live dotfiles
-- `chezmoi apply` **without** `--source=<clone>` — applies canonical source, bypassing the session's isolation
+- `chezmoi apply` **without** `--source=<clone>/home` — applies canonical source, bypassing the session's isolation
 - `chezmoi update` — pulls and applies; mutates live dotfiles
 - `chezmoi re-add` / `chezmoi add` against the canonical repo — adds live files to canonical source, bypassing the clone
 - `git push origin main` (from the clone) — would overwrite canonical main

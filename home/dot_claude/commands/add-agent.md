@@ -35,7 +35,7 @@ Arguments: $ARGUMENTS
 - `/add-agent <name>` — minimum. Claude reads recent conversation to pick
   the pattern.
 - `/add-agent <name> --global` — default; writes to
-  `~/.local/share/chezmoi/dot_claude/agents/<name>.md`, then
+  `~/.local/share/chezmoi/home/dot_claude/agents/<name>.md`, then
   `chezmoi apply`.
 - `/add-agent <name> --local` — writes to
   `<project-root>/.claude/agents/<name>.md`; no chezmoi.
@@ -82,9 +82,9 @@ Mutually exclusive groups:
    with `--local`, reject — chezmoi templating is global-only.
 
 3. **Determine destination.**
-   - Global default: `~/.local/share/chezmoi/dot_claude/agents/<name>.md`.
+   - Global default: `~/.local/share/chezmoi/home/dot_claude/agents/<name>.md`.
      Live after `chezmoi apply`: `~/.claude/agents/<name>.md`.
-   - Global template: `~/.local/share/chezmoi/dot_claude/agents/<name>.md.tmpl`.
+   - Global template: `~/.local/share/chezmoi/home/dot_claude/agents/<name>.md.tmpl`.
      Live (rendered): `~/.claude/agents/<name>.md`.
    - Local: `<project-root>/.claude/agents/<name>.md`. Create
      `.claude/agents/` if missing. If the current directory doesn't look
@@ -158,7 +158,7 @@ Mutually exclusive groups:
         what outputs it returns.
 
    Model to follow:
-   `~/.local/share/chezmoi/dot_claude/agents/jira-comment-drafter.md.tmpl`
+   `~/.local/share/chezmoi/home/dot_claude/agents/jira-comment-drafter.md.tmpl`
    (rendered live at `~/.claude/agents/jira-comment-drafter.md`).
 
    **If the signal is weak, halt and ask.** A vague

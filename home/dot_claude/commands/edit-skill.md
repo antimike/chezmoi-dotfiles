@@ -34,7 +34,7 @@ Arguments: $ARGUMENTS
   targeted instruction directly in conversation.
 - `/edit-skill <name> --from-draft=<path>` — resume after external editing.
 - `/edit-skill <name> --global` — force lookup in
-  `~/.local/share/chezmoi/dot_claude/skills/<name>/SKILL.md`.
+  `~/.local/share/chezmoi/home/dot_claude/skills/<name>/SKILL.md`.
 - `/edit-skill <name> --local` — force lookup in
   `<project-root>/.claude/skills/<name>/SKILL.md`.
 - `/edit-skill <name> --note="<summary>"` — `note` for this edit's
@@ -60,7 +60,7 @@ Mutually exclusive groups:
 2. **Parse flags.** Reject unknowns. Enforce mutual-exclusion.
 
 3. **Locate the live file.**
-   - `--global`: source at `~/.local/share/chezmoi/dot_claude/skills/<name>/SKILL.md`.
+   - `--global`: source at `~/.local/share/chezmoi/home/dot_claude/skills/<name>/SKILL.md`.
    - `--local`: `<project-root>/.claude/skills/<name>/SKILL.md`.
    - Neither: auto-detect. If both exist, **halt and ask.**
    - No file found: **halt and suggest `/add-skill`.**

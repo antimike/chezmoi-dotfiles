@@ -88,7 +88,7 @@ The script is idempotent (`systemctl enable --now` is safe on already-enabled ti
    - Guard on both the upstream tool and the script itself
    - `Type=oneshot` for periodic runs
    - `ExecStart=%h<home-relative-path>` using `trimPrefix` against `lookPath`
-   - `Documentation=file://%h/.local/share/chezmoi/dot_local/bin/executable_<name>.tmpl` pointing at the source
+   - `Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_<name>.tmpl` pointing at the source
 3. Timer unit at `private_dot_config/private_systemd/private_user/<name>.timer.tmpl`:
    - Guard matches the service guard
    - `OnCalendar=...` or `OnBootSec=...` schedule

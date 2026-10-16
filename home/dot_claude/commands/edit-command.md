@@ -36,7 +36,7 @@ Arguments: $ARGUMENTS
 - `/edit-command <name> --from-draft=<path>` — resume after external
   editing; load the file and proceed to diff + confirm.
 - `/edit-command <name> --global` — force lookup in
-  `~/.local/share/chezmoi/dot_claude/commands/`.
+  `~/.local/share/chezmoi/home/dot_claude/commands/`.
 - `/edit-command <name> --local` — force lookup in
   `<project-root>/.claude/commands/`.
 - `/edit-command <name> --note="<summary>"` — the `note` field for this
@@ -67,7 +67,7 @@ Mutually exclusive groups:
 
 3. **Locate the live file.**
    - If `--global`: look in
-     `~/.local/share/chezmoi/dot_claude/commands/<name>.md`.
+     `~/.local/share/chezmoi/home/dot_claude/commands/<name>.md`.
    - If `--local`: look in `<project-root>/.claude/commands/<name>.md`.
    - If neither flag: auto-detect. Check both locations. **If both exist,
      halt and ask** which one to edit — silent precedence choice risks

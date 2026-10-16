@@ -46,7 +46,7 @@ Mutually exclusive: `--global` vs. `--local`.
 2. **Parse flags.** Reject unknowns. Enforce mutual-exclusion.
 
 3. **Locate the skill directory.**
-   - `--global`: `~/.local/share/chezmoi/dot_claude/skills/<name>/`.
+   - `--global`: `~/.local/share/chezmoi/home/dot_claude/skills/<name>/`.
    - `--local`: `<project-root>/.claude/skills/<name>/`.
    - Neither: auto-detect. If both exist, **halt and ask.**
    - No directory found: **halt.** Nothing to remove.

@@ -35,7 +35,7 @@ Arguments: $ARGUMENTS
 
 - `/add-command <name>` — minimum. Claude reads recent conversation to pick the pattern.
 - `/add-command <name> --global` — default; writes to
-  `~/.local/share/chezmoi/dot_claude/commands/<name>.md`, then
+  `~/.local/share/chezmoi/home/dot_claude/commands/<name>.md`, then
   `chezmoi apply`.
 - `/add-command <name> --local` — writes to
   `<project-root>/.claude/commands/<name>.md`; no chezmoi.
@@ -74,7 +74,7 @@ Mutually exclusive groups:
    clear error and stop.
 
 3. **Determine destination.**
-   - Global: source `~/.local/share/chezmoi/dot_claude/commands/<name>.md`,
+   - Global: source `~/.local/share/chezmoi/home/dot_claude/commands/<name>.md`,
      live `~/.claude/commands/<name>.md` after `chezmoi apply`.
    - Local: `<project-root>/.claude/commands/<name>.md`. Create `.claude/`
      and `.claude/commands/` if missing, but if the current directory doesn't
@@ -115,7 +115,7 @@ Mutually exclusive groups:
      write it to the appropriate scripts directory rather than embedding it
      inline in the command body: `.claude/scripts/` for `--local` commands,
      `~/.claude/scripts/` for `--global` commands (chezmoi source:
-     `~/.local/share/chezmoi/dot_claude/scripts/`). Reference it by
+     `~/.local/share/chezmoi/home/dot_claude/scripts/`). Reference it by
      absolute path. Reason: embedded multi-line scripts cannot be
      pre-authorized with granular `permissions.allow` rules — the permission
      checker evaluates the full blob, not individual lines inside it.

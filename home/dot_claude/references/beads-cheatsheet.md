@@ -146,4 +146,4 @@ This reference is intended to evolve. When non-obvious bd functionality requires
 
 If a finding is purely about one project (e.g., one project's specific label taxonomy), put it in that project's CLAUDE.md or a project-local memory file instead. Global reference is for multi-project conventions.
 
-Source of truth for this file: `~/.local/share/chezmoi/dot_claude/references/beads-cheatsheet.md`. Edit there, then `chezmoi apply` or copy to `~/.claude/references/beads-cheatsheet.md`.
+Source of truth for this file: `~/.local/share/chezmoi/home/dot_claude/references/beads-cheatsheet.md`. Edit there, then `chezmoi apply` or copy to `~/.claude/references/beads-cheatsheet.md`.

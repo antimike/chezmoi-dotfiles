@@ -33,7 +33,7 @@ Arguments: $ARGUMENTS
   instruction directly in conversation.
 - `/edit-agent <name> --from-draft=<path>` — resume after external editing.
 - `/edit-agent <name> --global` — force lookup in
-  `~/.local/share/chezmoi/dot_claude/agents/<name>.md` or
+  `~/.local/share/chezmoi/home/dot_claude/agents/<name>.md` or
   `<name>.md.tmpl`.
 - `/edit-agent <name> --local` — force lookup in
   `<project-root>/.claude/agents/<name>.md`.
@@ -66,7 +66,7 @@ Mutually exclusive groups:
 
 3. **Locate the live file.**
    - `--global`: check for `<name>.md` and `<name>.md.tmpl` in
-     `~/.local/share/chezmoi/dot_claude/agents/`. If both exist,
+     `~/.local/share/chezmoi/home/dot_claude/agents/`. If both exist,
      **halt and ask** (shouldn't happen — investigate before proceeding).
    - `--local`: `<project-root>/.claude/agents/<name>.md` (no templates
      in local scope).
