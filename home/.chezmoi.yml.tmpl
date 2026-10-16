@@ -43,6 +43,9 @@ data:
   {{- else -}}
     "notify-send"
   {{- end }}
+  # Gates employer-only tooling (VPN stack, rano). False here; true on a future
+  # work laptop. Use as {{ "{{ if .work_tooling }}" }} inline guards.
+  work_tooling: false
   wallpaper:
     cache: {{ joinPath .filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
     library: {{ joinPath .filesystem.appData "wallpaper" }}
