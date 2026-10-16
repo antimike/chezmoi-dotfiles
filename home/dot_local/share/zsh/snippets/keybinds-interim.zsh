@@ -12,3 +12,7 @@ bindkey -M vicmd '^[[Z' reverse-menu-complete        # Shift-Tab
 bindkey -M viins '^[[3;5~' kill-word                 # Ctrl-Delete
 bindkey -M vicmd '^[[3;5~' kill-word
 bindkey -M vicmd 'vv' edit-command-line              # edit the command line in $EDITOR
+
+# Not a key binding, but kept here with the other interim fixes: pass ANSI colours
+# through less. zcolors' LESS theme has no -R.
+[[ " $LESS " == *" -R "* ]] || export LESS="-R${LESS:+ $LESS}"
