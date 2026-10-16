@@ -14,7 +14,7 @@ dot_local/bin/
   executable_<name>.tmpl     # the actual script invoked by the service
 run_onchange_after_reload-systemd-user.sh.tmpl
                              # reloads + enables timers after any change
-                             # (NOT YET in this repo; port from chezmoi-boco)
+                             # (see "The reload script" below)
 ```
 
 ## Template guards on dependencies
@@ -67,19 +67,15 @@ fi
 
 `.notifier` (in `.chezmoi.yml.tmpl`) resolves by inspecting `.chezmoi.kernel.osrelease` and checking whether the WSL-specific wrapper source exists. The runtime `command -v` guard covers the corner case where the resolved tool isn't actually installed on the target. Units run from systemd reach the session's notification daemon (verified on GNOME/Wayland via a transient `systemd-run --user` unit).
 
-## The reload script (to be ported)
+## The reload script
 
-On the BOCO dotfiles, `home/run_onchange_after_reload-systemd-user.sh.tmpl` reloads systemd and enables all timers after any change to files under the unit directory. It uses the `run_onchange_after_` prefix plus a hash-comments block at the top to make Chezmoi retrigger it when any source file changes:
+`home/run_onchange_after_reload-systemd-user.sh.tmpl` (ported from BOCO) runs `systemctl --user daemon-reload` and enables the managed timers after any change under `private_dot_config/private_systemd/private_user/`. The `run_onchange_after_` prefix plus a hash-comments block (one `# hash:` line per unit source file) makes chezmoi re-run it when a source file changes. The hash covers raw source, so a unit flipping between rendering and rendering empty (tool appeared or vanished) does not re-trigger it by itself; run `chezmoi apply --include=scripts --force` after such a change, or touch any unit source.
 
-```gotmpl
-{{ range (glob (joinPath .chezmoi.sourceDir "private_dot_config/private_systemd/private_user/*")) -}}
-# hash: {{ . }}: {{ include . | sha256sum }}
-{{ end }}
-```
-
-The script is idempotent (`systemctl enable --now` is safe on already-enabled timers). **This repo doesn't have it yet**; until it's ported, enable new timers by hand (`systemctl --user daemon-reload && systemctl --user enable --now <name>.timer`).
-
-**Known gap (BOCO version):** the reload script doesn't disable timers that were removed from source. If you delete a `.timer.tmpl` file, the enabled symlink in `~/.config/systemd/user/timers.target.wants/` will persist until manually removed with `systemctl --user disable <name>.timer`.
+Behaviour:
+- Enables (`enable --now`) every managed timer that exists in `~/.config/systemd/user/` **and has an `[Install]` section**. Static timers (no `[Install]`, started by their session target, e.g. `wallpaper.timer`, `polybar-weather.timer`) are skipped; enabling them would fail and start them outside their session.
+- **Removed timers are disabled.** After each run the enabled set is written to `~/.local/state/chezmoi-systemd/timers.list`. On the next run, a name in that file that is no longer desired (source deleted, or the unit now renders empty) gets `systemctl --user disable --now`. Only names the script recorded are ever disabled. No state file means a first run, which disables nothing. A leftover unit file in `~/.config/systemd/user/` is **not** deleted; remove it by hand.
+- On hosts with `enable_user_lingering`, tries `sudo -n loginctl enable-linger` if lingering is off, printing a hint instead of failing when sudo is unavailable.
+- Long-running (non-timer) services are not handled; add them to the script explicitly when one is ported.
 
 ## Checklist for adding a new timer
 
@@ -94,13 +90,13 @@ The script is idempotent (`systemctl enable --now` is safe on already-enabled ti
    - `OnCalendar=...` or `OnBootSec=...` schedule
    - `Persistent=true` if the timer should fire on next login after a missed scheduled time
    - `WantedBy=timers.target` in `[Install]`
-4. Run `chezmoi apply`, then reload and enable (by hand until the reload script is ported; see above).
+4. Run `chezmoi apply`; the reload script enables the timer if the unit has an `[Install]` section (see above).
 5. Verify: `systemctl --user list-timers | grep <name>`.
 6. Commit in the Chezmoi repo with a conventional message scoped `systemd` or the domain of the timer.
 
 ## Lingering (`enable_user_lingering`)
 
-`loginctl enable-linger $USER` lets user timers fire without an active login session — required for housekeeping that should run regardless of whether the user is logged in. The per-host flag `enable_user_lingering` in `.chezmoi.yml.tmpl` tracks which machines should have it. (On the BOCO dotfiles this role was played by `enable_systemd_session_services`; in this repo that flag means something else — it selects the systemd-managed i3 session in `~/.xsession`.) The BOCO reload script tried `sudo loginctl enable-linger` on flagged hosts where lingering was not yet set, printing a hint rather than failing if sudo was unavailable.
+`loginctl enable-linger $USER` lets user timers fire without an active login session — required for housekeeping that should run regardless of whether the user is logged in. The per-host flag `enable_user_lingering` in `.chezmoi.yml.tmpl` tracks which machines should have it. (On the BOCO dotfiles this role was played by `enable_systemd_session_services`; in this repo that flag means something else — it selects the systemd-managed i3 session in `~/.xsession`.) The reload script tries `sudo -n loginctl enable-linger` on flagged hosts where lingering was not yet set, printing a hint rather than failing if sudo was unavailable.
 
 ## Related
 
