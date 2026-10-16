@@ -215,11 +215,10 @@ Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned i
 1. `docs/tools/compare-trees.py` shows the files moved from only-BOCO to both.
 2. `chezmoi diff` on the new targets is understood; apply those targets only; `chezmoi status` clean.
 3. Guards hold: nothing WSL- or work-only is managed on this host (see Guards acceptance).
-4. `gitleaks detect --no-git --no-banner -s .` shows only the known findings (listed in the private `keys-and-findings.md`); anything new is a stop.
+4. `gitleaks detect --no-git --no-banner -s .` shows only the 2 accepted findings (`home/private_dot_config/private_systemd/private_user/private_polybar-weather.service.tmpl`, `home/private_dot_jupyter/private_certs/private_service-key.pem`; accepted by MH 2026-10-15); anything new is a stop.
 5. Grep changed files with the pattern list in the private `client-terms.md`; expect nothing.
 6. Tick [../bootstrap-debt.md](../bootstrap-debt.md) if a hand-installed tool is now managed; push the branch.
 
 ## Open questions
 
 1. When should the Atlassian/Jira redaction pass happen, and who reviews it? (Held items.)
-2. Approve merging `boco-merge/0a-home-layout` into `main` and pushing it (push needs the YubiKey).

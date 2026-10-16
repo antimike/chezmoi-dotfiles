@@ -11,7 +11,6 @@ updated: 2026-10-15
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| Approve merge + push of `boco-merge/0a-home-layout` (Phase 0a done) | MH approval | YubiKey needed for the push |
 | BOCO chezmoi merge, rest of Phase 0 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Atlassian/Jira review and redaction pass | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), "Held items" |
@@ -40,6 +39,7 @@ updated: 2026-10-15
 | `.chezmoi.yml` doctor warning (`suspicious-entries`) | info | cosmetic; renaming would create a second config |
 
 ## Closed recently
+- BOCO merge Phase 0a (`home/` layout), merged and pushed 2026-10-15; the 2 gitleaks findings are accepted as expected.
 - Public `bd-track` scrub (2026-10-15), GPG key switch, branch consolidation, step 7 (see [log/migration-steps.md](log/migration-steps.md)).
 
 ## Detail: claude-mem evaluation (deferred)
