@@ -1,0 +1,85 @@
+{{- /* Re-run whenever any unit source under private_systemd/private_user/ changes.
+     The hash-comments block below makes chezmoi re-invoke this script when the
+     source content changes; otherwise `run_onchange_` is a no-op. The hash covers
+     raw source, so a unit flipping between rendering and rendering empty (tool
+     appeared or vanished) does not re-trigger it by itself. */ -}}
+{{- $unitDir := joinPath .chezmoi.sourceDir "private_dot_config/private_systemd/private_user" -}}
+#!/usr/bin/env bash
+# systemd --user units reload: regenerate daemon state, (re-)enable the timers
+# managed here, and disable timers whose source has been removed. Idempotent:
+# safe to run on every change.
+#
+{{ range (glob (joinPath $unitDir "*")) -}}
+# hash: {{ base . }}: {{ include . | sha256sum }}
+{{ end }}
+set -euo pipefail
+
+if ! command -v systemctl >/dev/null 2>&1; then
+    echo "systemd-user-reload: systemctl not found; skipping" >&2
+    exit 0
+fi
+
+systemctl --user daemon-reload
+
+{{ if .enable_user_lingering -}}
+# Lingering lets user timers fire without an active login session.
+if command -v loginctl >/dev/null 2>&1 && ! loginctl show-user "$USER" -p Linger --value 2>/dev/null | grep -qx yes; then
+    if sudo -n true 2>/dev/null; then
+        sudo loginctl enable-linger "$USER"
+        echo "systemd-user-reload: enabled lingering for $USER"
+    else
+        echo "systemd-user-reload: lingering not enabled and sudo unavailable; run 'sudo loginctl enable-linger $USER' manually" >&2
+    fi
+fi
+{{ end -}}
+
+unit_dir="$HOME/.config/systemd/user"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi-systemd"
+state_file="$state_dir/timers.list"
+
+# Timers with a source file in this repo (names after chezmoi prefix/suffix
+# stripping). A source file may render empty, so presence in the target dir is
+# checked separately below.
+managed_timers=(
+{{- range (glob (joinPath $unitDir "*.timer*")) }}
+    {{ base . | trimSuffix ".tmpl" | trimPrefix "private_" | trimPrefix "symlink_" | quote }}
+{{- end }}
+)
+
+# Desired = managed timers that exist in the target dir and have an [Install]
+# section. Timers without one (static, started by their session target) can't
+# be enabled and are left alone.
+desired=()
+for name in "${managed_timers[@]}"; do
+    if [ -f "$unit_dir/$name" ] && grep -q '^\[Install\]' "$unit_dir/$name"; then
+        desired+=("$name")
+    fi
+done
+
+# Disable timers this script enabled on an earlier run that are no longer
+# desired (source removed, or now renders empty). Only names recorded in the
+# state file are touched, so timers this script never enabled are never
+# disabled. No state file means a first run: nothing to disable.
+if [ -f "$state_file" ]; then
+    while IFS= read -r name; do
+        [ -n "$name" ] || continue
+        keep=0
+        for d in "${desired[@]}"; do
+            [ "$d" = "$name" ] && keep=1 && break
+        done
+        if [ "$keep" -eq 0 ]; then
+            systemctl --user disable --now "$name" || echo "systemd-user-reload: could not disable $name" >&2
+            echo "systemd-user-reload: disabled removed timer $name (any leftover unit file in $unit_dir is not deleted)"
+        fi
+    done <"$state_file"
+fi
+
+# Service units are not enabled directly; their timers invoke them.
+for name in "${desired[@]}"; do
+    systemctl --user enable --now "$name"
+done
+
+mkdir -p "$state_dir"
+printf '%s\n' "${desired[@]}" | sort >"$state_file"
+
+echo "systemd-user-reload: daemon reloaded; ${#desired[@]} timer(s) enabled."
