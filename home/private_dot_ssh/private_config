@@ -1,0 +1,10 @@
+IdentitiesOnly yes
+
+Host QuakerOATI.github.com
+    HostName github.com
+    IdentityFile ~/.ssh/QuakerOATI.github.25519
+
+Host antimike.github.com
+    HostName github.com
+    IdentityFile ~/.ssh/yubikey-auth.pub
+    IdentityAgent /run/user/1000/gnupg/S.gpg-agent.ssh
