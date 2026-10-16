@@ -40,3 +40,9 @@ updated: 2026-10-15
 
 ## Closed recently
 - Public `bd-track` scrub (2026-10-15), GPG key switch, branch consolidation, step 7 (see [log/migration-steps.md](log/migration-steps.md)).
+
+## Detail: claude-mem evaluation (deferred)
+1. Requirements session with MH (~30 min).
+2. Desk research (one web-search subagent): current claude-mem (is the `observer-sessions` recursion fixed?), native auto-memory, marketplace memory plugins, MCP memory servers. Criteria: footprint, dependencies, injected content, token cost, storage growth, export, maintenance, license.
+3. Trial ~1 week in an isolated profile (`CLAUDE_CONFIG_DIR=~/.claude-trial`) vs a native-only baseline. Measure session-start tokens, `/usage` deltas, disk growth, and log whether it surfaced anything useful.
+4. Decide, then migrate data. Clean its DB (drop `observer-sessions` and client rows, `VACUUM`) only if it stays. Evidence so far: 9,211 hook firings vs one `mem-search` invocation. Held items in chezmoi: `claude-mem-audit` skill/command, `claude-mem-cleanup` script and timer, `.claude-mem/` settings.
