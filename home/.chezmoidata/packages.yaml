@@ -12,6 +12,7 @@ packages:
     - fzf
     - git
     - git-crypt
+    - git-delta
     - jq
     - lsd
     - ranger
