@@ -4,6 +4,7 @@ $filesystem := dict
   "appData" (joinPath ".local" "share" )
   "sourceDir" "Source"
   "scriptDir" (joinPath ".local" "bin" )
+  "tmpDir" "/tmp"
 -}}
 {{- $osid := .chezmoi.os -}}
 {{- if hasKey .chezmoi.osRelease "id" -}}
