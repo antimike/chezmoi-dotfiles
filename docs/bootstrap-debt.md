@@ -1,7 +1,7 @@
 ---
 summary: Hand-installed tools and known gaps that chezmoi should eventually own
 status: living checklist
-updated: 2026-10-15
+updated: 2026-10-16
 ---
 
 # Bootstrap debt
@@ -23,6 +23,7 @@ Tick an item once a `run_` script or managed file reproduces it from scratch.
 
 ## Known gaps
 
+- [x] `.chezmoi.yml.tmpl` could not generate a config from nothing: the `wallpaper` block read `.filesystem.*` from the *existing* config's data instead of the `$filesystem` dict defined at the top, so `chezmoi init` on a new machine failed (`map has no entry for key "filesystem"`). Fixed 2026-10-16; checked by running `chezmoi init --config <new path>` with no prior config (output equals the live config).
 - `tofi` is in the Debian list but not in Fedora's repos; nothing uses it yet.
 - `neovim` floats on `latest` in `.tool-versions` (MH choice); run `mise upgrade neovim` to bump.
 - `java` is pinned to the `23-loom+2-48.0.0` early-access build that `latest`
