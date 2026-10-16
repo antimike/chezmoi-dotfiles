@@ -1,5 +1,9 @@
-{{ if not (lookPath "direnv") -}}
 plugins:
+  # Exported whether or not direnv is built below. BOCO exports it on its (unconditional) build entry.
+  - export:
+      name: DIRENV_WARN_TIMEOUT
+      value: 60s
+{{- if not (lookPath "direnv") }}
   - args:
       - as"program"
       - make'!'
