@@ -1,3 +1,9 @@
+---
+summary: Older checklist of files to add to chezmoi; largely superseded by plans/boco-merge.md
+status: stale, review before use
+updated: 2026-10-15
+---
+
 ## Files to add
 
 - zsh stuff

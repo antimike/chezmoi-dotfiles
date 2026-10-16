@@ -1,9 +1,15 @@
+---
+summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
+status: planned; Phase 0a is next
+updated: 2026-10-15
+---
+
 # Merging the BOCO chezmoi config into this repo
 
 Planning document for future sessions. Survey date: 2026-10-14; decisions recorded the same day.
 Work happens in this repo (`~/.local/share/chezmoi`; after Phase 0a its source root is `home/`); the BOCO repo is a **read-only reference
 clone** at `~/Source/chezmoi-boco` (source root `home/`, 256 commits, private mirror on `antimike`).
-Context: `~/claude-migration-plan.md` (D13, Q11) and `BOOTSTRAP-DEBT.md`.
+Context: [../decisions.md](../decisions.md) (D13, D24–D28), [../bootstrap-debt.md](../bootstrap-debt.md), [../conventions.md](../conventions.md).
 
 ## Decisions (MH, 2026-10-14)
 
@@ -31,7 +37,7 @@ Files already adapted for Fedora or fixed on this machine; re-diff but do not ov
 - `.chezmoidata/{packages,beads,beads_viewer,dolt}.yaml`, installers (`run_onchange_install-*`) (Fedora, exact pins)
 - `.chezmoi.yml.tmpl` (merge by hand: it carries `notifier`, `enable_user_lingering`, the new signing key)
 - `snippets/mise.zsh`, `snippets/direnv.zsh`, `functions/pyproj` (finished versions), `create_okularrc`
-- The 2 known gitleaks findings stay out: never copy the old ***REMOVED*** key (in BOCO history)
+- Never copy credentials from the reference clone's history; gitleaks gates every commit (known findings: see the private doc)
 
 ## Ground rules
 
@@ -87,7 +93,7 @@ reference employer systems. Anything that cannot be made generic stays in privat
 | in both | 188 (95 identical, 93 differ) | |
 
 54 of the 93 differing files are `.claude/**` (reconciled in step 4). 39 others are in Phase 5.
-Regenerate with `compare-trees.py` (this directory).
+Regenerate with [../tools/compare-trees.py](../tools/compare-trees.py).
 
 ## Phases
 
@@ -109,7 +115,7 @@ provenance trailers and diffs trivial.
 - Add `.chezmoiroot` (content `home`) at the repo root. `git mv` every source entry into `home/`
   (including `.chezmoidata`, `.chezmoitemplates`, `.chezmoiignore`, `.chezmoiexternal.toml.tmpl`,
   `.chezmoi.yml.tmpl`, `bin/`, `lazyvim-lock.json`). Stay at the root: `.git*`, `.envrc`, `.ripgreprc`,
-  `docs/`, `BOOTSTRAP-DEBT.md`, `TODO.md`, `.chezmoiroot`. (`.chezmoiignore` entries for root-only files
+  `docs/`, `CLAUDE.md`, `.chezmoiroot`. (`.chezmoiignore` entries for root-only files
   are then unnecessary: files outside `home/` are not managed at all.)
 - Commit the pure renames separately (no content changes) so `git log --follow` works.
 - Fix-up commit: re-insert `home/` into the ~40 hard-coded source paths of the form
@@ -196,22 +202,21 @@ keep message data out of the repo.
   `check-wsl-lso`, `apply-wslconfig`, `apply-etc-config`, `install-wslu-repo` equivalents.
 - **Employer tooling (`work_tooling`):** namespaced-VPN stack (`vpn-*`, `dual-vpn`, `namespaced-openvpn`,
   `install-vpn-symlinks`), and `rano`. Apply "Employer-specific content" first. Atlassian/Jira: see Held items.
-- Still excluded: client-project material (list in `~/claude-migration-plan.md`, D3), `claude-mem-*`,
+- Still excluded: client-project material (D3; term list in the private repo, `client-terms.md`), `claude-mem-*`,
   `time-report`, `fewer-permission-prompts`, `auto-session/.transcripts`.
 
 ## Related plan: Sway
 
-Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned in `~/ricing-plan.md`, section 1,
-not here, to keep one source of truth. Sequencing: do Phase 0a (`home/` layout) first; Sway work then lands under `home/`.
+Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned in [sway.md](sway.md), not here, to keep one source of truth. Sequencing: do Phase 0a (`home/` layout) first; Sway work then lands under `home/`.
 
 ## Per-phase checklist
 
-1. `compare-trees.py` shows the files moved from only-BOCO to both.
+1. `docs/tools/compare-trees.py` shows the files moved from only-BOCO to both.
 2. `chezmoi diff` on the new targets is understood; apply those targets only; `chezmoi status` clean.
 3. Guards hold: nothing WSL- or work-only is managed on this host (see Guards acceptance).
-4. `gitleaks detect --no-git --no-banner -s .` shows only the two known findings (polybar-weather key, Jupyter key).
-5. Grep changed files for employer/client terms (patterns: D3 in `~/claude-migration-plan.md`); expect nothing.
-6. Tick `BOOTSTRAP-DEBT.md` if a hand-installed tool is now managed; push the branch.
+4. `gitleaks detect --no-git --no-banner -s .` shows only the known findings (listed in the private `keys-and-findings.md`); anything new is a stop.
+5. Grep changed files with the pattern list in the private `client-terms.md`; expect nothing.
+6. Tick [../bootstrap-debt.md](../bootstrap-debt.md) if a hand-installed tool is now managed; push the branch.
 
 ## Open questions
 
