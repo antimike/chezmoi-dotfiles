@@ -9,24 +9,20 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-{{ $exports := list -}}
-{{- range $toplevel_file := joinPath $zsh_tmpls "exports.{yml,yaml}" | glob -}}
-  {{- $exports = includeTemplate $toplevel_file $data | fromYaml | jq ".export[]" | concat $exports -}}
-{{- end -}}
-{{- range $file := joinPath $zsh_tmpls "exports.d" "**" "*.{yml,yaml}" | glob | sortAlpha -}}
-  {{- $exports = includeTemplate $file $data | fromYaml | jq ".export[]" | concat $exports -}}
-{{- end -}}
-{{- range $export := $exports -}}
-  {{- includeTemplate "zsh/export" $export }}
-{{- end }}
+export ZINIT_HOME={{ joinPath "$HOME" .filesystem.appData "zinit" "zinit.git" | quote }}
+export ZCOMP_CACHE={{ joinPath "$HOME" .filesystem.cacheDir "zcomp" | quote }}
+[[ -d "$ZCOMP_CACHE" ]] || mkdir -p "$ZCOMP_CACHE"
 
 source "${ZINIT_HOME}/zinit.zsh"
 
 # - - - - - - - - - - - - - - - - - - - -
 # Profiling Tools
+# To turn on profiling, run 'touch ~/.zsh-profile-startup' and restart the shell
+# To turn off profiling, run 'rm ~/.zsh-profile-startup' and restart the shell
 # - - - - - - - - - - - - - - - - - - - -
-
-if [[ "$PROFILE_STARTUP" == true ]]; then
+PROFILE_STARTUP=false
+if [[ -e "${HOME}/.zsh-profile-startup" ]]; then
+  PROFILE_STARTUP=true
   zmodload zsh/zprof
   # http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html
   PS4=$'%D{%M%S%.} %N:%i> '
@@ -41,43 +37,27 @@ fi
 # Load The Prompt System And Completion System And Initilize Them.
 autoload -Uz compinit promptinit
 
-# Load And Initialize The Completion System Ignoring Insecure Directories With A
-# Cache Time Of 20 Hours, So It Should Almost Always Regenerate The First Time A
-# Shell Is Opened Each Day.
+# Load And Initialize The Completion System Ignoring Insecure Directories. The dump
+# is regenerated when it is more than 20 days old (the (Nm-20) glob qualifier; the glob
+# must stay unquoted or it never expands and the dump is never refreshed).
 # See: https://gist.github.com/ctechols/ca1035271ad134841284
-_comp_files=({{ joinPath "${ZCOMP_CACHE}" ".zcompdump(Nm-20)" }})
+_comp_files=(${ZCOMP_CACHE}/.zcompdump(Nm-20))
 if (( $#_comp_files )); then
-    compinit -i -C
+    compinit -i -C -d "${ZCOMP_CACHE}/.zcompdump"
 else
-    compinit -i
+    compinit -i -d "${ZCOMP_CACHE}/.zcompdump"
 fi
 unset _comp_files
 promptinit
 setopt prompt_subst
 
-# - - - - - - - - - - - - - - - - - - - -
-# ZSH Settings
-# - - - - - - - - - - - - - - - - - - - -
-
-{{ includeTemplate "zsh/set_options.zsh" $data }}
-
-{{ includeTemplate "zsh/zstyle.zsh" $data }}
-
-# History.
-HISTFILE={{ .zsh.histfile.path | quote }}
-HISTSIZE={{ .zsh.histfile.size }}
-SAVEHIST={{ .zsh.histfile.savehist }}
-HISTCONTROL={{ .zsh.histfile.histcontrol }}
-
-{{ includeTemplate "zsh/opts" .zsh.histfile.opts }}
+autoload -U colors && colors    # Load Colors.
 
 {{- if (hasKey .zsh "theme") }}
 # - - - - - - - - - - - - - - - - - - - -
 # Theme
 # - - - - - - - - - - - - - - - - - - - -
-
-{{ includeTemplate "zsh/opts" .zsh.theme.opts }}
-{{ includeTemplate (joinPath "zsh/themes" .zsh.theme.name) }}
+{{ includeTemplate (joinPath "zsh/themes" .zsh.theme) }}
 {{ end }}
 
 {{ if .zsh.use_old_annexes }}
@@ -96,6 +76,18 @@ zinit light-mode for \
 {{ end }}
 
 # - - - - - - - - - - - - - - - - - - - -
+# ZSH Opts
+# - - - - - - - - - - - - - - - - - - - -
+
+{{ includeTemplate "zsh/opts.zsh" }}
+
+# - - - - - - - - - - - - - - - - - - - -
+# Completion settings (zstyle)
+# - - - - - - - - - - - - - - - - - - - -
+
+{{ includeTemplate "zsh/zstyle.zsh" $data }}
+
+# - - - - - - - - - - - - - - - - - - - -
 # Plugins
 # - - - - - - - - - - - - - - - - - - - -
 
@@ -111,31 +103,28 @@ zinit light-mode for \
   {{- end -}}
 {{- end -}}
 
-alias purescript=purs
-
 # - - - - - - - - - - - - - - - - - - - -
 # User Configuration
 # - - - - - - - - - - - - - - - - - - - -
 
-{{ if eq .chezmoi.hostname "voidmobile" }}
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-${HOME}/.config}"
-export ZDOTDIR="${XDG_CONFIG_HOME}/zsh"
-export CACHEDIR="$HOME/.local/share"
-[[ -d "$CACHEDIR" ]] || mkdir -p "$CACHEDIR"
+# Debian and Ubuntu install bat as batcat.
+if (( $+commands[batcat] && ! $+commands[bat] )); then
+  alias bat=batcat
+fi
 
+alias purescript=purs
 
-zinit wait lucid light-mode as"null" multisrc'*.zsh' for \
-    ${ZDOTDIR}/snippets
+zinit add-fpath {{ joinPath "$HOME" .filesystem.appData "zsh" "functions" | quote }}
 
-# Load in light-mode: no reporting (this speeds up the process considerably)
-zinit wait lucid light-mode for \
-    multisrc'{env,alias,widgets}/*.zsh' \
-        _local/config
+zinit wait lucid \
+  id-as"local-snippets" nocompile \
+  multisrc{{ joinPath "$HOME" .filesystem.appData "zsh" "snippets" "*.zsh" | quote }} \
+  atinit"autoload -Uz {{ joinPath "$HOME" .filesystem.appData "zsh" "functions" "*(:t)" }}" \
+  atpull'zinit creinstall -q {{ joinPath "$HOME" .filesystem.appData "zsh" "completions" }}' \
+  run-atpull \
+for zdharma-continuum/null
 
-alias config='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
-{{ end }}
-
-setopt no_beep
+zinit snippet {{ joinPath "$HOME" .filesystem.appData "zsh" "local.plugin.zsh" | quote }}
 
 # - - - - - - - - - - - - - - - - - - - -
 # End Profiling Script
