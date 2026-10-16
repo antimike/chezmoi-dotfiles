@@ -5,6 +5,6 @@ employer identifiers (see docs/conventions.md; pattern list is in the private re
 
 - Docs map: `docs/README.md`. Current state and next actions: @docs/STATUS.md
 - Rules: `docs/conventions.md`. Decisions: `docs/decisions.md`. Open items: `docs/open-items.md`.
-- This file and `docs/` are chezmoi-ignored (not deployed). After the `home/` restructure (BOCO merge Phase 0a) this file stays at the repo root, outside the managed source.
+- This file, `docs/` and `tools/` (dev scripts: `compare-trees.py`, later `zsh-probe/`) are chezmoi-ignored (not deployed). After the `home/` restructure (BOCO merge Phase 0a) they stay at the repo root, outside the managed source.
 - Confirm with the user before pushing, deleting branches, or other outward-facing actions.
 - At session end, update `docs/STATUS.md` and `docs/open-items.md`.

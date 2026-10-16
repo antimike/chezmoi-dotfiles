@@ -25,7 +25,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [runbooks/memory-and-backups.md](runbooks/memory-and-backups.md) | claude-state + restic: how, restore, failure modes | anything about transcripts, memory, timers |
 | [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md) | GPG keys, git signing config, verification | signing, `pass`, YubiKey problems |
 | [log/migration-steps.md](log/migration-steps.md) | Completed Claude Code migration work log | history or provenance questions |
-| [tools/compare-trees.py](tools/compare-trees.py) | Path-level comparison of two chezmoi source trees | re-running the BOCO survey |
+| [../tools/compare-trees.py](../tools/compare-trees.py) | Path-level comparison of two chezmoi source trees | re-running the BOCO survey |
 
 Private companion docs (keys, findings, client terms) are in the private repo: `~/Source/chezmoi-boco/docs/zbook-migration/`.
 This tree is public and chezmoi-ignored: never put secrets, client names or employer identifiers here (see [conventions.md](conventions.md)).

@@ -2,7 +2,7 @@
 """Compare two chezmoi source trees by *target* path (attribute prefixes stripped).
 
 Usage: python3 -I compare-trees.py <boco-source-dir> <personal-source-dir> <out.json>
-  e.g. python3 -I docs/tools/compare-trees.py ~/Source/chezmoi-boco/home . /tmp/cmp.json
+  e.g. python3 -I tools/compare-trees.py ~/Source/chezmoi-boco/home home ~/.cache/cmp.json
 Prints counts; the JSON has only_b / both / only_p lists plus name maps.
 """
 import os,re,sys,collections
