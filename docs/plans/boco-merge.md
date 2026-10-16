@@ -65,7 +65,7 @@ Files already adapted for Fedora or fixed on this machine; re-diff but do not ov
 - **Employer-specific tooling** (VPN stack, `rano`): same inline guard on `.work_tooling`, a data key in
   `.chezmoi.yml.tmpl`, default false here, true on a future work laptop.
 - **Tool present:** keep the existing `lookPath` guards on units and scripts.
-- Acceptance: on this host, `chezmoi managed | grep -iE 'wsl|\.exe|vpn|rano'` is empty and `chezmoi diff` is quiet
+- Acceptance: on this host, `chezmoi managed | grep -iE '(^|/)(\.?wsl[^/]*|[^/]*\.exe|vpn-[^/]*|dual-vpn|namespaced-openvpn|install-vpn-symlinks|rano[^/]*|winpath|getwinip|getlocalhost|sync-nfs)(/|$)'` is empty (anchored on path components; the earlier loose `vpn` pattern matched the personal `.config/protonvpn`) and `chezmoi diff` is quiet
   for guarded items. Prove the other side by rendering one guarded file with
   `chezmoi execute-template --override-data '{"chezmoi":{"kernel":{"osrelease":"x-microsoft-wsl2"}}}'`
   (or on a WSL host); the body must appear.
