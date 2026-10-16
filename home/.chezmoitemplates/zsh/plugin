@@ -1,4 +1,13 @@
 {{- if eq (kindOf .) "map" -}}
+{{- if not (hasKey . "args") -}}
+{{- /* Entry without a zinit call: emit only its exports and commands. */ -}}
+{{- if hasKey . "export" }}{{ includeTemplate "zsh/export" .export }}
+{{ end -}}
+{{- range (default (list) (get . "exports")) }}{{ includeTemplate "zsh/export" . }}
+{{ end -}}
+{{- if hasKey . "command" }}{{ .command }}
+{{ end -}}
+{{- else -}}
 {{- $exports := (default (list) (get . "exports")) -}}
 {{- $commands := (default (list) (get . "commands")) -}}
 {{- if (hasKey . "export") }}{{ $exports = prepend $exports .export -}}{{- end -}}
@@ -24,4 +33,5 @@
 {{- if hasKey . "ice" }}{{ join " " .ice | cat "zinit ice" }}{{ end }}
 {{ $cmd_line }}
 {{ join "\n" $commands }}
+{{- end -}}
 {{- end -}}
