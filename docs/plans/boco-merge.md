@@ -201,18 +201,20 @@ plan's assumptions:
 - **Lockfile reconciled on a clean profile** against current LazyVim 16.0.1 (123 plugins; treesitter on its `main`
   branch). Validated by a headless load exercising treesitter/LSP/cmp/formatting with no config errors, via the new
   `tools/nvim-lazy-sync/` helper. The big snag was lazy.nvim's "too many rounds of missing plugins" — an *install-failure*
-  loop, not a spec problem: rock builds (oxocarbon's dev fennel rockspec, image.nvim's magick) failed because the system
-  luarocks is Lua 5.4 while Neovim is LuaJIT/5.1. Fixed with `rocks = { enabled = true, hererocks = true }` (forcing
-  lazy's isolated 5.1 luarocks) plus `hererocks` + `ImageMagick-devel` in the installer. (image.nvim's magick rock still
-  does not load — inline rendering stays off; see open-items.)
+  loop, not a spec problem: oxocarbon's dev fennel rockspec failed to build because the system luarocks is Lua 5.4 while
+  Neovim is LuaJIT/5.1. Fixed with `rocks = { enabled = true, hererocks = true }` (forcing lazy's isolated 5.1 luarocks)
+  plus `hererocks` + `ImageMagick-devel` in the installer.
 - **`run_once_install_neovim_deps.sh.tmpl`**: ported distro-gated (original Debian `apt-get` logic kept under `else`;
   Fedora `dnf` branch with verified names). Only the venv/pip provider step was live-tested (venv rebuilt at
   `~/.venv/neovim`); the `sudo dnf`/gem/npm steps run on the next full `chezmoi apply`. Manifest migration of its OS
   packages deferred to D32.
 - `venvDir`/`npmDir` added to `.chezmoi.yml.tmpl` (absolute paths). Themes coexist: BOCO's set + this repo's
-  `colorschemes.lua`/`kanagawa`/`lush`; active colorscheme is gruvbox (BOCO's `colorscheme.lua`).
-Remaining (not blockers): image.nvim inline rendering is off until rocks/magick is set up; `ruff` binary and mason LSP
-servers (jedi, ruff) install on demand.
+  `colorschemes.lua`/`lush` (this repo's `kanagawa.lua` dropped — colorscheme.lua defines it); active colorscheme is
+  gruvbox (BOCO's `colorscheme.lua`).
+- **image.nvim** enabled with a runtime guard (kitty session only, never WSL), `backend = "kitty"`, `magick_rock`
+  processor; its `magick` luarock builds via lazy's native rocks (hererocks) from image.nvim's rockspec, so
+  `vhyrro/luarocks.nvim` was dropped. Regenerate the lock from a kitty session so the gated image.nvim stays pinned.
+Remaining (not blockers): `ruff` binary and mason LSP servers (jedi, ruff) install on demand.
 
 ### Phase 3: timers and services (needs Phase 0)
 - **`sync-repos` (low priority).** Its use-case in BOCO history was a single entry: a daily auto-commit and push of

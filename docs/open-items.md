@@ -44,7 +44,6 @@ updated: 2026-10-17
 | Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
 | `^X^R` is `redisplay` instead of `_read_comp` since the zshrc switch (rarely used completion-debug key) | info | not traced; the D33 audit would surface this kind of change |
 | fzf `--bash` Alt-C and `**` completion verified in a scratch home only; darwin/arm64 checksum rows are untested on those hosts | info | 2026-10-16 |
-| nvim: image.nvim inline rendering is off — its `magick` luarock does not load yet (`require('magick')` fails) even with rocks enabled and `ImageMagick-devel` installed. luarocks itself now works (`rocks = { enabled = true, hererocks = true }` in `lazy.lua`; oxocarbon's rock builds). Finish the magick rock or switch image.nvim to a kitty backend | Claude | Phase 2, 2026-10-17 |
 | nvim: `ruff` binary (for nvim-lint) and the mason LSP servers (jedi, ruff, …) are not pre-installed; nvim-lint logs "Error running ruff: ENOENT" until present. Decide whether to add them to the nvim-deps installer / mason ensure_installed or leave on-demand | Claude | Phase 2, 2026-10-17 |
 | nvim-deps installer OS packages (ruby-devel, latexmk, biber, chafa, node) should migrate into the D32 logical package map when it lands; the provider installs (venv/pip, gem, npm) become fallback-method entries | Claude | tracks D32 |
 

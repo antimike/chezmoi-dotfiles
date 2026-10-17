@@ -54,5 +54,10 @@ does not load cleanly; on success it prints the lockfile path.
 
 - The lockfile is a symlink into this repo, so a successful run leaves the
   regenerated `home/lazyvim-lock.json` staged-ready in the working tree.
+- **Runtime-gated plugins:** some specs are `enabled = function() … end` (e.g.
+  image.nvim only in a kitty session). lazy does not install a disabled plugin,
+  so regenerate from a session where the gate passes — for image.nvim, run from
+  a kitty terminal or prefix `KITTY_WINDOW_ID=1` — or the plugin (and its rocks)
+  drop out of the lock.
 - The probe cannot exercise every lazy-loaded plugin; it covers the common
   trigger filetypes. Open the real editor for a final human check.
