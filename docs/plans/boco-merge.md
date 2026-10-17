@@ -179,6 +179,10 @@ Pins must be exact, >=14 days old, with a Linux x86_64 asset.
 - Helpers: `tutor`, `claude-init`, `etckeeper-secret-audit`, `functions/{bd,docstring}`, `snippets/{pass,dotnet}.zsh`,
   `.bash_aliases`, `.bash_env`, `.zprofile`, `.bashrc`
 - zsh completions: skip generated ones (`_mise`, `_pdm`, `_chezmoi`, `_python_argcomplete*`, `_poetry`, `_bun`); let tools provide them.
+  Installer-generated, decided 2026-10-16: for tools with a completion command (`cheat`, `dstask`, `the-way`) the installer writes
+  `completions/_<tool>` through `.chezmoitemplates/install-completion.sh`, not a render-time `output` template (that renders empty on a
+  first apply, and BOCO's `_the-way` was committed as a 0-byte file). Static `_cht`, `_nb`, `_nbterm` stay as files.
+  Status 2026-10-16: `fzf`, `cheat`, `cht-sh`, `the-way` (+ widgets), `nb`, `dnote`, `dstask`, `d2` done on `boco-merge/1-tools`; the helpers below remain.
 
 ### Phase 2: Neovim (all BOCO plugins and themes)
 Copy all ~35 plugin specs and the config files that differ (`init.lua`, `config/*.lua`, `plugins/{chezmoi,example,
