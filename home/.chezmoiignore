@@ -1,3 +1,4 @@
 *.swp
 .keep
 lazyvim-lock.json
+lazyvim.json
