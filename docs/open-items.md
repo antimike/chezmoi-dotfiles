@@ -11,7 +11,7 @@ updated: 2026-10-17
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| BOCO chezmoi merge, Phases 1-6 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| BOCO chezmoi merge, Phases 3-6 (Phases 0-2 done; Phase 2 on `boco-merge/2-nvim`, awaiting merge/push) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
 | zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
@@ -44,6 +44,8 @@ updated: 2026-10-17
 | Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
 | `^X^R` is `redisplay` instead of `_read_comp` since the zshrc switch (rarely used completion-debug key) | info | not traced; the D33 audit would surface this kind of change |
 | fzf `--bash` Alt-C and `**` completion verified in a scratch home only; darwin/arm64 checksum rows are untested on those hosts | info | 2026-10-16 |
+| nvim: `ruff` binary (for nvim-lint) and the mason LSP servers (jedi, ruff, …) are not pre-installed; nvim-lint logs "Error running ruff: ENOENT" until present. Decide whether to add them to the nvim-deps installer / mason ensure_installed or leave on-demand | Claude | Phase 2, 2026-10-17 |
+| nvim-deps installer OS packages (ruby-devel, latexmk, biber, chafa, node) should migrate into the D32 logical package map when it lands; the provider installs (venv/pip, gem, npm) become fallback-method entries | Claude | tracks D32 |
 
 | **GitHub Support request to purge cached views of the old (pre-rewrite) SHAs** on `antimike/chezmoi-dotfiles`. The force-push (2026-10-17) rewrote every ref, but GitHub keeps old commits reachable via cached commit URLs and any fork/PR refs until support purges them; the old client terms stay viewable at `github.com/.../commit/<old-sha>` until then | MH | 2026-10-17; last step of the history rewrite |
 | The templated i3 config is not applied (no i3 session here); kitty `notes` points at `~/.config/i3/bin/open-notes.bash`, which does not exist yet | info | 2026-10-16 |

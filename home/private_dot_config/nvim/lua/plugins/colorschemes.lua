@@ -8,7 +8,7 @@ return {
     "metalelf0/jellybeans-nvim",
   },
   { "ellisonleao/gruvbox.nvim" },
-  { "shaunsingh/nord.nvim", after = "nvcode-colorschemes" },
+  { "shaunsingh/nord.nvim" },
   { "wuelnerdotexe/vim-enfocado" },
   {
     "lalitmee/cobalt2.nvim",

@@ -20,12 +20,22 @@ Tick an item once a `run_` script or managed file reproduces it from scratch.
 - [ ] `bd-track`: installed by hand via `just install-dev`. The installer
       (`run_onchange_install-bd-track.sh.tmpl`, pinned to `v0.5.1`) is in place;
       tick this once it has run on a clean host.
+- [ ] Neovim providers, rocks toolchain and CLI helpers (the `~/.venv/neovim`
+      pynvim/neovim venv, `gem install neovim`, `npm -g neovim`,
+      `latexmk`/`biber`/`chafa`, `hererocks` via pipx, `ImageMagick-devel`,
+      `@mermaid-js/mermaid-cli` [mmdc], and `lazygit` via `go install`): owned by
+      `run_once_install_neovim_deps.sh.tmpl` (Phase 2, distro-gated). On this host
+      MH ran a full `chezmoi apply` 2026-10-17 (venv/gem/npm/dnf providers in);
+      mmdc was installed by hand, hererocks + ImageMagick-devel by hand. The mmdc
+      and lazygit lines were added afterwards, so they fire on the next apply
+      (the script re-runs when its content changes). Tick once a clean host has
+      run the whole script.
 
 ## Known gaps
 
 - [x] `.chezmoi.yml.tmpl` could not generate a config from nothing: the `wallpaper` block read `.filesystem.*` from the *existing* config's data instead of the `$filesystem` dict defined at the top, so `chezmoi init` on a new machine failed (`map has no entry for key "filesystem"`). Fixed 2026-10-16; checked by running `chezmoi init --config <new path>` with no prior config (output equals the live config).
 - `tofi` is in the Debian list but not in Fedora's repos; nothing uses it yet.
-- `neovim` floats on `latest` in `.tool-versions` (MH choice); run `mise upgrade neovim` to bump.
+- [x] `neovim` was floating on `latest` in `.tool-versions`; that landed on 0.12.6, which broke lualine (0.12's stricter `vim.tbl_contains(nil)`), tripped a checkhealth E95 and caused intermittent `E5009: Invalid $VIMRUNTIME` from version churn. Pinned to `0.11.7` (2026-10-17). Revisit when the plugin set (lualine especially) supports 0.12; bump by editing `home/dot_tool-versions`.
 - `java` is pinned to the `23-loom+2-48.0.0` early-access build that `latest`
   resolved to. Replace with a real LTS if java is still needed.
 - `~/.tool-versions` pins `golang 1.21.4` while `~/.config/mise/config.toml`
