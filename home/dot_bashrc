@@ -52,3 +52,15 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
+
+# Keep ~/.local/bin and ~/bin ahead of system and tool-manager directories.
+# conda's hook above prepends /usr/bin (conda lives there), which would put the
+# distro packages ahead of the pinned tools the chezmoi installers put in
+# ~/.local/bin. Remove any existing entries, then prepend them once.
+__path=":$PATH:"
+__path=${__path//:$HOME\/.local\/bin:/:}
+__path=${__path//:$HOME\/bin:/:}
+__path=${__path#:}
+PATH="$HOME/.local/bin:$HOME/bin:${__path%:}"
+unset __path
+export PATH
