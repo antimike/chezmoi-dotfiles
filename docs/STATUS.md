@@ -16,7 +16,7 @@ updated: 2026-10-15
 - A private doc (keys, findings, client terms) is committed in `~/Source/chezmoi-boco` but **not pushed** (waiting for MH's OK).
 
 ## Next actions (in order)
-1. **BOCO merge Phases 1–6** ([plans/boco-merge.md](plans/boco-merge.md)), one `boco-merge/<phase>` branch each. Phase 1 still owes the fzf installer and `.bashrc.d/fzf-*`; the zsh side of fzf is done.
+1. **BOCO merge Phases 1–6** ([plans/boco-merge.md](plans/boco-merge.md)), one `boco-merge/<phase>` branch each. Phase 1 is in progress on `boco-merge/1-tools`: fzf is done (pinned v0.74.4, installer, `fzf --bash`); next `cheat`, `cht-sh`, `the-way`, `nb`, `dnote`, `dstask`, `d2`, then the helpers.
 2. Sway work ([plans/sway.md](plans/sway.md)); Phase 0a is done, so it can start.
 3. Atlassian/Jira review pass and gitleaks hook rollout when MH schedules them.
 

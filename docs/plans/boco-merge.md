@@ -174,7 +174,7 @@ provenance trailers and diffs trivial.
 ### Phase 1: self-contained tools (BOCO versions authoritative; Fedora installers)
 Each is `.chezmoidata/<tool>.yaml` + `run_onchange_install-<tool>.sh.tmpl` (+ completion/snippet).
 Pins must be exact, >=14 days old, with a Linux x86_64 asset.
-- `fzf` (zsh side done early on 2026-10-16: `snippets/fzf-*`, `plugins.d/0015.fzf.yaml`, `.chezmoidata/fzf.yaml` keybindings, `snippets/fzf-env.zsh`; still to do: `run_onchange_install-fzf.sh.tmpl` with the pinned release and checksums, and `.bashrc.d/fzf-*`), `cheat`, `cht-sh` (+ `cht`), `the-way`
+- `fzf` (zsh side done early on 2026-10-16: `snippets/fzf-*`, `plugins.d/0015.fzf.yaml`, `.chezmoidata/fzf.yaml` keybindings, `snippets/fzf-env.zsh`; DONE 2026-10-16: `run_onchange_install-fzf.sh.tmpl` pinned to v0.74.4 and `.bashrc.d/fzf-integration.bash` using `fzf --bash` instead of BOCO's vendored scripts), `cheat`, `cht-sh` (+ `cht`), `the-way`
   (+ widgets/snippet), `nb`, `dnote`, `dstask`, `d2`
 - Helpers: `tutor`, `claude-init`, `etckeeper-secret-audit`, `functions/{bd,docstring}`, `snippets/{pass,dotnet}.zsh`,
   `.bash_aliases`, `.bash_env`, `.zprofile`, `.bashrc`

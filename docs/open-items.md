@@ -43,9 +43,11 @@ updated: 2026-10-16
 | rustup: `~/.cargo/bin` holds a stale toolchain (cargo 1.74.0, 2023) that is off `PATH`; the packaged cargo is 1.98.1. Decide: managed rustup installer + current `stable` + `PATH`, or remove `~/.cargo` | MH + Claude | left out of `zshenv` on purpose (2026-10-16) |
 | Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
 | `^X^R` is `redisplay` instead of `_read_comp` since the zshrc switch (rarely used completion-debug key) | info | not traced; the D33 audit would surface this kind of change |
-| fzf installer (`run_onchange_install-fzf.sh.tmpl`, pinned release + checksums) and `.bashrc.d/fzf-*` | Claude | Phase 1; the zsh side is already done |
+| bash `PATH` order: after `~/.bashrc` runs, `/usr/bin` precedes `~/.local/bin` (pyenv/asdf/conda lines), so bash `fzf` resolves to the Fedora 0.73.1, not the pinned 0.74.4; zsh is correct | Claude | found 2026-10-16; fix with the `.bashrc`/`.bash_env` port later in Phase 1 |
+| fzf `--bash` Alt-C and `**` completion verified in a scratch home only; darwin/arm64 checksum rows are untested on those hosts | info | 2026-10-16 |
 
 ## Closed recently
+- fzf, Phase 1 item 1 (2026-10-16, branch `boco-merge/1-tools`): v0.74.4 pinned, installer, `fzf --bash` integration; applied to `~/.local/bin/fzf` and `~/.bashrc.d` (snapshot in `~/.local/state/claude-migration-backups/fzf-apply/`).
 - Phase 0 of the BOCO merge (2026-10-16): `is-wsl`, `work_tooling`, systemd reload script, git/GPG/SSH config, zsh switch-over (applied, merged, pushed). Stale `rtx` RPM removed by MH.
 - BOCO merge Phase 0a (`home/` layout), merged and pushed 2026-10-15; the 2 gitleaks findings are accepted as expected.
 - Public `bd-track` scrub (2026-10-15), GPG key switch, branch consolidation, step 7 (see [log/migration-steps.md](log/migration-steps.md)).
