@@ -3,7 +3,7 @@
 # Usage information is taken from (trimmed) comments placed at the top of
 # autoloaded function definition files
 
-local zfuncdir=~/.zshrc.d/functions
+local zfuncdir=${XDG_DATA_HOME:-~/.local/share}/zsh/functions
 file=$zfuncdir/$1
 if [[ -r $file ]]; then
     sed -n '2,/^$/p' $file | sed 's/^#//'
