@@ -33,14 +33,18 @@ packages:
     - restic
     # Desktop helpers (i3 / notifications / clipboard)
     - cliphist
+    - dmenu
+    - dmenu-wayland
     - dunst
     - ImageMagick
     - kitty
     - libnotify
+    - passmenu
     - rofi
     - wl-clipboard
     - xclip
     - xdotool
+    - ydotool
     # Dev toolchain and python build deps (for mise-built interpreters)
     - bzip2-devel
     - cargo
