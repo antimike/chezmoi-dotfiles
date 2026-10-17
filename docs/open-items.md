@@ -39,7 +39,6 @@ updated: 2026-10-16
 | Timers fail while the YubiKey is unplugged | info | retry next run; consider a dedicated unattended password path if annoying |
 | Known gaps: java pin, Go version mismatch, unmanaged `yq`, `tofi` | Claude | [bootstrap-debt.md](bootstrap-debt.md) |
 | `.chezmoi.yml` doctor warning (`suspicious-entries`) | info | cosmetic; renaming would create a second config |
-| Stale `rtx` RPM (`rtx-2024.0.0-1`, Dec 2023): the old name of mise (`jdx/rtx` now resolves to `jdx/mise`). `mise.zsh.tmpl` already has `alias rtx=mise`, history shows no use since 2024-02-10, and `_rtx` was dropped in the zsh apply. Recommended: `sudo dnf remove rtx` | MH | `/usr/bin/rtx` |
 | zinit's `~/.zcompdump` is reused with `-C` by `fast-syntax-highlighting`'s `zicompinit`, so new completions only appear after deleting it (`rm ~/.zcompdump*`); `.zcompdump.zbook.220817` (2024) is a leftover | info | found 2026-10-16 |
 | rustup: `~/.cargo/bin` holds a stale toolchain (cargo 1.74.0, 2023) that is off `PATH`; the packaged cargo is 1.98.1. Decide: managed rustup installer + current `stable` + `PATH`, or remove `~/.cargo` | MH + Claude | left out of `zshenv` on purpose (2026-10-16) |
 | Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
@@ -47,6 +46,7 @@ updated: 2026-10-16
 | fzf installer (`run_onchange_install-fzf.sh.tmpl`, pinned release + checksums) and `.bashrc.d/fzf-*` | Claude | Phase 1; the zsh side is already done |
 
 ## Closed recently
+- Phase 0 of the BOCO merge (2026-10-16): `is-wsl`, `work_tooling`, systemd reload script, git/GPG/SSH config, zsh switch-over (applied, merged, pushed). Stale `rtx` RPM removed by MH.
 - BOCO merge Phase 0a (`home/` layout), merged and pushed 2026-10-15; the 2 gitleaks findings are accepted as expected.
 - Public `bd-track` scrub (2026-10-15), GPG key switch, branch consolidation, step 7 (see [log/migration-steps.md](log/migration-steps.md)).
 
