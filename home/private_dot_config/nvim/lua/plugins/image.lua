@@ -1,10 +1,20 @@
 return {
   {
     "3rd/image.nvim",
-    enabled = false,
-    dependencies = { "luarocks.nvim" },
+    -- Image preview needs a graphics-capable terminal, which is a per-session
+    -- property, so gate at runtime: only in a kitty session, and never on WSL
+    -- (kitty is awkward there). This also keeps the magick rock from trying to
+    -- build on hosts that cannot use image.nvim anyway.
+    enabled = function()
+      return vim.env.KITTY_WINDOW_ID ~= nil and vim.fn.has("wsl") == 0
+    end,
     opts = {
-      backend = "kitty", -- or "ueberzug" for X11
+      backend = "kitty",
+      -- FFI bindings via the `magick` luarock, installed by lazy's native rocks
+      -- from image.nvim's rockspec (rocks.hererocks in lazy.lua). Faster than the
+      -- default magick_cli (no per-operation ImageMagick subprocess), which
+      -- matters for the jupyter/molten/quarto inline-plot workflow.
+      processor = "magick_rock",
       integrations = {
         markdown = {
           enabled = true,
@@ -24,16 +34,5 @@ return {
       tmux_show_only_in_active_window = false,
       hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp" },
     },
-  },
-  {
-    "vhyrro/luarocks.nvim",
-    lazy = true,
-    opts = {},
-    config = function(_, opts)
-      -- Add the vendor path that luarocks.loader needs for dkjson
-      local rocks_path = vim.fn.stdpath("data") .. "/lazy/luarocks.nvim/.rocks"
-      package.path = rocks_path .. "/share/lua/5.1/luarocks/vendor/?.lua;" .. package.path
-      require("luarocks-nvim").setup(opts)
-    end,
   },
 }
