@@ -1,0 +1,19 @@
+# Pinned nb release, consumed by run_onchange_install-nb.sh.tmpl.
+#
+# nb (https://github.com/xwmx/nb) ships as a single portable bash script.
+# The release asset is platform-independent, so there's only one SHA256.
+# Upstream does not publish a checksums file, so the hash is computed
+# locally at pin time: `curl -fsSL <url> | sha256sum`.
+#
+# Pin rule: exact tag, at least 14 days old. 7.25.5 = 2026-08-12. The zsh
+# completions (_nb, _nbterm) are static files in completions/.
+#
+# To bump:
+#   1. version: new upstream tag (no "v" prefix; upstream tags are bare
+#      semver like "7.25.5")
+#   2. sha256:  recomputed as above
+#   3. commit; the rendered script hash changes and chezmoi re-runs the
+#      installer on next `chezmoi apply`.
+nb:
+  version: "7.25.5"
+  sha256:  "7dc2e0c2a6130e3317c675bb171e8205f93f73c4e4972958b31bc774b959cc55"
