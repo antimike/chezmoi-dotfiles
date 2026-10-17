@@ -1,6 +1,6 @@
 ---
 summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
-status: Phases 0-2 done and on main (Phase 2 merged + pushed 2026-10-17, merge fbc8169); Phase 3 next
+status: Phases 0-2 done and on main (Phase 2 merged + pushed 2026-10-17, merge fbc8169); Phase 3 code done on boco-merge/3-timers (unmerged), gitleaks hook rollout pending
 updated: 2026-10-17
 ---
 
@@ -47,7 +47,7 @@ Files already adapted for Fedora or fixed on this machine; re-diff but do not ov
   conventional message, trailer `Source: AudensAurantius/chezmoi@<sha>:home/<path>`
   (`git -C ~/Source/chezmoi-boco log -1 --format=%h -- home/<path>`; private-only commits use
   `antimike/chezmoi-boco@<sha>`, see `conventions.md`).
-- Feature branch off `BOCO-migration` per phase (`boco-merge/<phase>`). Never `chezmoi init/apply`
+- Feature branch off `main` per phase (`boco-merge/<phase>`). Never `chezmoi init/apply`
   against the clone. Apply named targets only, then `chezmoi status`.
 - Chezmoi ignores source mode bits: scripts invoked by path need `executable_`. Verify after apply.
 - Fedora, not Debian: take package names from `.chezmoidata/packages.yaml`.
@@ -66,7 +66,10 @@ Files already adapted for Fedora or fixed on this machine; re-diff but do not ov
 - **Employer-specific tooling** (VPN stack, `rano`): same inline guard on `.work_tooling`, a data key in
   `.chezmoi.yml.tmpl`, default false here, true on a future work laptop.
 - **Tool present:** keep the existing `lookPath` guards on units and scripts.
-- Acceptance: on this host, `chezmoi managed | grep -iE '(^|/)(\.?wsl[^/]*|[^/]*\.exe|vpn-[^/]*|dual-vpn|namespaced-openvpn|install-vpn-symlinks|rano[^/]*|winpath|getwinip|getlocalhost|sync-nfs)(/|$)'` is empty (anchored on path components; the earlier loose `vpn` pattern matched the personal `.config/protonvpn`) and `chezmoi diff` is quiet
+- Acceptance (corrected 2026-10-17, Phase 3): `chezmoi managed` **does list** templates that render empty (it lists
+  source entries, not rendered output), so it cannot prove a guard. Check what would be written instead: guarded targets
+  must be absent from `chezmoi status` and `chezmoi apply --dry-run --verbose <targets>` must print nothing for them.
+  The original check, kept for reference: on this host, `chezmoi managed | grep -iE '(^|/)(\.?wsl[^/]*|[^/]*\.exe|vpn-[^/]*|dual-vpn|namespaced-openvpn|install-vpn-symlinks|rano[^/]*|winpath|getwinip|getlocalhost|sync-nfs)(/|$)'` is empty (anchored on path components; the earlier loose `vpn` pattern matched the personal `.config/protonvpn`) and `chezmoi diff` is quiet
   for guarded items. Prove the other side by rendering one guarded file with
   `chezmoi execute-template --override-data '{"chezmoi":{"kernel":{"osrelease":"x-microsoft-wsl2"}}}'`
   (or on a WSL host); the body must appear.
@@ -217,6 +220,13 @@ plan's assumptions:
 Remaining (not blockers): `ruff` binary and mason LSP servers (jedi, ruff) install on demand.
 
 ### Phase 3: timers and services (needs Phase 0)
+**Code DONE 2026-10-17 on `boco-merge/3-timers` (5 commits, unmerged).** Ported: `sync-repos` (empty list: the timer
+and `~/.config/sync-repos` stay unmanaged until an entry is added; script + service installed, service run clean),
+`dstask-notify` (via the `notify` adapter; also guarded on `~/.dstask` existing; fixed a UTC end-of-day bug that hid
+tasks due the same evening), `rano` (installer, monitor, weekly report, all `work_tooling`-guarded; employer report
+recipient moved to data key `rano.report_email`), and the reload script's long-running-services list
+(`rano-monitor.service`). **Not done:** the gitleaks hook rollout and `mani` task below (held until MH schedules it),
+and the optional `init.templateDir` hook.
 - **`sync-repos` (low priority).** Its use-case in BOCO history was a single entry: a daily auto-commit and push of
   `~/.timewarrior` (the timewarrior data directory), to get off-machine history for a data repo nobody commits by
   hand. timew is obsolete (bd-track keeps its own event log) and `nb`/`dstask` handle their own git sync, so there

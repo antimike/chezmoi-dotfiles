@@ -82,4 +82,16 @@ done
 mkdir -p "$state_dir"
 printf '%s\n' "${desired[@]}" | sort >"$state_file"
 
+# Long-running services (not timer-driven), listed explicitly: oneshot services
+# must not be enabled here, their timers invoke them. Enabled only when the unit
+# rendered on this host; not disabled automatically if it later stops rendering.
+long_running_services=(
+    rano-monitor.service
+)
+for name in "${long_running_services[@]}"; do
+    if [ -f "$unit_dir/$name" ]; then
+        systemctl --user enable --now "$name"
+    fi
+done
+
 echo "systemd-user-reload: daemon reloaded; ${#desired[@]} timer(s) enabled."

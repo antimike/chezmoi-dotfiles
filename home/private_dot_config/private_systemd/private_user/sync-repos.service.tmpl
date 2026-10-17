@@ -1,0 +1,10 @@
+{{ if lookPath "git" -}}
+[Unit]
+Description=Daily git auto-commit + push for repos in ~/.config/sync-repos/repos.conf
+Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_sync-repos.tmpl
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/sync-repos
+Nice=10
+{{- end }}
