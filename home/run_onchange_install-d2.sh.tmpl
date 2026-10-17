@@ -1,0 +1,70 @@
+#!/bin/sh
+# run_onchange_install-d2.sh.tmpl — install d2 to ~/.local.
+#
+# d2 (https://github.com/terrastruct/d2) is a diagram scripting language
+# with a dedicated CLI renderer. The tarball SHA256 is pinned in
+# .chezmoidata/d2.yaml; bumping that file re-triggers this installer.
+#
+# Delegates to the install.sh bundled in the release tarball, which installs
+# the binary, man page, and any other release artifacts into $PREFIX.
+#
+# Platforms without a pinned checksum in d2.yaml are skipped (exit 0) rather
+# than failing `chezmoi apply`.
+{{- $v := .d2.version -}}
+{{- $platform := printf "%s_%s" .chezmoi.os .chezmoi.arch -}}
+{{- $sha := dig $platform "" .d2.checksums -}}
+{{- /* Upstream names the macOS assets "macos", not "darwin". */ -}}
+{{- $assetOS := .chezmoi.os -}}
+{{- if eq $assetOS "darwin" -}}{{- $assetOS = "macos" -}}{{- end -}}
+{{- $assetName := printf "d2-%s-%s-%s.tar.gz" $v $assetOS .chezmoi.arch -}}
+{{- $assetURL := printf "https://github.com/terrastruct/d2/releases/download/%s/%s" $v $assetName }}
+
+set -eu
+
+VERSION={{ $v | quote }}
+ASSET_NAME={{ $assetName | quote }}
+ASSET_URL={{ $assetURL | quote }}
+EXPECTED_SHA={{ $sha | quote }}
+INSTALL_PATH={{ joinPath .chezmoi.homeDir ".local" "bin" "d2" | quote }}
+DIR_IN_TAR={{ printf "d2-%s" $v | quote }}
+PREFIX={{ joinPath .chezmoi.homeDir ".local" | quote }}
+
+if [ -z "$EXPECTED_SHA" ]; then
+  echo "d2 installer: no pinned checksum for $ASSET_NAME; skipping" >&2
+  exit 0
+fi
+
+# Idempotency guard: skip if the installed version already matches.
+# `d2 --version` prints "v0.7.1".
+# `d2 --version` prints "v0.9.0"; compare it exactly.
+if [ -x "$INSTALL_PATH" ] && [ "$("$INSTALL_PATH" --version 2>/dev/null)" = "$VERSION" ]; then
+  echo "d2 installer: $VERSION already installed at $INSTALL_PATH" >&2
+  exit 0
+fi
+
+tmp_tar=$(mktemp)
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_tar" "$tmp_dir"' EXIT
+
+echo "d2 installer: downloading $ASSET_URL" >&2
+curl -fsSL -o "$tmp_tar" "$ASSET_URL"
+
+actual=$(sha256sum "$tmp_tar" | awk '{print $1}')
+if [ "$EXPECTED_SHA" != "$actual" ]; then
+  echo "d2 installer: checksum mismatch for $ASSET_NAME" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+tar -xzf "$tmp_tar" -C "$tmp_dir"
+
+if [ ! -f "$tmp_dir/$DIR_IN_TAR/scripts/install.sh" ]; then
+  echo "d2 installer: scripts/install.sh not found in tarball; contents:" >&2
+  find "$tmp_dir" -type f >&2
+  exit 1
+fi
+
+echo "d2 installer: installing $VERSION via bundled install.sh (PREFIX=$PREFIX)" >&2
+( cd "$tmp_dir/$DIR_IN_TAR" && PREFIX="$PREFIX" sh ./scripts/install.sh )
+echo "d2 installer: done" >&2

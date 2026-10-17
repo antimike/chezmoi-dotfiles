@@ -1,0 +1,27 @@
+# Pinned D2 release, consumed by run_onchange_install-d2.sh.tmpl.
+#
+# d2 (https://github.com/terrastruct/d2) is a diagram scripting language
+# with a dedicated CLI renderer. Upstream publishes a SHA256SUMS file with each
+# release; the rows below are verbatim from it. Its macOS assets are named
+# `macos`, not `darwin`; the template maps the OS at render time, the keys here
+# stay chezmoi's os_arch.
+#
+# Pin rule: exact tag, at least 14 days old. v0.9.0 = 2026-09-07 (BOCO pinned
+# v0.7.1). d2 is pre-1.0, so a bump can change diagram rendering. Only
+# linux_amd64 has been exercised (zbook); the other rows are untested on those
+# hosts. d2 has no zsh completion command.
+#
+# To bump:
+#   1. version: new upstream tag, "v"-prefixed
+#   2. checksums: verbatim rows from
+#      https://github.com/terrastruct/d2/releases/download/<tag>/SHA256SUMS
+#      (d2-<tag>-<os>-<arch>.tar.gz; os is linux or macos)
+#   3. commit; the rendered script hash changes, so the installer re-runs on
+#      next apply.
+d2:
+  version: "v0.9.0"
+  checksums:
+    linux_amd64:  "5669ddc46b99e942cc96078f4a4e36d5e62103348f4c05179ede27802fdd87a9"
+    linux_arm64:  "ac2c028697199479acb321db1e3d68caee9f2ba492ed73caa3cd13f3829bf913"
+    darwin_amd64: "cad39576a480d6bb02ea142fef1726647914b0d2da51ccc9b30b660a2b1babf0"
+    darwin_arm64: "eaf6c0c143e56dd9fa97bfb6df25ea9c1ebce40245f056a0768cf1a6c15d3064"
