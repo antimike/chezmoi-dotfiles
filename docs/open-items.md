@@ -53,7 +53,15 @@ updated: 2026-10-16
 | Installers were run directly (a scoped apply cannot target a `run_onchange` script), so chezmoi has no state for them; the next full apply re-runs them, and they are idempotent | info | 2026-10-16 |
 | Untested on non-Linux/non-amd64 hosts: the darwin and arm64 checksum rows for fzf, cheat, dnote, d2, dstask (darwin only), the-way (macos amd64 only) | info | rows verified against upstream, not run |
 
+| bash startup is about 1.1 s; conda's `shell.bash hook` alone is 350-675 ms and predates this work (before the Phase 1 `.bashrc` merge it was about 0.95 s). Options: load conda lazily, or only in zsh. The merge added about 0.15 s (`pyenv virtualenv-init`, `mise`, gpg setup) | MH decides | measured 2026-10-16 |
+| bash still sources asdf (`~/.asdf`), which the zsh config dropped in favour of `mise` (`alias asdf=mise`); the stale asdf shims on `PATH` (`~/.asdf/shims/chezmoi` has no version installed) are why `chezmoi completion bash` needed a guard. Remove the asdf block from `dot_bashrc` for parity with zsh? `~/.tool-versions` would still be read by mise | MH decides | 2026-10-16 |
+| `PASSWORD_STORE_ENABLE_EXTENSIONS` is set by the zsh snippet and `~/.bash_env`, so only interactive shells have it; a launcher or Sway keybinding that runs `pass dmenu` directly does not. Put it in `~/.config/environment.d/` if that bites | info | 2026-10-16 |
+| `bd.tmpl` (routes `bd start|stop` to `bd-timew`) is not ported: `bd-timew` here is a deprecated alias inside the `bd-track` package and the function would call it. Option: a version that calls `bd-track start|stop` | MH decides | 2026-10-16 |
+| `etckeeper-secret-audit` is installed but not run: it needs `sudo etckeeper-secret-audit` | MH | 2026-10-16 |
+| Observed, not changed: `claude-init` writes `.claude/settings.local.json` with `Bash(git:*)` (includes `git push`) | info | 2026-10-16 |
+
 ## Closed recently
+- Phase 1 helpers (2026-10-16): `tutor` (fixed its default pager), `claude-init`, `etckeeper-secret-audit` (fixed an unchecked `cd`), the `pass` wrapper and extension setting, the `dotnet` snippet (adapted to Fedora's dotnet), `.bash_aliases` (guarded `fd`/`bat`, no obsolescent egrep alias), `.bash_env` and the merged `.bashrc`; `usage` now reads the real functions directory. `docstring`, `.zprofile` are not ported (duplicates). Applied with a snapshot in `~/.local/state/claude-migration-backups/phase1-helpers/`.
 - jrnl, kitty `notes` and pet path fixes applied (2026-10-16, snapshot in `~/.local/state/claude-migration-backups/path-fixes/`).
 - Completions on `fpath` (2026-10-16): the zshrc puts `~/.local/share/zsh/completions` on `fpath` before `compinit` and rescans when a file there is newer than the dump (`-C` never looks for new files); the `zinit creinstall` hook and its symlinks are gone. Measured: a full scan costs about 9 ms more with 26 extra completions, a cached start nothing.
 - Client-term cleanup of the tracked tree (2026-10-16): zero hits. Home paths templated (jrnl, kitty notes, pet, i3, the-way), two man pages use `~`, and the dead README symlinks, `vifminfo.json` and `create_okularrc` are removed. History is a separate item above.
