@@ -62,10 +62,6 @@ if command -v pyenv >/dev/null; then
 	pyenv commands 2>/dev/null | grep -qx virtualenv-init && eval "$(pyenv virtualenv-init -)"
 fi
 
-if [[ -d "$HOME/.asdf" ]]; then
-	. "$HOME/.asdf/asdf.sh"
-	. "$HOME/.asdf/completions/asdf.bash"
-fi
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 set -o vi
 # History search with Ctrl-P / Ctrl-N in vi insert mode
