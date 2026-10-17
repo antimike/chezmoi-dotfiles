@@ -16,7 +16,7 @@ updated: 2026-10-15
 - A private doc (keys, findings, client terms) is committed in `~/Source/chezmoi-boco` but **not pushed** (waiting for MH's OK).
 
 ## Next actions (in order)
-1. **BOCO merge Phases 1–6** ([plans/boco-merge.md](plans/boco-merge.md)), one `boco-merge/<phase>` branch each. Phase 1 is in progress on `boco-merge/1-tools` (not pushed): all tool installers and helpers are done and tested (fzf, cheat, cht-sh, the-way + widgets, nb, dnote, dstask, d2 applied; clipse tested but not installed, since GNOME lacks the clipboard protocol it needs). Before the first push, rewrite history to purge client-term hits (rehearsed; see `open-items.md`), then force-push `main` with MH's OK.
+1. **Push Phase 1, then BOCO merge Phases 2–6** ([plans/boco-merge.md](plans/boco-merge.md)). Phase 1 (`boco-merge/1-tools`, 55 commits, not pushed) is done, applied (a full `chezmoi apply` is clean) and documented. To push: (a) bundle-backup, then rewrite history to purge client-term hits from every ref (rehearsed; see `open-items.md`, "History rewrite"); (b) fast-forward `main` to the branch; (c) force-push `main` **with MH's OK**; (d) GitHub support request to purge cached views. Then Phase 2 (Neovim) on `boco-merge/2-nvim`.
 2. Sway work ([plans/sway.md](plans/sway.md)); Phase 0a is done, so it can start.
 3. Atlassian/Jira review pass and gitleaks hook rollout when MH schedules them.
 
