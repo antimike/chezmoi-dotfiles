@@ -31,12 +31,13 @@ require("lazy").setup({
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
   install = { colorscheme = { "tokyonight", "habamax" } },
-  -- No luarocks/hererocks toolchain on this host: skip rock builds (oxocarbon's
-  -- dev fennel rockspec and image.nvim's magick rock) that otherwise fail to
-  -- install every round and trip lazy's "too many rounds of missing plugins".
-  -- image.nvim inline rendering needs ImageMagick + the magick rock (or a kitty
-  -- backend); re-enable rocks if that is set up.
-  rocks = { enabled = false },
+  -- Force hererocks: the system luarocks targets Lua 5.4, but Neovim is LuaJIT
+  -- (Lua 5.1), so rocks like image.nvim's `magick` must build against 5.1.
+  -- hererocks (installed via pipx) bootstraps an isolated 5.1 luarocks; without
+  -- hererocks=true lazy would pick the 5.4 system luarocks and fail. The
+  -- ImageMagick headers for `magick` and hererocks itself come from
+  -- run_once_install_neovim_deps.sh.tmpl.
+  rocks = { enabled = true, hererocks = true },
   checker = {
     enabled = true, -- check for plugin updates periodically
     notify = false, -- notify on update
