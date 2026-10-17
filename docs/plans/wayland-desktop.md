@@ -103,7 +103,7 @@ versions checked 2026-10-08 and 2026-10-17.
 | Need | Recommendation | Alternatives | Trade-off |
 |---|---|---|---|
 | Bar + tray | **waybar** 0.15 (tray is a built-in module: no stalonetray) | ironbar, eww, quickshell (none packaged) | waybar has sway, hyprland, niri and river modules, CSS styling and a tray; the others are more programmable but heavier to maintain. Rebuild the polybar modules (workspaces, clock, battery, network, volume, weather) here. |
-| Notifications | **SwayNotificationCenter** 0.12.6 (recommended 2026-10-17; MH to confirm) | dunst (installed, D29), mako | swaync: popups plus a slide-out panel that is a real notification log, Do Not Disturb, panel widgets (MPRIS controls, volume/brightness sliders, buttons), waybar module (count, DND), styled with GTK CSS like waybar (fits [theming.md](theming.md)). Cost: new config; `dunstctl` bindings become `swaync-client`; heavier than dunst. dunst: rich INI rules and scripts, history only via `dunstctl history-pop`/`history`, no UI. mako: the minimal option. |
+| Notifications | **dunst** 1.13.2 (installed; D29 confirmed by MH 2026-10-17) | SwayNotificationCenter 0.12.6, mako | dunst: global keybindings act on the current popup (`dunstctl action`, `dunstctl context` opens a rofi menu of its actions and links, `close`, `close-all`, `history-pop`); works in i3 and SwayFX, so the shared fragment keeps one set of bindings; runtime-toggled rules (`dunstctl rule`) and graded pause levels; theming through `dunstctl reload <files>` with a generated file. History: a rofi/fuzzel **history browser** (step 8). Waybar status: a custom module on `dunstctl count history` / `is-paused`. swaync was considered: a clickable panel with widgets and inline reply, but Wayland-only, and its README documents no command to act on the latest popup from a keybinding. |
 | Lock screen | **swaylock** 1.8.6 | gtklock 4.0 (packaged, CSS-themed), swaylock-effects (blur/clock; not packaged), hyprlock (COPR) | swaylock is minimal and robust; gtklock looks better and stays packaged. Both use ext-session-lock, so either works across compositors. |
 | Idle / DPMS | **swayidle** 1.9 | hypridle (COPR) | swayidle drives dim, lock and output power off from timeouts, plus `before-sleep` lock. |
 | Launcher, dmenu prompts | **rofi** 2.0 (keep) | fuzzel 1.14, wofi | rofi keeps all existing themes and modi. fuzzel is faster and simpler; keep it in mind for prompts. |
@@ -260,7 +260,10 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    **X-specific config items:** `app_id` rules, screenshot rewrite, `i3-input` wrapper, exit/nag, dropdown terminal,
    opacity keys.
 7. **waybar** with tray (the polybar replacement).
-8. **Pickers:** password picker (with the sensitive-clipboard check), clipboard picker.
+8. **Pickers:** password picker (with the sensitive-clipboard check), clipboard picker, **notification history browser**
+   (`dunstctl history` JSON → `jq` → rofi; Enter = `history-pop <ID>`, a custom key = `history-rm <ID>`; raise
+   `history_length`; optional dunst rule script appending to a log file so history survives restarts; check the
+   timestamp format, which is probably time since boot). Note: actions on re-shown notifications only work while the sending app runs.
 9. **Keybinding manifest** (start it in step 3, when the shared fragment is split), then which-key leader menus and the
    cheat sheet rendered from it.
 10. **Minimal configs** for niri, Hyprland, Wayfire, reusing the helper target; trial period; pick the main compositor.
@@ -272,5 +275,4 @@ Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
 ## Open questions
 
 1. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
-2. Notifications: confirm SwayNotificationCenter over dunst (comparison in the helper table).
-3. Which physical sockets are `DP-4..6` (the NVIDIA-wired ports)? In the backlog until MH is at the desk.
+2. Which physical sockets are `DP-4..6` (the NVIDIA-wired ports)? In the backlog until MH is at the desk.

@@ -20,7 +20,7 @@ updated: 2026-10-17
 ## Plans waiting on a start
 | Item | Who | Where |
 |---|---|---|
-| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial under uwsm; order of work agreed 2026-10-17; **next: step 0** (recovery-runbook checks, GPU udev symlinks), then step 1 (packages and sessions). Waiting on MH: notifications choice (swaync recommended), `DP-4..6` sockets (backlog) | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) |
+| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial under uwsm; order of work agreed 2026-10-17; **next: step 0** (recovery-runbook checks, GPU udev symlinks), then step 1 (packages and sessions). Waiting on MH: `DP-4..6` sockets (backlog); notifications decided (dunst + history browser) | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) |
 | Devices and audio review (step 5): PipeWire/WirePlumber, playerctl (not installed), kanshi, Bluetooth, udiskie, Wi-Fi | Claude | [plans/devices-and-audio.md](plans/devices-and-audio.md) |
 | Mining pass over `i3-config-mbp`, `i3wm-configuration`, `arcolinux-i3wm` (cloned to `~/Source/antimike/`) | Claude | step 6 of [plans/wayland-desktop.md](plans/wayland-desktop.md) |
 | Theming system (theme bundles, wallpaper fetcher and palette-aware selection, fonts, pickers); after the SwayFX daily driver | Claude | [plans/theming.md](plans/theming.md) |

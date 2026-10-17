@@ -1,5 +1,5 @@
 ---
-summary: Decision log (D1–D43) for the Claude Code migration, chezmoi merge, desktop and docs; one line per decision
+summary: Decision log (D1–D44) for the Claude Code migration, chezmoi merge, desktop and docs; one line per decision
 status: current
 updated: 2026-10-17
 ---
@@ -64,6 +64,7 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | D41 | Compositors render on the Intel iGPU; the NVIDIA card is kept for compute and opened by compositors only for scanout to its own ports (`DP-4..6`) if those are used. Stable colon-free DRM device symlinks via udev (MH, 2026-10-17). |
 | D42 (**draft**) | One `keybindings` data tree for all apps (compositors, wlr-which-key, zsh, kitty, nvim): `generate` sections render bindings, `catalog` sections (nvim) only list them for the cheat sheet and checks. Chords and WM actions use i3/Sway syntax, translated per compositor by a table keyed on the i3 command strings. Extends D33. Detail: [plans/wayland-desktop.md](plans/wayland-desktop.md). |
 | D43 | Removable drives: known drives (by UUID) automount at fixed paths; unknown drives are not automounted but get a notification with a mount action (udiskie). Safer than automounting untrusted filesystems (MH, 2026-10-17). |
+| D44 | Notifications stay on **dunst** (reaffirms D29): keybinding-driven actions on the current popup, the same bindings in i3 and SwayFX, rules and pause levels. History comes from an own rofi/fuzzel browser over `dunstctl history`. SwayNotificationCenter rejected: Wayland-only, panel-centric, no documented command to act on the latest popup (MH, 2026-10-17). |
 | D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. Since 2026-10-17 both are listed in `.gitleaksignore`, so a scan shows none. |
 
 ## Tooling (proposed)
