@@ -37,17 +37,27 @@ fi
 # Load The Prompt System And Completion System And Initilize Them.
 autoload -Uz compinit promptinit
 
+# Completions managed here (static files, and the ones the installers generate)
+# live in one directory. Put it on fpath before compinit so they need no
+# per-tool linking step.
+_comp_dir={{ joinPath "$HOME" .filesystem.appData "zsh" "completions" | quote }}
+fpath=("$_comp_dir" $fpath)
+
 # Load And Initialize The Completion System Ignoring Insecure Directories. The dump
 # is regenerated when it is more than 20 days old (the (Nm-20) glob qualifier; the glob
-# must stay unquoted or it never expands and the dump is never refreshed).
+# must stay unquoted or it never expands and the dump is never refreshed), or when a
+# file in the completions directory is newer than it (compinit -C never looks for new
+# files, so a freshly generated completion would stay unregistered until then).
 # See: https://gist.github.com/ctechols/ca1035271ad134841284
-_comp_files=(${ZCOMP_CACHE}/.zcompdump(Nm-20))
-if (( $#_comp_files )); then
-    compinit -i -C -d "${ZCOMP_CACHE}/.zcompdump"
+_comp_dump="${ZCOMP_CACHE}/.zcompdump"
+_comp_files=(${_comp_dump}(Nm-20))
+_comp_newer=(${_comp_dir}/_*(Ne:'[[ $REPLY -nt $_comp_dump ]]':))
+if (( $#_comp_files && ! $#_comp_newer )); then
+    compinit -i -C -d "$_comp_dump"
 else
-    compinit -i -d "${ZCOMP_CACHE}/.zcompdump"
+    compinit -i -d "$_comp_dump"
 fi
-unset _comp_files
+unset _comp_files _comp_newer _comp_dump _comp_dir
 promptinit
 setopt prompt_subst
 
@@ -120,8 +130,6 @@ zinit wait lucid \
   id-as"local-snippets" nocompile \
   multisrc{{ joinPath "$HOME" .filesystem.appData "zsh" "snippets" "*.zsh" | quote }} \
   atinit"autoload -Uz {{ joinPath "$HOME" .filesystem.appData "zsh" "functions" "*(:t)" }}" \
-  atpull'zinit creinstall -q {{ joinPath "$HOME" .filesystem.appData "zsh" "completions" }}' \
-  run-atpull \
 for zdharma-continuum/null
 
 zinit snippet {{ joinPath "$HOME" .filesystem.appData "zsh" "local.plugin.zsh" | quote }}
