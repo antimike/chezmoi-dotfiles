@@ -23,7 +23,7 @@ updated: 2026-10-17
 
 ## Next actions (in order; reprioritized by MH 2026-10-17)
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
-2. **Sway and ricing** ([plans/sway.md](plans/sway.md), [plans/ricing-backlog.md](plans/ricing-backlog.md)), in a fresh session. First step: fold MH's untracked `ricing.md` (repo root; public repo, so never commit it as is) into those two docs, Sway items into the plan and the rest into the backlog, then delete it. Then agree the order of work with MH.
+2. **Sway and ricing** ([plans/wayland-desktop.md](plans/wayland-desktop.md), [plans/ricing-backlog.md](plans/ricing-backlog.md)), in a fresh session. First step: fold MH's untracked `ricing.md` (repo root; public repo, so never commit it as is) into those two docs, Sway items into the plan and the rest into the backlog, then delete it. Then agree the order of work with MH.
 3. **kitty: merge and debug pass.** Merge BOCO's `kitty.conf` (taken out of Phase 5; guard WSL-only lines) and fix what is broken, including the `notes` launcher pointing at a missing `~/.config/i3/bin/open-notes.bash` ([open-items.md](open-items.md)). Best done once Sway runs, since kitty is the terminal there.
 4. Atlassian/Jira review pass when MH schedules it.
 5. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).

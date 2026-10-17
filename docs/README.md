@@ -20,7 +20,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [zsh-plugins.md](zsh-plugins.md) | zsh plugins dropped, abandoned or worth investigating, with what each provided | dropping or adding a zsh plugin; missing a shell feature |
 | [todo.md](todo.md) | Older checklist of files to add to chezmoi | porting dotfiles (partly superseded by the BOCO merge plan) |
 | [plans/boco-merge.md](plans/boco-merge.md) | Phased plan to merge the employer-era chezmoi repo here | working on the merge, `home/` layout, guards |
-| [plans/sway.md](plans/sway.md) | Sway session plan and i3 → Sway mapping | desktop/Wayland work |
+| [plans/wayland-desktop.md](plans/wayland-desktop.md) | Sway session plan and i3 → Sway mapping | desktop/Wayland work |
 | [plans/ricing-backlog.md](plans/ricing-backlog.md) | Low-priority improvements checklist | looking for spare-time work |
 | [runbooks/memory-and-backups.md](runbooks/memory-and-backups.md) | claude-state + restic: how, restore, failure modes | anything about transcripts, memory, timers |
 | [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md) | GPG keys, git signing config, verification | signing, `pass`, YubiKey problems |

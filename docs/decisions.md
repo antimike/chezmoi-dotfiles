@@ -52,7 +52,7 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | D27 | Mail: personal and professional accounts only; the university account is dropped. |
 | D28 | `sync-repos` is ported as low-priority BOCO tooling with an empty repo list; `mani` is optional for interactive status. |
 
-## Desktop (see [plans/sway.md](plans/sway.md))
+## Desktop (see [plans/wayland-desktop.md](plans/wayland-desktop.md))
 
 | # | Decision |
 |---|---|

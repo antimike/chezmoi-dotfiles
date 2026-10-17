@@ -39,5 +39,5 @@ Original plan written 2026-10-08; steps executed 2026-10-08 to 2026-10-14.
 ## Post-migration (2026-10-15)
 
 - `bd-track` public tree scrubbed (see D21); GPG signing key switched (D22).
-- BOCO merge plan written ([plans/boco-merge.md](../plans/boco-merge.md)); Sway plan extended ([plans/sway.md](../plans/sway.md)).
+- BOCO merge plan written ([plans/boco-merge.md](../plans/boco-merge.md)); Sway plan extended ([plans/wayland-desktop.md](../plans/wayland-desktop.md)).
 - Branches consolidated onto `main` (D26); docs consolidated into this tree (D30).

@@ -7,7 +7,7 @@ updated: 2026-10-15
 # Backlog (aesthetic and quality-of-life work)
 
 Merged from MH's scratch notes; "[x]" = done as part of the Claude Code migration ([../log/migration-steps.md](../log/migration-steps.md)).
-Sway work has its own plan: [sway.md](sway.md).
+Sway work has its own plan: [wayland-desktop.md](wayland-desktop.md).
 
 ## Claude tooling
 - [x] Editor preferences (vi mode), skills, home-rolled tooling (`bd-track`), beads install (dolt, uv, bun, bd)
@@ -17,9 +17,9 @@ Sway work has its own plan: [sway.md](sway.md).
 - [ ] `claude-sandbox` repo: clone and set up (`claude-config` is done)
 
 ## Ricing
-- [ ] Background images (systemd timer exists for the X11 session; Wayland version in [sway.md](sway.md))
+- [ ] Background images (systemd timer exists for the X11 session; Wayland version in [wayland-desktop.md](wayland-desktop.md))
 - [ ] Neovim config migration (part of [boco-merge.md](boco-merge.md), Phase 2)
-- [ ] Wayland-compatible i3 replacement: Sway ([sway.md](sway.md))
+- [ ] Wayland-compatible i3 replacement: Sway ([wayland-desktop.md](wayland-desktop.md))
 - [ ] Compositor, status bar / tray, notification daemon (dunst chosen)
 - [ ] Kitty config update and assessment
 - [ ] Investigate browser options
