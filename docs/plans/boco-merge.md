@@ -1,7 +1,7 @@
 ---
 summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
-status: Phase 0a done (2026-10-15); rest of Phase 0 is next
-updated: 2026-10-15
+status: Phases 0 and 1 done and on main (Phase 1 force-pushed 2026-10-17); Phase 2 (Neovim) is next
+updated: 2026-10-17
 ---
 
 # Merging the BOCO chezmoi config into this repo
@@ -171,7 +171,7 @@ provenance trailers and diffs trivial.
   `gpg-agent.conf` (here: `enable-ssh-support`; `gpg.conf` `default-key` is also unmanaged) and `~/.ssh/config`
   (private host entries only; keys never enter the repo).
 
-### Phase 1: self-contained tools (BOCO versions authoritative; Fedora installers)
+### Phase 1: self-contained tools (BOCO versions authoritative; Fedora installers) — DONE, on `main` (force-pushed 2026-10-17 after the history rewrite; `boco-merge/1-tools` merged and deleted)
 Each is `.chezmoidata/<tool>.yaml` + `run_onchange_install-<tool>.sh.tmpl` (+ completion/snippet).
 Pins must be exact, >=14 days old, with a Linux x86_64 asset.
 - `fzf` (zsh side done early on 2026-10-16: `snippets/fzf-*`, `plugins.d/0015.fzf.yaml`, `.chezmoidata/fzf.yaml` keybindings, `snippets/fzf-env.zsh`; DONE 2026-10-16: `run_onchange_install-fzf.sh.tmpl` pinned to v0.74.4 and `.bashrc.d/fzf-integration.bash` using `fzf --bash` instead of BOCO's vendored scripts), `cheat`, `cht-sh` (+ `cht`), `the-way`
@@ -184,7 +184,7 @@ Pins must be exact, >=14 days old, with a Linux x86_64 asset.
   first apply, and BOCO's `_the-way` was committed as a 0-byte file). Static `_cht`, `_nb`, `_nbterm` stay as files.
   Status 2026-10-16: `fzf`, `cheat`, `cht-sh`, `the-way` (+ widgets), `nb`, `dnote`, `dstask`, `d2`, and `clipse` (not BOCO; added 2026-10-16) done on `boco-merge/1-tools`. The helpers below are done too (2026-10-16); `functions/bd` was rewritten to call `bd-track`, and `docstring` and `.zprofile` were duplicates and are not ported.
 
-### Phase 2: Neovim (all BOCO plugins and themes)
+### Phase 2: Neovim (all BOCO plugins and themes) — NEXT (branch `boco-merge/2-nvim`, off `main` at `d4d1b4c`)
 Copy all ~35 plugin specs and the config files that differ (`init.lua`, `config/*.lua`, `plugins/{chezmoi,example,
 formatting,treesitter}.lua`). BOCO wins; reconcile the lockfile (`lazyvim-lock.json` here vs `lazy-lock.json`) by
 running `:Lazy restore`/`sync` on a clean profile. Skip `*.bak`. `mason.lua` is WSL-flavoured: check, guard if so.
