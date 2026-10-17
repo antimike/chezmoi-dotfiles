@@ -250,14 +250,14 @@ recipient moved to data key `rano.report_email`), and the reload script's long-r
 - Also: `dstask-notify` (use the `notify` adapter), `rano` units (guarded `work_tooling`).
 - Not ported (superseded by bd-track): `timew-autostop`, `timew-nudge`. `claude-mem-cleanup` stays held with claude-mem.
 
-### Phase 4: mail stack (all of it)
+### Phase 4: mail stack (all of it) — LOW PRIORITY (MH, 2026-10-17: time-consuming; webmail covers the need)
 neomutt, `mbsync`, `msmtp`, `procmail`, `mailcap`, notmuch, `graph-send-mail`. Accounts: `professional` and
 `personal` only; **omit `csu`** (blocks in `.mbsyncrc`/`msmtp/config`, `signatures/{.signature-csu,csu}`, any
 CSU templates). Template one block per account from `.chezmoidata/mail.yaml`. Credentials only via `pass`. Verify with a real sync before committing;
 keep message data out of the repo.
 
 ### Phase 5: reconcile the 39 differing non-Claude files (BOCO wins unless on keep-ours)
-- Shell: `.bashrc`, `.profile`, `.zshenv`, `.zshrc`, `.vimrc`, `direnv/direnvrc`, `kitty.conf` (guard WSL-only lines)
+- Shell: `.bashrc`, `.profile`, `.zshenv`, `.zshrc`, `.vimrc`, `direnv/direnvrc` (`kitty.conf` moved to its own merge-and-debug step, STATUS)
 - zsh templates (9) and `snippets/npm.zsh` (done together with the Phase 0 switch-over)
 - Data: `.chezmoiexternal.toml` (merge), `.chezmoidata/zsh.yaml`, `.chezmoi.yml` (hand-merge)
 
