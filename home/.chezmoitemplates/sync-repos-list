@@ -12,8 +12,13 @@
   Absolute paths like /etc/ are fine here but require the consumer to run
   with appropriate privileges (deferred).
 
-  Empty on purpose: the only BOCO entry (~/.timewarrior) is obsolete, and no
-  data repo here qualifies yet. While this renders empty, repos.conf is not
-  managed and sync-repos.timer is not installed. Any repo added here should
-  carry a gitleaks pre-commit hook, since the commits are unreviewed.
+  Only repos chezmoi provisions or otherwise knows the fixed path of (D36):
+  data repos nobody commits by hand. Commits are unreviewed, so sync-repos
+  scans them with gitleaks itself. While this renders empty, repos.conf is
+  not managed and sync-repos.timer is not installed.
 */ -}}
+{{- /* claude-state: Claude auto-memory (memory/ dirs only). Replaced the
+       dedicated claude-state-sync timer on 2026-10-17. */ -}}
+{{ if stat (joinPath .chezmoi.homeDir ".claude/projects/.git") -}}
+{{ .chezmoi.homeDir }}/.claude/projects
+{{ end -}}

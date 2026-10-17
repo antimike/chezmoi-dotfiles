@@ -1,0 +1,5 @@
+# Targets whose source was removed; chezmoi deletes them on apply.
+# claude-state-sync, folded into sync-repos on 2026-10-17 (D36).
+.local/bin/claude-state-sync
+.config/systemd/user/claude-state-sync.service
+.config/systemd/user/claude-state-sync.timer
