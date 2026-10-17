@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# clipboard-history-audit — look through the cliphist history for entries that
+# look like secrets (API tokens, private keys, KEY="value" assignments) using
+# gitleaks, and optionally delete them.
+#
+#   clipboard-history-audit            list flagged entries (nothing is changed)
+#   clipboard-history-audit --delete   list them, then ask before deleting
+#
+# Limits: gitleaks recognises secrets by format. It does NOT catch a bare random
+# password (what `pass -c` copies) or free text such as "my password is ...".
+# The protection for those is not recording them in the first place: copy them
+# with `wl-copy --sensitive`, which cliphist honours.
+set -euo pipefail
+
+delete=0
+case "${1:-}" in
+  --delete) delete=1 ;;
+  "") ;;
+  *) echo "usage: clipboard-history-audit [--delete]" >&2; exit 2 ;;
+esac
+for tool in cliphist gitleaks jq; do
+  command -v "$tool" >/dev/null 2>&1 || { echo "clipboard-history-audit: '$tool' not found" >&2; exit 127; }
+done
+
+# Decoded entries are secrets in the clear: keep them on tmpfs, owner-only, and
+# remove them on exit.
+work=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/clipaudit.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+chmod 700 "$work"
+mkdir "$work/entries"
+
+total=0
+while IFS=$'\t' read -r id preview; do
+  [ -n "$id" ] || continue
+  case "$preview" in "[[ binary"*) continue ;; esac
+  cliphist decode "$id" > "$work/entries/$id.txt" 2>/dev/null || continue
+  total=$((total + 1))
+done < <(cliphist list)
+
+if [ "$total" -eq 0 ]; then
+  echo "clipboard-history-audit: no text entries in the history"
+  exit 0
+fi
+
+# exit code 1 means "leaks found"; anything else non-zero is a real failure.
+status=0
+gitleaks dir "$work/entries" --no-banner --redact --report-format json \
+  --report-path "$work/report.json" --exit-code 1 >/dev/null 2>"$work/gitleaks.err" || status=$?
+if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
+  cat "$work/gitleaks.err" >&2
+  exit "$status"
+fi
+
+# One line per flagged entry: "ID<TAB>rule(s)".
+flagged=$(jq -r 'group_by(.File)[] | [(.[0].File | split("/")[-1] | rtrimstr(".txt")), ([.[].RuleID] | unique | join(","))] | @tsv' \
+  "$work/report.json" 2>/dev/null | sort -n || true)
+
+if [ -z "$flagged" ]; then
+  echo "clipboard-history-audit: scanned $total text entries, nothing flagged"
+  exit 0
+fi
+
+echo "clipboard-history-audit: scanned $total text entries; flagged:"
+printf '%s\n' "$flagged" | while IFS=$'\t' read -r id rules; do
+  printf '  %-6s %s\n' "$id" "$rules"
+done
+
+if [ "$delete" -eq 1 ]; then
+  count=$(printf '%s\n' "$flagged" | wc -l)
+  read -r -p "Delete these $count entries from the history? [y/N] " answer
+  case "$answer" in
+    y|Y|yes|YES)
+      printf '%s\n' "$flagged" | cut -f1 | while read -r id; do
+        cliphist list | awk -F'\t' -v id="$id" '$1 == id' | cliphist delete
+      done
+      echo "clipboard-history-audit: deleted $count entries" ;;
+    *) echo "clipboard-history-audit: nothing deleted" ;;
+  esac
+else
+  echo "Re-run with --delete to remove them."
+fi
