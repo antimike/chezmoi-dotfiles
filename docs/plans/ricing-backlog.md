@@ -27,7 +27,7 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
 - [ ] Nix config derivations (exploration notes exist in the reference clone's `docs/`)
 
 ## Permissions and security
-- [ ] Passwordless `sudo` with the YubiKey
+- [ ] Passwordless `sudo` and touch authorization with the YubiKey (`pam-u2f`, installed but not in any PAM stack yet; MH wants it, 2026-10-17). Do it as its own step, not with a display-manager change ([../runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md)); polkit prompts then accept a touch too.
 - [ ] New SSH keys for GitHub and other services (GitHub already works via the YubiKey; others open)
 - [ ] Review contents of GPG backups; see also [../runbooks/gpg-and-signing.md](../runbooks/gpg-and-signing.md)
 
@@ -49,7 +49,7 @@ that were already handled or that differ from the old plan.
 | background images, pywal | [theming.md](theming.md) "Wallpapers", "Palette generation" | pywal's maintenance status flagged; generator to be compared |
 | lush? (nvim) | [theming.md](theming.md) "nvim" | inverted variant dropped as a default (contrast handled by the generator) |
 | sleep timeout / power settings | [wayland-desktop.md](wayland-desktop.md) "Daily-driver features" | timings from MH at that step |
-| password picker | same | `~/.local/bin/pass` wrapper (2026-10-16) already marks copies sensitive; check PATH under uwsm; `passmenu` already bound in i3 |
+| password picker | same | own rofi/fuzzel script that bypasses `pass -c` (D40); the `~/.local/bin/pass` wrapper still guards CLI use |
 | clipboard picker | same | **mostly done**: clipboard stack + `clipboard-history` fzf picker; rofi front end and binding open |
 | i3 -> Sway | [wayland-desktop.md](wayland-desktop.md) | **changed:** SwayFX full port, plus a niri/Hyprland/Wayfire trial |
 | compositor? | same, "Compositors" | **resolved:** the compositor is the WM under Wayland; picom goes away |

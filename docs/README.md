@@ -22,8 +22,10 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [plans/boco-merge.md](plans/boco-merge.md) | Phased plan to merge the employer-era chezmoi repo here | working on the merge, `home/` layout, guards |
 | [plans/wayland-desktop.md](plans/wayland-desktop.md) | Compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal), uwsm, shared helper units, i3 → Sway mapping, greeter | desktop/Wayland work |
 | [plans/theming.md](plans/theming.md) | Theme bundles and switcher, wallpapers and palettes, fonts, pickers, lush.nvim | theming work (after the SwayFX daily driver) |
+| [plans/devices-and-audio.md](plans/devices-and-audio.md) | Audio stack and media control review; hotplug for monitors, audio outputs, Bluetooth, drives, Wi-Fi | audio or device work on the desktop |
 | [plans/ricing-backlog.md](plans/ricing-backlog.md) | Low-priority improvements checklist | looking for spare-time work |
 | [runbooks/memory-and-backups.md](runbooks/memory-and-backups.md) | claude-state + restic: how, restore, failure modes | anything about transcripts, memory, timers |
+| [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) | Failsafe for DM, greeter, compositor and GPU changes: prep, safe test, symptom table, rollback card | **before** any display manager, greeter, compositor or GPU change |
 | [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md) | GPG keys, git signing config, verification | signing, `pass`, YubiKey problems |
 | [log/migration-steps.md](log/migration-steps.md) | Completed Claude Code migration work log | history or provenance questions |
 | [../tools/README.md](../tools/README.md) | Dev scripts: `compare-trees.py` (tree survey) and `zsh-probe/` (scratch-home zsh harness) | re-running the BOCO survey; testing zsh changes without touching `$HOME` |
