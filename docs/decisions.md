@@ -56,7 +56,10 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 
 | # | Decision |
 |---|---|
-| D29 | Add a Sway session beside GNOME. Units are scoped to their session target, not excluded per host. Keep dunst and use gammastep. One shared WM config fragment drives both i3 and Sway. |
+| D29 | Add a Sway session beside GNOME. Units are scoped to their session target, not excluded per host. Keep dunst and use gammastep. One shared WM config fragment drives both i3 and Sway. *(Partly superseded by D37: SwayFX instead of plain Sway; the fragment now drives i3 and SwayFX.)* |
+| D37 | Trial several compositors side by side, each listed by GDM: **SwayFX gets the full i3 port** and is the daily-driver target; niri, Hyprland and Wayfire (`simple-tile`) get minimal configs. Pick the main compositor after the trial (MH, 2026-10-17). SwayFX and Hyprland come from COPRs, pinned. |
+| D38 (**draft**, awaiting MH) | Run every compositor session through **uwsm** (meson install to `/usr/local`, pinned), and scope shared helper units to one hand-written `wayland-wm-session.target` that each compositor starts, not to `graphical-session.target` (GNOME starts that too). Rejected: per-compositor helper targets (four copies), `sway-systemd` (Sway only). |
+| D39 (**draft**, awaiting MH) | Theming uses the **cache-include pattern**: chezmoi manages app configs that include generated files from `~/.cache/theme/current/`; the switcher writes only the cache. Wallpaper images are not in chezmoi (fetcher cache, optional git-annex); palettes come from the primary output's image, with outputs drawn from one palette cluster. Detail: [plans/theming.md](plans/theming.md). |
 | D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. Since 2026-10-17 both are listed in `.gitleaksignore`, so a scan shows none. |
 
 ## Tooling (proposed)

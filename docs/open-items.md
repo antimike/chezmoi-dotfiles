@@ -20,7 +20,10 @@ updated: 2026-10-17
 ## Plans waiting on a start
 | Item | Who | Where |
 |---|---|---|
-| Sway session, then shared WM config fragment | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md) (Phase 0a done; unblocked) |
+| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial; order of work proposed 2026-10-17, awaiting MH | MH + Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md) |
+| Theming system (theme bundles, wallpaper fetcher and palette-aware selection, fonts, pickers); after the SwayFX daily driver | Claude | [plans/theming.md](plans/theming.md) |
+| Locate the polybar config and the i3 helper scripts (`set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`): not in chezmoi, not on zbook | MH | [plans/wayland-desktop.md](plans/wayland-desktop.md) |
+| Stray editor temp file committed: `home/private_dot_config/kitty/bin/dot_null-ls_638155_launch_session` | Claude | delete in the kitty pass |
 | claude-mem evaluation (about 30 min requirements, ~1 week trial in `CLAUDE_CONFIG_DIR=~/.claude-trial`) | MH + Claude | deferred; evidence so far favors dropping it |
 | **Hooks in `bd-track` and `claude-config` (deferred by MH, 2026-10-17).** Both commit `.beads/hooks/` built for `core.hooksPath=.beads/hooks`, but neither clone sets it, so no hooks run (bd's or pre-commit's). `bd-track`'s `pre-commit` has no pre-commit-framework step; `claude-config`'s step fails open without `.venv` (none in this clone), skipping gitleaks too. Proposed: `install-hooks` sets `core.hooksPath` where `.beads/hooks/` is tracked, both repos call gitleaks before the `.venv` check. **Investigate first:** MH recalls bd hooks being problematic on the WSL work laptop (WSL-specific or not is unknown); check what each bd 1.3 hook does. Also `bd` warns `.beads` is 0755 in `claude-config` (wants 0700) | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
 | chezmoi provisioning of `claude-state`: today a new machine clones it by hand ([runbooks/memory-and-backups.md](runbooks/memory-and-backups.md)), so strictly it does not meet D36's "chezmoi-provisioned" rule; it is listed because its path is fixed. Option: a `run_once_before_` script that clones into `~/.claude/projects` when it is not yet a repo (it may already exist, made by Claude Code) | MH + Claude | D36, 2026-10-17 |
