@@ -99,9 +99,10 @@ def default_config() -> Path | None:
     return None
 
 
-def clean_env(home: Path) -> dict[str, str]:
+def clean_env(home: Path, extra: dict[str, str] | None = None) -> dict[str, str]:
     user = os.environ.get("USER", "user")
     return {
+        **(extra or {}),
         "HOME": str(home),
         "ZDOTDIR": str(home),
         "TERM": "xterm-256color",
@@ -153,7 +154,7 @@ def render(
     )
 
 
-def time_startup(home: Path, runs: int = 3) -> None:
+def time_startup(home: Path, out: Path, runs: int = 3) -> None:
     """Record startup time and stderr of `zsh -i -c exit` (no pty, no turbo plugins)."""
     timings, errors = [], []
     for _ in range(runs):
@@ -167,20 +168,27 @@ def time_startup(home: Path, runs: int = 3) -> None:
         )
         timings.append(f"{time.monotonic() - start:.3f}")
         errors.append(result.stderr)
-    (home / "probe" / "timing.txt").write_text("\n".join(timings) + "\n")
-    (home / "probe" / "stderr.txt").write_text("".join(errors))
+    (out / "timing.txt").write_text("\n".join(timings) + "\n")
+    (out / "stderr.txt").write_text("".join(errors))
     only_zshenv = run(
         ["zsh", "-c", "env | sort"], check=False, capture=True, env=clean_env(home)
     )
-    (home / "probe" / "env-zshenv-only.txt").write_text(only_zshenv.stdout)
+    (out / "env-zshenv-only.txt").write_text(only_zshenv.stdout)
 
 
-def pty_session(home: Path, prompts: int = 8, queue_tries: int = 20) -> None:
+def pty_session(
+    home: Path,
+    out_dir: Path,
+    *,
+    history_off: bool = False,
+    prompts: int = 8,
+    queue_tries: int = 20,
+) -> None:
     """Run an interactive zsh in a pty, let turbo plugins load, then source dump.zsh."""
     master, slave = pty.openpty()
     proc = subprocess.Popen(
         ["zsh", "-i"], stdin=slave, stdout=slave, stderr=slave,
-        env=clean_env(home), start_new_session=True, close_fds=True,
+        env=clean_env(home, {"ZSH_PROBE_OUT": str(out_dir)}), start_new_session=True, close_fds=True,
     )  # fmt: skip
     os.close(slave)
     out = bytearray()
@@ -203,6 +211,9 @@ def pty_session(home: Path, prompts: int = 8, queue_tries: int = 20) -> None:
         os.write(master, text.encode())
 
     pump(6)  # startup and the first prompt
+    if history_off:  # do not write the session's commands into the real history file
+        send("fc -p /dev/null\n")
+        pump(1)
     for _ in range(prompts):  # turbo tasks run at prompts, so cycle a few
         send("sleep 1\n")
         pump(1.3)
@@ -222,18 +233,18 @@ def pty_session(home: Path, prompts: int = 8, queue_tries: int = 20) -> None:
         proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
         proc.kill()
-    (home / "probe" / "pty-session.txt").write_bytes(bytes(out))
+    (out_dir / "pty-session.txt").write_bytes(bytes(out))
 
 
-def normalise(home: Path, label: str) -> None:
+def normalise(home: Path, label: str, out: Path) -> None:
     """Strip anything that differs between two renders of the same tree."""
-    for path in (home / "probe").glob("*.txt"):
+    for path in out.glob("*.txt"):
         text = path.read_text(errors="replace")
         text = text.replace(str(home), "<HOME>").replace(
             f"scratch--{label}--", "scratch--LABEL--"
         )
         text = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", text).replace("\r", "")
-        text = re.sub(r"(?m)^__MISE_SESSION=.*$", "__MISE_SESSION=<x>", text)
+        text = re.sub(r"(?m)^(__MISE_SESSION|ZSH_PROBE_OUT)=.*$", r"\1=<x>", text)
         text = re.sub(r"(?m)^(DIRENV_DIFF|DIRENV_WATCHES)=.*$", r"\1=<x>", text)
         text = re.sub(r"orig-s[0-9]*-r[0-9]*-", "orig-S-R-", text)
         path.write_text(text)
@@ -267,10 +278,11 @@ def cmd_probe(args: argparse.Namespace) -> None:
     try:
         logger.info("rendering %s into %s", source, home)
         render(source, home, scratch, args.label, config, args.zinit_dir)
-        time_startup(home)
+        out = home / "probe"
+        time_startup(home, out)
         logger.info("running the pty session (about a minute)")
-        pty_session(home)
-        normalise(home, args.label)
+        pty_session(home, out)
+        normalise(home, args.label, out)
     finally:
         if worktree is not None:
             run(
@@ -290,6 +302,19 @@ def cmd_probe(args: argparse.Namespace) -> None:
     print(
         f"probe {args.label}: widgets {widgets}, startup {' '.join(timing)} s -> {home / 'probe'}"
     )
+
+
+def cmd_live(args: argparse.Namespace) -> None:
+    """Dump the state of the real home (not a render), without touching shell history."""
+    home = Path.home()
+    out = args.scratch / args.label / "probe"
+    shutil.rmtree(out.parent, ignore_errors=True)
+    out.mkdir(parents=True)
+    time_startup(home, out)
+    logger.info("running the pty session against the real home (about a minute)")
+    pty_session(home, out, history_off=True)
+    normalise(home, args.label, out)
+    print(f"live {args.label}: dump in {out}")
 
 
 def cmd_compare(args: argparse.Namespace) -> None:
@@ -373,6 +398,14 @@ def get_cli_arguments() -> argparse.Namespace:
         help="Zinit tree to copy into the scratch home.",
     )
     probe.set_defaults(func=cmd_probe)
+
+    live = sub.add_parser(
+        "live",
+        help="Dump the real home's shell state (read-only).",
+        formatter_class=HelpFormatter,
+    )
+    live.add_argument("label", help="Name of this dump.")
+    live.set_defaults(func=cmd_live)
 
     compare = sub.add_parser(
         "compare",

@@ -14,9 +14,10 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 uv run tools/zsh-probe/zsh-probe.py probe before --baseline main   # render a git revision
 uv run tools/zsh-probe/zsh-probe.py probe after                    # render the working tree
 uv run tools/zsh-probe/zsh-probe.py compare before after --show alias bindkey
+uv run tools/zsh-probe/zsh-probe.py live now && uv run tools/zsh-probe/zsh-probe.py compare after now
 ```
 
-`probe` takes about a minute; `compare` exits 1 if anything differs. Dumps go to `${ZSH_PROBE_DIR:-${XDG_CACHE_HOME:-~/.cache}/zsh-probe}/<label>/probe/`; remove a label's directory when you are done with it.
+`probe` takes about a minute; `compare` exits 1 if anything differs. `live <label>` dumps your *real* home the same way (read-only; shell history is switched off for the session), so you can `compare` a render against what the real shell actually does. Expect real-home-only differences: mise's PATH and functions, the p10k instant-prompt cache, anything direnv loads from the directory you ran it in, and unmanaged leftovers. Dumps go to `${ZSH_PROBE_DIR:-${XDG_CACHE_HOME:-~/.cache}/zsh-probe}/<label>/probe/`; remove a label's directory when you are done with it.
 Needs `uv` (dependencies are declared inline), `chezmoi`, `git` and `zsh`, and your real zinit tree (copied, about 70 MB).
 It reads the live chezmoi config but never writes to your real home or chezmoi state.
 

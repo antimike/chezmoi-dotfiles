@@ -1,4 +1,4 @@
-PD="$HOME/probe"
+PD="${ZSH_PROBE_OUT:-$HOME/probe}"
 { env | sort } > $PD/env.txt
 alias > $PD/alias.txt
 print -l ${(ok)functions} > $PD/functions.txt
