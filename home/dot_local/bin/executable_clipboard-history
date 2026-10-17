@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# clipboard-history — pick an entry from the cliphist history and put it back on
+# the clipboard.
+#
+#   clipboard-history          fuzzy-pick with fzf, copy the choice with wl-copy
+#   clipboard-history --list   print the history (what cliphist list prints)
+#
+# History is recorded by the clipboard-stack.target user units (see
+# ~/.config/systemd/user). Copies marked sensitive (wl-copy --sensitive) are never
+# recorded. Run clipboard-history-audit to look for secrets that slipped in.
+set -euo pipefail
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "clipboard-history: '$1' not found" >&2; exit 127; }
+}
+
+need cliphist
+case "${1:-}" in
+  --list) exec cliphist list ;;
+  "") ;;
+  *) echo "usage: clipboard-history [--list]" >&2; exit 2 ;;
+esac
+need fzf
+need wl-copy
+
+# Lines look like "ID<TAB>preview"; images show as "[[ binary data ... ]]". The
+# preview pane shows text entries in full and just the label for binary ones.
+selection=$(cliphist list | fzf --no-sort --reverse --height=60% \
+  --delimiter=$'\t' --with-nth=2.. --prompt='clipboard> ' \
+  --preview 'case {2..} in "[[ binary"*) printf "%s\n" {2..} ;; *) cliphist decode {1} | head -n 60 ;; esac' \
+  --preview-window=right,50%,wrap) || exit 0
+[ -n "$selection" ] || exit 0
+
+printf '%s' "$selection" | cliphist decode | wl-copy
