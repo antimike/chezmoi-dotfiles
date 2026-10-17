@@ -1,0 +1,82 @@
+#!/bin/sh
+# run_onchange_install-clipse.sh.tmpl — install clipse (github.com/savedra1/clipse)
+# to ~/.local/bin.
+#
+# On Linux upstream ships separate Wayland and X11 builds; the host key
+# `display_server` picks one (default x11 when the key is missing). With no
+# graphical session ("none") the installer skips. Pins are in
+# .chezmoidata/clipse.yaml; bumping them re-triggers this installer. Platforms
+# without a pinned checksum skip (exit 0) rather than failing `chezmoi apply`.
+#
+# The tarball holds one binary named after its variant (clipse-linux-x11-amd64),
+# installed as `clipse`. Both builds report the same version, so the asset name
+# is recorded next to the install; changing display_server then reinstalls.
+{{- $v := .clipse.version -}}
+{{- $ds := dig "display_server" "x11" . -}}
+{{- $variant := "" -}}
+{{- if eq $ds "wayland" -}}{{- $variant = "wayland" -}}{{- end -}}
+{{- if eq $ds "x11" -}}{{- $variant = "x11" -}}{{- end -}}
+{{- $key := "" -}}
+{{- $assetName := "" -}}
+{{- if and (eq .chezmoi.os "linux") $variant -}}
+{{-   $key = printf "linux_%s_%s" $variant .chezmoi.arch -}}
+{{-   $assetName = printf "clipse_%s_linux_%s_%s.tar.gz" $v $variant .chezmoi.arch -}}
+{{- else if eq .chezmoi.os "darwin" -}}
+{{-   $key = printf "darwin_%s" .chezmoi.arch -}}
+{{-   $assetName = printf "clipse_%s_darwin_%s.tar.gz" $v .chezmoi.arch -}}
+{{- end -}}
+{{- $sha := "" -}}
+{{- if $key -}}{{- $sha = dig $key "" .clipse.checksums -}}{{- end -}}
+{{- $assetURL := printf "https://github.com/savedra1/clipse/releases/download/%s/%s" $v $assetName }}
+
+set -eu
+
+VERSION={{ $v | quote }}
+ASSET_NAME={{ $assetName | quote }}
+ASSET_URL={{ $assetURL | quote }}
+EXPECTED_SHA={{ $sha | quote }}
+INSTALL_PATH={{ joinPath .chezmoi.homeDir ".local" "bin" "clipse" | quote }}
+MARKER={{ joinPath .chezmoi.homeDir ".local" "share" "clipse-install" "asset" | quote }}
+
+if [ -z "$EXPECTED_SHA" ]; then
+  echo "clipse installer: no pinned build for display_server={{ $ds }} on {{ .chezmoi.os }}/{{ .chezmoi.arch }}; skipping" >&2
+  exit 0
+fi
+
+# Idempotency guard: `clipse -v` prints "<name> v1.2.1"; compare the last field
+# exactly, and require that the installed build is the one this host wants.
+if [ -x "$INSTALL_PATH" ] \
+    && [ "$("$INSTALL_PATH" -v 2>/dev/null | awk '{print $NF}')" = "$VERSION" ] \
+    && [ "$(cat "$MARKER" 2>/dev/null)" = "$ASSET_NAME" ]; then
+  echo "clipse installer: $VERSION ($ASSET_NAME) already installed at $INSTALL_PATH" >&2
+  exit 0
+fi
+
+mkdir -p "$(dirname "$INSTALL_PATH")" "$(dirname "$MARKER")"
+
+tmp_tar=$(mktemp)
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_tar" "$tmp_dir"' EXIT
+
+echo "clipse installer: downloading $ASSET_URL" >&2
+curl -fsSL -o "$tmp_tar" "$ASSET_URL"
+
+actual=$(sha256sum "$tmp_tar" | awk '{print $1}')
+if [ "$EXPECTED_SHA" != "$actual" ]; then
+  echo "clipse installer: checksum mismatch for $ASSET_NAME" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+tar -xzf "$tmp_tar" -C "$tmp_dir"
+binary=$(find "$tmp_dir" -type f -name 'clipse*' | head -1)
+if [ -z "$binary" ]; then
+  echo "clipse installer: no 'clipse' binary in $ASSET_NAME" >&2
+  exit 1
+fi
+
+chmod u+x "$binary"
+mv "$binary" "$INSTALL_PATH"
+printf '%s\n' "$ASSET_NAME" > "$MARKER"
+echo "clipse installer: $VERSION ($ASSET_NAME) installed to $INSTALL_PATH" >&2

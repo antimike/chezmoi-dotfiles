@@ -1,0 +1,29 @@
+# Pinned clipse release, consumed by run_onchange_install-clipse.sh.tmpl.
+#
+# clipse (https://github.com/savedra1/clipse) is a TUI clipboard manager. On
+# Linux upstream ships separate Wayland and X11 builds; the installer picks one
+# from the `display_server` host key (see .chezmoi.yml.tmpl) and skips when
+# there is no graphical session. The Wayland build needs wl-clipboard and a
+# compositor with the data-control protocol (Sway has it, GNOME does not); the
+# X11 build needs xclip or xsel. Checksums are verbatim from
+#   https://github.com/savedra1/clipse/releases/download/<version>/checksums.txt
+#
+# Pin rule: exact tag, at least 14 days old. v1.2.1 = 2026-01-27 (upstream's
+# latest). Only linux_wayland_amd64 and linux_x11_amd64 were exercised on zbook
+# (download, checksum, `clipse -v`); the rest are untested on those hosts. clipse
+# has no zsh completion command and no systemd unit: start it with `clipse -listen`
+# from the session (for Sway: an exec line in its config).
+#
+# To bump:
+#   1. version: new upstream tag, "v"-prefixed
+#   2. checksums: verbatim rows from the checksums file above
+#   3. commit; the rendered script hash changes, so the installer re-runs.
+clipse:
+  version: "v1.2.1"
+  checksums:
+    linux_wayland_amd64: "0853240cbfa8efc1a73baebf4e202f70dc14c832bb5a8b74c650ab410e294003"
+    linux_wayland_arm64: "976b4d255c92a8e9ba4e2e4448069e128a74e98a3cd89a6814cdc9e2381991cc"
+    linux_x11_amd64:     "b3c192c055fd847202c7806a9b3963b347b40b1f2dff0261ba63eb2601f8a847"
+    linux_x11_arm64:     "57503488f61fe1505d0a8ef27470a3a3feb5cc7dc3336c4f898dfdf96644a998"
+    darwin_amd64:        "98ad0278dc5fcaeeccf748398ac71a62014d283e0005041ef874373d5822a1af"
+    darwin_arm64:        "1ab0562f52a86260f56980ee76b124345285d70c16ee2a7284a94d48d5b738ab"
