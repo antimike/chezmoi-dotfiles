@@ -1,11 +1,15 @@
+-- Disable auto-apply on save for Chezmoi files that feed run_onchange scripts.
+-- The auto-watch runs `chezmoi apply --source-path`, which is a targeted apply
+-- that burns the onchange hash without triggering the script.
 return {
   {
-    "alker0/chezmoi.vim",
-    lazy = false,
-    init = function()
-      -- This option is required.
-      vim.g["chezmoi#use_tmp_buffer"] = true
-      -- add other options here if needed.
-    end,
+    "xvzc/chezmoi.nvim",
+    opts = {
+      edit = {
+        ignore_patterns = {
+          "dot_wslconfig*",
+        },
+      },
+    },
   },
 }
