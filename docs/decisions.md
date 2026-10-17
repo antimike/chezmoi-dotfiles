@@ -1,5 +1,5 @@
 ---
-summary: Decision log (D1–D34) for the Claude Code migration, chezmoi merge, Sway and docs; one line per decision
+summary: Decision log (D1–D36) for the Claude Code migration, chezmoi merge, Sway and docs; one line per decision
 status: current
 updated: 2026-10-17
 ---
@@ -57,7 +57,7 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | # | Decision |
 |---|---|
 | D29 | Add a Sway session beside GNOME. Units are scoped to their session target, not excluded per host. Keep dunst and use gammastep. One shared WM config fragment drives both i3 and Sway. |
-| D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. |
+| D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. Since 2026-10-17 both are listed in `.gitleaksignore`, so a scan shows none. |
 
 ## Tooling (proposed)
 
@@ -78,6 +78,13 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | # | Decision |
 |---|---|
 | D34 | scdaemon reaches the YubiKey **through pcscd in shared mode** (`disable-ccid` + `pcsc-shared` in `~/.gnupg/scdaemon.conf`), rendered only on hosts where pcscd is installed (MH, 2026-10-17). Reason: once pcscd runs it owns the CCID interface, and gsd-smartcard and Chromium keep the card open, so the built-in driver and an exclusive connect both fail. Accepted trade-off: GnuPG calls shared mode "somewhat dangerous" (scdaemon caches card state and keeps the PIN verified, so another PC/SC client in the session could use the unlocked card). Rejected: exclusive mode with gsd-smartcard and Chromium's card access disabled (loses lock-on-removal, Chromium's holder is hard to pin down). Detail: [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md). |
+
+## Repos, hooks and sync
+
+| # | Decision |
+|---|---|
+| D35 | **Where repos are cloned is discovered, not listed in chezmoi data** (MH, 2026-10-17). A generated, unmanaged `~/mani.yaml` (one project per clone found under a few root folders) is the registry of hand-made clones; the tasks run on it live in the chezmoi-managed `~/.config/mani/config.yaml`. **Pre-commit hooks are keyed off each repo's committed `.pre-commit-config.yaml`**: the install task runs `pre-commit install` in every clone whose config has a gitleaks hook, so making a repo scanned means committing that file and nothing else. Replaces the plan's hand-kept `mani` task list. ghq was rejected: it only sees repos under its own root, and the chezmoi source, `~/.claude/projects` and `~/.local/src/bd-track` cannot move there. |
+| D36 | **The `sync-repos` list holds only repos chezmoi itself provisions** (fixed, known paths, so the list stays in the `sync-repos-list` template; no mani), and **unattended commits scan for secrets themselves** instead of relying on a per-clone hook, which can be silently missing (`claude-config` and `chess_trainer` have committed pre-commit configs whose hooks were never installed in these clones) (MH, 2026-10-17). Next: give `sync-repos` `claude-state-sync`'s gitleaks scan, `pull --rebase` and failure notifications, make `claude-state` its first entry and retire `claude-state-sync`. Deferred: one `dstask` repo provisioned by chezmoi with a remote, then listed. Amends D28. |
 
 ## Resolved questions (migration)
 

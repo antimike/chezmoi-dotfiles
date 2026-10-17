@@ -1,0 +1,21 @@
+# mani user config: tasks only. The projects come from ~/mani.yaml, which
+# `mani-discover` generates per machine (D35). Run from anywhere under $HOME.
+
+tasks:
+  install-hooks:
+    desc: pre-commit install where the repo's committed config has a gitleaks hook
+    # Hooks live in each clone, so a fresh clone needs this again. Repos without
+    # a gitleaks hook in .pre-commit-config.yaml are left alone.
+    cmd: |
+      if [ ! -f .pre-commit-config.yaml ] || ! grep -q 'gitleaks' .pre-commit-config.yaml; then
+        echo "skip: no gitleaks hook in .pre-commit-config.yaml"
+      elif [ -n "$(git config --get core.hooksPath)" ]; then
+        echo "skip: core.hooksPath is set; pre-commit install would refuse" >&2
+        exit 1
+      else
+        pre-commit install
+      fi
+
+  status:
+    desc: branch, ahead/behind and uncommitted changes
+    cmd: git status --short --branch | head -1; git status --porcelain | wc -l | xargs printf '%s uncommitted\n'

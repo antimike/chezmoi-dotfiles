@@ -1,6 +1,6 @@
 ---
 summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
-status: Phases 0-2 done and on main (Phase 2 merged + pushed 2026-10-17, merge fbc8169); Phase 3 code done on boco-merge/3-timers (unmerged), gitleaks hook rollout pending
+status: Phases 0-2 done and on main (Phase 2 merged + pushed 2026-10-17, merge fbc8169); Phase 3 timers merged 2026-10-17; gitleaks hook rollout in progress on boco-merge/3-hooks
 updated: 2026-10-17
 ---
 
@@ -220,30 +220,32 @@ plan's assumptions:
 Remaining (not blockers): `ruff` binary and mason LSP servers (jedi, ruff) install on demand.
 
 ### Phase 3: timers and services (needs Phase 0)
-**Code DONE 2026-10-17 on `boco-merge/3-timers` (5 commits, unmerged).** Ported: `sync-repos` (empty list: the timer
-and `~/.config/sync-repos` stay unmanaged until an entry is added; script + service installed, service run clean),
+**Timers and services DONE, merged to `main` 2026-10-17 (merge `5ab6ded`).** Ported: `sync-repos` (empty list: the
+timer and `~/.config/sync-repos` stay unmanaged until an entry is added; script + service installed, service run clean),
 `dstask-notify` (via the `notify` adapter; also guarded on `~/.dstask` existing; fixed a UTC end-of-day bug that hid
 tasks due the same evening), `rano` (installer, monitor, weekly report, all `work_tooling`-guarded; employer report
 recipient moved to data key `rano.report_email`), and the reload script's long-running-services list
-(`rano-monitor.service`). **Not done:** the gitleaks hook rollout and `mani` task below (held until MH schedules it),
-and the optional `init.templateDir` hook.
-- **`sync-repos` (low priority).** Its use-case in BOCO history was a single entry: a daily auto-commit and push of
-  `~/.timewarrior` (the timewarrior data directory), to get off-machine history for a data repo nobody commits by
-  hand. timew is obsolete (bd-track keeps its own event log) and `nb`/`dstask` handle their own git sync, so there
-  is currently **no concrete use for it here**. Port it anyway as BOCO tooling (script + timer + `sync-repos-list`),
-  with an **empty** repo list on this host; revisit when a real data repo qualifies. Auto-committing unreviewed
-  content is only safe with a secret scan, which is handled by hooks, not by this script (below).
-  It does not need replacing: `mani`/`git for-each-repo` run a command per repo but don't auto-commit.
-  Add a templated `mani.yaml` for interactive `mani run status --all` ("what needs pushing?") if wanted.
-- **gitleaks pre-commit hooks in every repo that needs them** (replaces a scan inside `sync-repos`; a hook also
-  fires on the auto-commit, and a failing hook just leaves that repo dirty and logged). Pattern: the
-  `.pre-commit-config.yaml` used in `claude-state` (a `local`/`system` gitleaks hook) plus `pre-commit install`.
-  Roll out to: all public repos (`chezmoi-dotfiles`, `bd-track`, `claude-config`, `chess_trainer`, `resume-builder`),
-  any repo on the sync list, and `claude-state` (done). Make it repeatable with a `mani` task that installs the hook
-  across tagged repos. Hooks are per clone, so a fresh machine needs the task re-run. Optional safety net: a chezmoi-managed
-  `init.templateDir` whose `hooks/pre-commit` runs `gitleaks protect --staged`, so every new clone gets a hook.
-  Watch for conflicts: `pre-commit install` refuses if `core.hooksPath` is set (unset in the repos checked on
-  2026-10-14), and `bd hooks install` also writes `.git/hooks/*`; pre-commit chains existing hooks as `.legacy`.
+(`rano-monitor.service`). The reload script became `run_after_` the same day (guard flips were missed).
+**Hook rollout done on `boco-merge/3-hooks` (unmerged) except `bd-track`/`claude-config` (deferred, open item).** **Next:** `sync-repos` hardening (below).
+- **`sync-repos` (D28, amended by D36).** Its BOCO use-case (`~/.timewarrior`) is obsolete. Its list holds **only repos
+  chezmoi itself provisions** (fixed paths, so the `sync-repos-list` template stays; no mani). Unattended commits must
+  scan for secrets **inside the script**, not via a per-clone hook, which can be silently missing (`claude-config`
+  and `chess_trainer` have committed configs whose hooks were never installed here). Next step: port `claude-state-sync`'s behaviour into `sync-repos` (gitleaks on
+  the staged set, refuse if gitleaks is missing, `pull --rebase --autostash` before push, `notify` on failure), list
+  `~/.claude/projects` as its first entry, and retire `claude-state-sync`. Deferred: one `dstask` repo provisioned by
+  chezmoi (remote + run_once clone), then listed.
+- **gitleaks pre-commit hooks (D35).** Hooks protect commits made by hand; each repo opts in by committing a
+  `.pre-commit-config.yaml` with a `local`/`system` gitleaks hook (`gitleaks git --pre-commit --staged --redact
+  --no-banner`; `protect` is deprecated in gitleaks 8.30). Roll out to the public repos (`chezmoi-dotfiles`,
+  `bd-track`, `claude-config`, `chess_trainer`, `resume-builder`) and `claude-state` (config and hook already in place since
+  2026-10-14; only the deprecated `protect` command changes). Install per clone with mani: a generated, unmanaged `~/mani.yaml`
+  lists the clones found under a few root folders, and the managed `~/.config/mani/config.yaml` holds an
+  `install-hooks` task that runs `pre-commit install` where the config has a gitleaks hook. The chezmoi repo gets a
+  `.gitleaksignore` for its 2 accepted findings (D30). Existing configs in `claude-config` and `chess_trainer` bring
+  their other hooks (whitespace fixers, ruff, `just-check`) into effect too. Deferred safety net: an
+  `init.templateDir` hook for new clones. Conflicts: `pre-commit install` refuses if `core.hooksPath` is set (unset
+  everywhere, 2026-10-17); `bd hooks install` also writes `.git/hooks/*` (none installed); pre-commit chains existing
+  hooks as `.legacy`.
 - Also: `dstask-notify` (use the `notify` adapter), `rano` units (guarded `work_tooling`).
 - Not ported (superseded by bd-track): `timew-autostop`, `timew-nudge`. `claude-mem-cleanup` stays held with claude-mem.
 
@@ -276,7 +278,7 @@ Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned i
 1. `tools/compare-trees.py` shows the files moved from only-BOCO to both.
 2. `chezmoi diff` on the new targets is understood; apply those targets only; `chezmoi status` clean (apart from ` R reload-systemd-user.sh`, which runs on every apply).
 3. Guards hold: nothing WSL- or work-only is managed on this host (see Guards acceptance).
-4. `gitleaks detect --no-git --no-banner -s .` shows only the 2 accepted findings (`home/private_dot_config/private_systemd/private_user/private_polybar-weather.service.tmpl`, `home/private_dot_jupyter/private_certs/private_service-key.pem`; accepted by MH 2026-10-15); anything new is a stop.
+4. `gitleaks dir --no-banner .` finds no leaks (the 2 accepted findings are in `.gitleaksignore`, D30); anything is a stop.
 5. Grep changed files with the pattern list in the private `client-terms.md`; expect nothing.
 6. Tick [../bootstrap-debt.md](../bootstrap-debt.md) if a hand-installed tool is now managed; push the branch.
 

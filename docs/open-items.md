@@ -11,7 +11,7 @@ updated: 2026-10-17
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| BOCO chezmoi merge, Phases 3-6 (Phases 0-3 code on `main`; gitleaks hook rollout, the rest of Phase 3, held until MH schedules it) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| BOCO chezmoi merge: merge `boco-merge/3-hooks`, then `sync-repos` hardening (D36), then Phases 4-6 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
 | zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
@@ -22,13 +22,16 @@ updated: 2026-10-17
 |---|---|---|
 | Sway session, then shared WM config fragment | Claude | [plans/sway.md](plans/sway.md) (Phase 0a done; unblocked) |
 | claude-mem evaluation (about 30 min requirements, ~1 week trial in `CLAUDE_CONFIG_DIR=~/.claude-trial`) | MH + Claude | deferred; evidence so far favors dropping it |
-| gitleaks pre-commit hook rollout across public repos (held until MH schedules it) | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
+| **Hooks in `bd-track` and `claude-config` (deferred by MH, 2026-10-17).** Both commit `.beads/hooks/` built for `core.hooksPath=.beads/hooks`, but neither clone sets it, so no hooks run (bd's or pre-commit's). `bd-track`'s `pre-commit` has no pre-commit-framework step; `claude-config`'s step fails open without `.venv` (none in this clone), skipping gitleaks too. Proposed: `install-hooks` sets `core.hooksPath` where `.beads/hooks/` is tracked, both repos call gitleaks before the `.venv` check. **Investigate first:** MH recalls bd hooks being problematic on the WSL work laptop (WSL-specific or not is unknown); check what each bd 1.3 hook does. Also `bd` warns `.beads` is 0755 in `claude-config` (wants 0700) | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
+| One `dstask` repo provisioned by chezmoi (private remote created by MH, run_once clone), then added to the `sync-repos` list (D36) | MH + Claude | deferred |
+| Optional `init.templateDir` hook so new clones get gitleaks before `install-hooks` runs | Claude | deferred (D35) |
 | zsh switch-over test (scratch-home render first) | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 0 |
 
 ## Housekeeping
 | Item | Who | Notes |
 |---|---|---|
 | Delete stray remote branch `claude/implement-from-notes` in `chess_trainer` | MH approval | duplicate of `main`; deferred |
+| Second `chess_trainer` clone at `~/Source/pyprojects/chess_trainer`: no remote, 4 uncommitted changes, last commit 2024-10-30; looks stale. Check before deleting | MH | found 2026-10-17 |
 | Wire the env var for the credential moved to `pass` (consumer project unknown) | MH | details in the private doc |
 | Rotate two unused keys that sit in the public chezmoi repo | MH | details in the private doc; source from `pass` |
 | Extend or retire the expired old GPG key; clean the keyring | MH | [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md) |
@@ -58,6 +61,8 @@ updated: 2026-10-17
 | Observed, not changed: `claude-init` writes `.claude/settings.local.json` with `Bash(git:*)` (includes `git push`) | info | 2026-10-16 |
 
 ## Closed recently
+- **gitleaks hook rollout (2026-10-17, `boco-merge/3-hooks`)**, except the deferred bd repos. Red/green tested with a fake GitHub token in chezmoi, `chess_trainer`, `resume-builder` and `claude-state`. Gotchas: pre-commit refuses to run while `.pre-commit-config.yaml` has unstaged edits (stage it with the test file); `claude-state`'s whitelist `.gitignore` ignores files outside `*/memory/`; its project folders start with `-`, so pass `--` to git and `rm`.
+- **YubiKey not found after a reboot (2026-10-17):** pcscd held the CCID interface; `scdaemon.conf` with `disable-ccid` + `pcsc-shared`, gated on pcscd being installed (D34).
 - **Reload script runs on every apply (2026-10-17):** renamed to `run_after_reload-systemd-user.sh.tmpl` and the source-hash block dropped, so timers whose guard flips are enabled by the next full apply. Tested by disabling `dstask-notify.timer` and running a plain `chezmoi apply` (re-enabled). Costs about 1.5 s per full apply; `chezmoi status` now always lists ` R reload-systemd-user.sh`.
 - **Phase 3 (timers and services) merged to `main` (2026-10-17)**, merge commit `5ab6ded`; scans clean (gitleaks: the 2 accepted findings; client-term grep: 0 hits in the tree and the commit messages). MH kept `~/.dstask` and applied the `dstask-notify` targets; the timer was then enabled by a manual run of the reload script (see the open item above), and a manual run of the service succeeded.
 - **History rewrite + Phase 1 force-push (2026-10-17).** Bundle backup (`~/.local/state/claude-migration-backups/chezmoi-prerewrite-20261016-233103.bundle`, all refs, verified), then `uvx git-filter-repo --force` over all refs: dropped 7 okular/vifminfo path spellings, scrubbed the `client-terms.md` pattern (case-insensitive, word-boundaried) from every blob and 5 commit messages. Verified: 0 pattern hits across all 246 commits (PCRE, boundary-correct), 0 message hits, branch tip tree byte-identical to the pre-rewrite `78ecd783…`, working-tree scan clean, gitleaks exactly the 2 accepted findings. Re-added `origin`; remapped 5 in-repo doc SHAs via `.git/filter-repo/commit-map` (`923d83b→2feda22`, `10a7675→1f5d2dd`, `3b44920→999671c`, `a3f16cb→dcbb3d4`, `59adab1→31644a7`; `76a997a` is BOCO-repo, left). Fast-forwarded `main` onto the branch (`cd888d3`) and force-pushed with `--force-with-lease` (lease held; `origin/main` was still `a6cb0332`). Remaining: the GitHub Support purge, now an open item above.
