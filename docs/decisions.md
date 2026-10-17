@@ -1,7 +1,7 @@
 ---
-summary: Decision log (D1–D31) for the Claude Code migration, chezmoi merge, Sway and docs; one line per decision
+summary: Decision log (D1–D34) for the Claude Code migration, chezmoi merge, Sway and docs; one line per decision
 status: current
-updated: 2026-10-15
+updated: 2026-10-17
 ---
 
 # Decisions
@@ -72,6 +72,12 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 |---|---|
 | D30 | Docs live in `docs/`, are organized for Claude to navigate (see [README.md](README.md)), and are public, so sensitive material goes to the private repo. `CLAUDE.md` + `docs/STATUS.md` replace one-shot session prompts. |
 | D31 | Superseded plan drafts and the scratch notes file are deleted (rollback copy kept locally in `~/.local/state/claude-migration-backups/docs-2026-10-15/`). |
+
+## Hardware and security
+
+| # | Decision |
+|---|---|
+| D34 | scdaemon reaches the YubiKey **through pcscd in shared mode** (`disable-ccid` + `pcsc-shared` in `~/.gnupg/scdaemon.conf`), rendered only on hosts where pcscd is installed (MH, 2026-10-17). Reason: once pcscd runs it owns the CCID interface, and gsd-smartcard and Chromium keep the card open, so the built-in driver and an exclusive connect both fail. Accepted trade-off: GnuPG calls shared mode "somewhat dangerous" (scdaemon caches card state and keeps the PIN verified, so another PC/SC client in the session could use the unlocked card). Rejected: exclusive mode with gsd-smartcard and Chromium's card access disabled (loses lock-on-removal, Chromium's holder is hard to pin down). Detail: [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md). |
 
 ## Resolved questions (migration)
 
