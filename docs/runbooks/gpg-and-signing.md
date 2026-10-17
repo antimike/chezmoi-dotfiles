@@ -29,3 +29,9 @@ gpg --card-status | grep -E 'Signature|Encryption'  # fails "No such device" if 
 git -C <repo> tag -s -m test tmp-test && git -C <repo> tag -v tmp-test; git -C <repo> tag -d tmp-test
 ```
 Symptom of an unplugged key: `gpg: selecting card failed: No such device`, SSH `Permission denied (publickey)`, `unable to sign the tag`.
+
+Same symptoms with the key plugged in (`lsusb` shows it) mean pcscd owns the reader. `~/.gnupg/scdaemon.conf`
+(managed) sets `disable-ccid` (go through pcscd, not scdaemon's own USB driver) and `pcsc-shared` (gsd-smartcard and
+Chromium keep the card open, so an exclusive connect fails with `sharing violation`). Found 2026-10-17, after a reboot
+in which pcscd was socket-activated. Restart scdaemon after changing it: `gpgconf --kill scdaemon`. Debug with
+`gpg-connect-agent 'SCD GETINFO reader_list' /bye` (empty = no reader) and a `debug-level guru` + `log-file` run.
