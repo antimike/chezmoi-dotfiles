@@ -31,6 +31,8 @@ export NPM_INSTALL_PREFIX="${NPM_INSTALL_PREFIX:-{{ .filesystem.npmDir }}}"
 mkdir -p "$NPM_INSTALL_PREFIX"
 npm config set prefix "$NPM_INSTALL_PREFIX"
 npm install -g neovim
+# mmdc (mermaid-cli): renders Mermaid diagrams in Snacks.image / render-markdown
+npm install -g @mermaid-js/mermaid-cli
 
 # LaTeX
 {{ if eq .chezmoi.osRelease.id "fedora" -}}

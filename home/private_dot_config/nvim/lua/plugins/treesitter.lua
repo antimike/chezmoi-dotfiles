@@ -14,6 +14,7 @@ return {
         "markdown",         -- block-level elements
         "markdown_inline",  -- inline elements (links, emphasis); needed for full highlighting
         "mermaid",
+        "latex",            -- LaTeX math rendering in Snacks.image
         "html",
         "vimdoc",
 
