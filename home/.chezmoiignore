@@ -2,3 +2,8 @@
 .keep
 lazyvim-lock.json
 lazyvim.json
+{{- /* sync-repos: keep the config dir out until the repo list is non-empty
+     (an all-empty directory would otherwise still be created). */}}
+{{ if not (includeTemplate "sync-repos-list" . | trim) -}}
+.config/sync-repos
+{{ end -}}
