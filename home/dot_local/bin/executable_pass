@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# pass — wrapper that marks pass's clipboard copies as sensitive on Wayland.
+#
+# `pass -c` (and `pass show -c`, `pass generate -c`, `pass otp -c`) copies with a
+# plain `wl-copy`, so a clipboard-history manager records the password. This
+# wrapper exports a `wl-copy` function that adds --sensitive; the pass script
+# inherits it and calls it in place of the program. cliphist skips sensitive
+# copies (CLIPBOARD_STATE=sensitive), and so do other managers that honour the
+# hint. Nothing else about pass changes, and on X11 (no WAYLAND_DISPLAY) the
+# function is not defined at all.
+#
+# It must be found before the real pass on PATH (~/.local/bin is first). The real
+# one is looked up by walking PATH and skipping this file, so no process is
+# spawned beyond the extra bash.
+if [[ -n ${WAYLAND_DISPLAY-} ]]; then
+  # shellcheck disable=SC2329  # called by the pass script, through the exported function
+  wl-copy() { command wl-copy --sensitive "$@"; }
+  export -f wl-copy
+fi
+
+IFS=: read -ra path_dirs <<<"$PATH"
+for dir in "${path_dirs[@]}"; do
+  candidate="$dir/pass"
+  [[ -f $candidate && -x $candidate && ! $candidate -ef ${BASH_SOURCE[0]} ]] || continue
+  # shellcheck disable=SC2093  # the first match replaces this process on purpose
+  exec "$candidate" "$@"
+done
+
+echo "pass wrapper: no other 'pass' found on PATH" >&2
+exit 127
