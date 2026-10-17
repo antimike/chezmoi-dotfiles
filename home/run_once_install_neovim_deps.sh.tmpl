@@ -50,6 +50,13 @@ sudo dnf install -y chafa
 sudo apt-get install -y chafa ueberzug
 {{ end -}}
 
+# lazygit (Snacks.lazygit integration). Not in Fedora's default repos, so
+# install via Go (the lazygit README ranks no distro package and warns they are
+# third-party); needs the go toolchain on PATH.
+if ! command -v lazygit >/dev/null 2>&1 && command -v go >/dev/null 2>&1; then
+  go install github.com/jesseduffield/lazygit@latest
+fi
+
 # Lua rocks toolchain. lazy.nvim builds luarocks (e.g. image.nvim's `magick`)
 # against Neovim's LuaJIT/Lua 5.1 via hererocks, since the system luarocks is
 # built for Lua 5.4; magick also needs the ImageMagick development headers.
