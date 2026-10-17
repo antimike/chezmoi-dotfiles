@@ -87,31 +87,36 @@ if [ -x "$HOME/.bun/bin/bun" ]; then
 	alias claude-mem='$HOME/.bun/bin/bun "$(ls -dt $HOME/.claude/plugins/cache/thedotmack/claude-mem/[0-9]*/ 2>/dev/null | head -1)scripts/worker-service.cjs"'
 fi
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/usr/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/usr/etc/profile.d/conda.sh" ]; then
-        . "/usr/etc/profile.d/conda.sh"
-    else
-        export PATH="/usr/bin:$PATH"
-    fi
+# conda, loaded on first use. Its shell hook costs 350-675 ms, and every
+# interactive shell paid it. This replaces the block that `conda init` writes
+# (re-running `conda init` would add that block back, ahead of this one). Until
+# the first `conda` command there is no (base) prompt prefix and no CONDA_*
+# variables; conda is installed under /usr, so base is the system Python anyway.
+if [ -x /usr/bin/conda ]; then
+	conda() {
+		unset -f conda
+		local setup
+		if setup="$('/usr/bin/conda' 'shell.bash' 'hook' 2>/dev/null)"; then
+			eval "$setup"
+		elif [ -f /usr/etc/profile.d/conda.sh ]; then
+			. /usr/etc/profile.d/conda.sh
+		fi
+		# the hook puts /usr/bin first on PATH; undo that
+		__keep_local_bin_first
+		conda "$@"
+	}
 fi
-unset __conda_setup
-# <<< conda initialize <<<
 
-
-# Keep ~/.local/bin and ~/bin ahead of system and tool-manager directories.
-# conda's hook above prepends /usr/bin (conda lives there), which would put the
-# distro packages ahead of the pinned tools the chezmoi installers put in
-# ~/.local/bin. Remove any existing entries, then prepend them once. This must
-# stay the last thing that touches PATH.
-__path=":$PATH:"
-__path=${__path//:$HOME\/.local\/bin:/:}
-__path=${__path//:$HOME\/bin:/:}
-__path=${__path#:}
-PATH="$HOME/.local/bin:$HOME/bin:${__path%:}"
-unset __path
-export PATH
+# Keep ~/.local/bin and ~/bin ahead of system and tool-manager directories, so the
+# pinned tools the chezmoi installers put in ~/.local/bin win over distro packages.
+# Removes any existing entries, then prepends them once. Run it last at startup,
+# and again after anything that rewrites PATH (the lazy conda hook above).
+__keep_local_bin_first() {
+	local p=":$PATH:"
+	p=${p//:$HOME\/.local\/bin:/:}
+	p=${p//:$HOME\/bin:/:}
+	p=${p#:}
+	PATH="$HOME/.local/bin:$HOME/bin:${p%:}"
+	export PATH
+}
+__keep_local_bin_first
