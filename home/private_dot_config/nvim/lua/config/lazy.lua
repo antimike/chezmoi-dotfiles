@@ -31,6 +31,12 @@ require("lazy").setup({
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
   install = { colorscheme = { "tokyonight", "habamax" } },
+  -- No luarocks/hererocks toolchain on this host: skip rock builds (oxocarbon's
+  -- dev fennel rockspec and image.nvim's magick rock) that otherwise fail to
+  -- install every round and trip lazy's "too many rounds of missing plugins".
+  -- image.nvim inline rendering needs ImageMagick + the magick rock (or a kitty
+  -- backend); re-enable rocks if that is set up.
+  rocks = { enabled = false },
   checker = {
     enabled = true, -- check for plugin updates periodically
     notify = false, -- notify on update
