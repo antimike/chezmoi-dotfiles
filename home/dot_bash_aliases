@@ -1,0 +1,32 @@
+# Aliases for bash, sourced from ~/.bashrc.
+
+# enable color support of ls and add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias dir='dir --color=auto'
+    alias vdir='vdir --color=auto'
+fi
+# grep, fgrep and egrep are not aliased here: Fedora's /etc/profile.d/colorgrep.sh
+# defines them (as grep, grep -F, grep -E), while `egrep --color=auto` prints an
+# "egrep is obsolescent" warning on every use.
+
+# some more ls aliases
+alias ll='ls -l'
+alias la='ls -A'
+alias l='ls -CF'
+
+alias md="mkdir -p"
+
+# Debian ships these under other names (batcat, fdfind); Fedora uses the real
+# names, so only alias when the real name is missing.
+if ! command -v bat >/dev/null 2>&1 && command -v batcat >/dev/null 2>&1; then
+	alias bat=batcat
+fi
+if ! command -v fd >/dev/null 2>&1 && command -v fdfind >/dev/null 2>&1; then
+	alias fd=fdfind
+fi
+
+if ! command -v ipython >/dev/null 2>&1 && command -v ipython3 >/dev/null 2>&1; then
+	alias ipython=ipython3
+fi

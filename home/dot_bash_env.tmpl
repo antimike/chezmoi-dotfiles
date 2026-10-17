@@ -1,0 +1,9 @@
+# Environment variables for bash, sourced from ~/.bashrc. zsh gets its own from
+# ~/.zshenv and the snippets.
+
+# colored GCC warnings and errors
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+export EDITOR={{ .editor }}
+export VISUAL={{ .editor }}
+# Let pass run the user extensions in ~/.password-store/.extensions
+export PASSWORD_STORE_ENABLE_EXTENSIONS=true
