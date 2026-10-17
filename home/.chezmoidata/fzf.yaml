@@ -1,6 +1,18 @@
-# User-defined fzf keybindings, consumed by snippets/fzf-integration.zsh.tmpl.
-# (BOCO also pins an fzf release and checksums here for its installer; that comes
-# with the Phase 1 installer. Here fzf comes from dnf for now.)
+# Pinned fzf release, consumed by run_onchange_install-fzf.sh.tmpl.
+# Also carries user-defined keybindings consumed by
+# snippets/fzf-integration.zsh.tmpl.
+#
+# Upstream publishes per-OS/arch tarballs and a separate checksums file:
+#   https://github.com/junegunn/fzf/releases/download/<version>/fzf_<version>_checksums.txt
+#
+# Pin rule: exact tag, at least 14 days old. v0.74.4 = 2026-09-12.
+# Only linux_amd64 has been exercised (zbook); the other rows are verbatim from
+# the upstream checksums file but untested on those hosts.
+#
+# To bump:
+#   1. version: new upstream tag, "v"-prefixed
+#   2. checksums: verbatim rows from the checksums file above
+#   3. commit; the rendered installer hash changes, so the re-install triggers.
 #
 # Keybindings notes:
 #   fzf's own `--zsh` output already binds ^T, ^R, and \ec in all three
@@ -18,6 +30,12 @@
 #       keymaps: [emacs, vicmd, viins]
 
 fzf:
+  version: "v0.74.4"
+  checksums:
+    linux_amd64:  "05e6813a337cc722c3ed07e54a764b75cc5d671e2e60459db0ba696ee5fa7504"
+    linux_arm64:  "5d673b849f494f0d64ec471d8640b153ca8849e3846a31da17abdcfce8df6b46"
+    darwin_amd64: "2d392b50be66e2ab104ccd52a6072df692b1f9b9c5b449a9c098de885f32c4c5"
+    darwin_arm64: "4f6a113bfc0c7959e0005c78d566a51afc4fcefc956f43735c62a9deb19e92ae"
   # keybindings:
   #   # Bind in multiple keymaps — expands to three `bindkey -M <map> ...`
   #   # lines, one per keymap in the list.
