@@ -1,6 +1,6 @@
 ---
 summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
-status: Phases 0-2 done (Phase 2 on branch boco-merge/2-nvim, not yet merged/pushed); Phase 3 next
+status: Phases 0-2 done and on main (Phase 2 merged + pushed 2026-10-17, merge fbc8169); Phase 3 next
 updated: 2026-10-17
 ---
 
@@ -184,7 +184,7 @@ Pins must be exact, >=14 days old, with a Linux x86_64 asset.
   first apply, and BOCO's `_the-way` was committed as a 0-byte file). Static `_cht`, `_nb`, `_nbterm` stay as files.
   Status 2026-10-16: `fzf`, `cheat`, `cht-sh`, `the-way` (+ widgets), `nb`, `dnote`, `dstask`, `d2`, and `clipse` (not BOCO; added 2026-10-16) done on `boco-merge/1-tools`. The helpers below are done too (2026-10-16); `functions/bd` was rewritten to call `bd-track`, and `docstring` and `.zprofile` were duplicates and are not ported.
 
-### Phase 2: Neovim (all BOCO plugins and themes) — DONE on branch `boco-merge/2-nvim` (11 commits; not yet merged/pushed), 2026-10-17
+### Phase 2: Neovim (all BOCO plugins and themes) — DONE, merged to `main` and pushed 2026-10-17 (merge `fbc8169`)
 Ported all 39 BOCO plugin specs (15 themes + 19 features + the 4 shared chezmoi/example/formatting/treesitter) and the
 config files, into this repo's `private_dot_config/nvim/` (note: this repo nests `.config` as `private_`; `norm()` in
 `compare-trees.py` strips the prefix, so paths still match 1:1). BOCO won throughout. Outcomes and corrections to the
