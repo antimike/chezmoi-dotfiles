@@ -20,7 +20,7 @@ on failure also display the stacktrace internals of virtualenv (default: False)
 use app data folder in read\-only mode (write operations will fail with error) (default: False)
 .TP
 \fB\-\-app\-data\fR APP_DATA
-a data folder used as cache by the virtualenv (default: /home/***REMOVED***/.local/share/virtualenv)
+a data folder used as cache by the virtualenv (default: ~/.local/share/virtualenv)
 .TP
 \fB\-\-reset\-app\-data\fR
 start with empty app data folder (default: False)
@@ -127,4 +127,4 @@ activators to generate \- default is all supported (default: bash,cshell,fish,nu
 \fB\-\-prompt\fR prompt
 provides an alternative prompt prefix for this environment (default: None)
 .PP
-config file /home/***REMOVED***/.config/virtualenv/virtualenv.ini missing (change via env var VIRTUALENV_CONFIG_FILE)
+config file ~/.config/virtualenv/virtualenv.ini missing (change via env var VIRTUALENV_CONFIG_FILE)

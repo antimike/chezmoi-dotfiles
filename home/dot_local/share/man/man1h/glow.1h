@@ -25,7 +25,7 @@ Stash a markdown
 show system files and directories (TUI\-mode only)
 .TP
 \fB\-\-config\fR string
-config file (default /home/***REMOVED***/.config/glow/glow.yml)
+config file (default ~/.config/glow/glow.yml)
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 help for glow
