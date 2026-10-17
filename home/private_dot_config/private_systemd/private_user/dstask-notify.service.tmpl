@@ -1,0 +1,10 @@
+{{ if and (lookPath "dstask") (lookPath .notifier) (stat (joinPath .chezmoi.homeDir ".dstask")) -}}
+[Unit]
+Description=dstask due-today notification digest
+Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_dstask-notify.tmpl
+
+[Service]
+Type=oneshot
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=%h/.local/bin/dstask-notify
+{{- end }}
