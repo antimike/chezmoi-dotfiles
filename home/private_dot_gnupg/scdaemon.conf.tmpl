@@ -1,3 +1,7 @@
+{{- /* Only where pcscd is installed: without it, disable-ccid leaves scdaemon
+     no way to reach the card. Renders empty (no target file) otherwise, so
+     scdaemon keeps its built-in CCID driver. See D34. */ -}}
+{{- if or (lookPath "pcscd") (stat "/usr/sbin/pcscd") (stat "/usr/bin/pcscd") -}}
 # Talk to the card through the PC/SC daemon (pcscd) instead of scdaemon's
 # built-in CCID driver: when pcscd runs it owns the YubiKey's CCID interface,
 # and the built-in driver then fails with "selecting card failed: No such device".
@@ -5,3 +9,4 @@ disable-ccid
 # Open the card in shared mode. Other PC/SC clients (gsd-smartcard, Chromium)
 # keep it open, so the default exclusive connect fails with "sharing violation".
 pcsc-shared
+{{ end -}}
