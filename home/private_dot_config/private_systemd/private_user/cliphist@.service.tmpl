@@ -1,0 +1,18 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Clipboard history (cliphist), %i entries
+Documentation=https://github.com/sentriz/cliphist man:wl-paste(1)
+PartOf=clipboard-stack.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# Stops retrying on a compositor without the data-control protocol (GNOME).
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+# wl-paste runs `cliphist store` on each change and sets CLIPBOARD_STATE;
+# cliphist skips "sensitive" copies and drops the last entry on "clear".
+ExecStart=/usr/bin/wl-paste --type %i --watch /usr/bin/cliphist store
+Restart=on-failure
+RestartSec=2
+{{- end }}

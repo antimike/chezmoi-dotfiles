@@ -1,0 +1,18 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Keep the Wayland clipboard after its source program exits
+Documentation=https://github.com/Linus789/wl-clip-persist
+PartOf=clipboard-stack.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# Stops retrying on a compositor without the data-control protocol (GNOME).
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+# Only the regular clipboard: persisting the primary selection would change how
+# select-to-copy behaves.
+ExecStart=%h/.local/bin/wl-clip-persist --clipboard regular
+Restart=on-failure
+RestartSec=2
+{{- end }}

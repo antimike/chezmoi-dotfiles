@@ -1,0 +1,10 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Wayland clipboard history and persistence
+Documentation=file://%h/.local/share/chezmoi/docs/plans/sway.md
+Wants=cliphist@text.service cliphist@image.service wl-clip-persist.service
+After=graphical-session.target
+# No [Install] section on purpose: nothing starts this by default, so GNOME (no
+# data-control protocol) never tries. A Sway session starts it with
+#   exec systemctl --user start clipboard-stack.target
+{{- end }}
