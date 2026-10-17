@@ -1,105 +1,196 @@
 ---
-summary: Plan for a Sway (Wayland) session beside GNOME on zbook, mapping the i3/X11 setup and preserving the i3 config via a shared template fragment
-status: planned, no steps done
-updated: 2026-10-15
+summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
+status: planning; order of work proposed 2026-10-17, awaiting MH's agreement; no config changed yet
+updated: 2026-10-17
 ---
 
-# Sway session plan
+# Wayland desktop plan
 
-Desktop-environment work on zbook, separate from the Claude Code migration (see [../log/migration-steps.md](../log/migration-steps.md)).
-Scratch backlog: [ricing-backlog.md](ricing-backlog.md).
+Desktop work on zbook, separate from the Claude Code migration ([../log/migration-steps.md](../log/migration-steps.md)).
+Theming (theme bundles, wallpapers, palette generation, pickers for fonts and themes) is a separate, longer-running
+project: [theming.md](theming.md). Loose items: [ricing-backlog.md](ricing-backlog.md).
 
-**Current state of zbook:** Fedora 44, GNOME on Wayland (`XDG_SESSION_TYPE=wayland`, `XDG_CURRENT_DESKTOP=GNOME`). i3 and polybar are installed but unused on this machine.
+**Priority (MH, 2026-10-17):** make SwayFX a usable daily driver first. Theming comes after, as time allows.
 
-**Dotfiles:** chezmoi (`~/.local/share/chezmoi`, remote `antimike/chezmoi-dotfiles`). It already contains a set of X11/i3 session units: `xsession.target`, `xsettingsd.service`, the xss-dimmer, the wallpaper timer and redshift. Their install lists are in `.chezmoidata/systemd.yaml` and per-unit settings in `.chezmoitemplates/systemd/*.yaml`.
+## Current state of zbook (checked 2026-10-17)
 
----
+- Fedora 44, GNOME on Wayland. **GDM** is the active display manager; `lightdm` is installed but unused.
+- i3 and polybar are installed but unused. **Not in chezmoi and not on this machine:** the polybar config, and the
+  i3 helper scripts the i3 config calls (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`,
+  `xss-lock`), plus kitty's `open-notes.bash` ([../open-items.md](../open-items.md)). Recover them from another machine or rewrite.
+- Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack.target` running `cliphist@text`,
+  `cliphist@image` and `wl-clip-persist`; the clipse installer), started explicitly by a Wayland session, never by GNOME.
+- Already installed: `dunst`, `rofi` 2.0 (Wayland-native), `kitty` 0.47, `cliphist`, `wl-clipboard`, `brightnessctl`,
+  `xdg-desktop-portal-gtk`, `gnome-keyring`, `pinentry-gnome3`, `pam-u2f`.
+- Secure Boot is on and swap is zram only (8G). Both matter for hibernation (below).
+- Existing X11/i3 session units (`xsession.target`, `xsettingsd`, xss-dimmer, wallpaper timer, redshift, polybar,
+  picom, autorandr) stay; they are scoped to the i3 session and inert elsewhere.
 
-## Sway session
+## Compositors
 
-### Goal
+| Compositor | Role in the trial | Fedora 44 | Notes |
+|---|---|---|---|
+| **SwayFX** | **Full i3 port; daily driver** | COPR (pin it; note it in the decision log) | Sway fork: i3 config syntax and i3 IPC (so `i3altlayout` and i3ipc scripts keep working), plus blur, rounded corners, shadows, inactive dimming. Risk: trails upstream Sway (1.11 in Fedora). Plain `sway` stays available as a fallback using the same config, minus the SwayFX-only lines. |
+| **niri** | Minimal config | Official (26.04) | Scrolling tiling, KDL config, own IPC (`niri msg`), XWayland through `xwayland-satellite` (packaged). Stable, animated. |
+| **Hyprland** | Minimal config | COPR | Most eye candy; frequent breaking config changes; i3-style manual tiling only through the `hy3` plugin, which must match the exact Hyprland version. |
+| **Wayfire** | Minimal config | Official (0.10.1) | Effects-heavy (cube, wobbly); tiling through the `simple-tile` plugin that ships in the `wayfire` package. Basic auto-tiling only: an eye-candy reference more than a contender. |
 
-Add a Sway session alongside GNOME, chosen at the login screen. Its helper programs run as systemd user units scoped to the Sway session, following the same pattern as the existing i3/X11 units.
+Considered and set aside: river (0.4 split window management into separate clients; that ecosystem is still thin),
+scroll (Sway fork with scrolling layout; not packaged), miracle-wm, COSMIC (a full DE), labwc (stacking).
 
-### Design principle: scope units by session, not by host
+**Minimal config** means: terminal, launcher, the ~10 most-used bindings, outputs, and the shared helper target. No port
+of the i3 config. A runner-up can stay installed after the trial if its config stays minimal.
 
-Because GNOME and Sway will coexist on one machine, **don't exclude units per host** in chezmoi. Instead:
+## Session plumbing: uwsm plus one shared helper target
 
-- Deploy all unit files.
-- Each unit has `PartOf=` and `WantedBy=` set to its session's target, so it starts and stops with that session and never runs under GNOME.
-- The existing X11 units already behave this way. For example, `xsettingsd.service` has no `[Install]` section and only runs when the i3 session's target starts it, so it's inert on a GNOME-only machine.
+- **uwsm** (Universal Wayland Session Manager, github.com/Vladimir-csp/uwsm) launches each compositor as systemd units
+  (`wayland-wm@.service`, `wayland-session@.target`, bound to `graphical-session.target`), imports the environment and
+  shuts down cleanly. It officially supports sway, wayfire, hyprland and niri. `uwsm app -- <cmd>` runs each app in its
+  own unit under `app-graphical.slice`, which gives per-app resource control (the general form of the old
+  "process cap" note).
+- **Install:** Python, but built with **meson**, not pip. Dependencies are packaged (`python3-dbus`, `python3-pyxdg`;
+  optional `whiptail`, `inotify-tools`, `libnotify`). The `wayland-sessions/*.desktop` entries GDM reads must be in a
+  system directory, so it is a sudo install to `/usr/local`, via a pinned tag+commit installer in the style of
+  `run_onchange_install-wl-clip-persist.sh.tmpl`. Not in Fedora's repos.
+- **Overlap:** with uwsm, do not use `sway-systemd` or start `niri.service` directly; one session model for all four.
+- **Shared helpers:** a hand-written `wayland-wm-session.target` (`BindsTo=graphical-session.target`, no `[Install]`).
+  Every compositor's config starts it. Shared units (bar, notifications, idle, gamma, outputs, wallpaper, clipboard)
+  use `PartOf=`/`WantedBy=wayland-wm-session.target`. GNOME also starts `graphical-session.target`, which is why
+  helpers cannot hang off that directly. This keeps the existing rule: **scope units by session, not by host.**
+  `clipboard-stack.target` joins it (`Wants=` from the new target).
+- Portals: `xdg-desktop-portal-wlr` for screen sharing and screenshots on wlroots compositors; `xdg-desktop-portal-gtk`
+  (installed) for file pickers. niri and Hyprland want their own portal backends (`-gnome` and `-hyprland`); check each
+  in its minimal config.
 
-### Session plumbing
+## Shared helper components (choices and trade-offs)
 
-- **`sway-systemd`** (Fedora package, 0.4.1 in F44) provides `sway-session.target`, tied to `graphical-session.target`. It passes Sway's environment (`WAYLAND_DISPLAY`, `SWAYSOCK`, `XDG_CURRENT_DESKTOP`, …) to systemd and handles XDG autostart. Before writing anything by hand, check that it's still the recommended approach.
-- **Without the package**, the equivalent in the Sway config is:
-  ```
-  exec "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP; systemctl --user start sway-session.target"
-  ```
-  plus a hand-written `sway-session.target` with `BindsTo=graphical-session.target`.
-- **Portals:** `xdg-desktop-portal-wlr` (0.8.4) for screen sharing and screenshots under wlroots.
+All work across the four compositors unless noted (they use standard Wayland protocols such as layer-shell). Fedora
+versions checked 2026-10-08 and 2026-10-17.
 
-### Mapping the existing X11/i3 pieces to Sway
+| Need | Recommendation | Alternatives | Trade-off |
+|---|---|---|---|
+| Bar + tray | **waybar** 0.15 | ironbar, eww, quickshell (none packaged) | waybar has sway, hyprland, niri and river modules, CSS styling and a tray; the others are more programmable but heavier to maintain. Rebuild the polybar modules (workspaces, clock, battery, network, volume, weather) here. |
+| Notifications | **dunst** (keep, D29) | **SwayNotificationCenter** 0.12.6 (packaged), mako | dunst keeps your config and `dunstctl` bindings; history only via `history-pop`. swaync adds a notification-center panel (a real notification log, Do Not Disturb, waybar integration) at the cost of a new config. Revisit if the "notification log" item needs more than history-pop. |
+| Lock screen | **swaylock** 1.8.6 | gtklock 4.0 (packaged, CSS-themed), swaylock-effects (blur/clock; not packaged), hyprlock (COPR) | swaylock is minimal and robust; gtklock looks better and stays packaged. Both use ext-session-lock, so either works across compositors. |
+| Idle / DPMS | **swayidle** 1.9 | hypridle (COPR) | swayidle drives dim, lock and output power off from timeouts, plus `before-sleep` lock. |
+| Launcher, dmenu prompts | **rofi** 2.0 (keep) | fuzzel 1.14, wofi | rofi keeps all existing themes and modi. fuzzel is faster and simpler; keep it in mind for prompts. |
+| Night light | **gammastep** (D29) | wlsunset | Needs the wlr gamma-control protocol; check Hyprland (has its own `hyprsunset`) and niri in their minimal configs. |
+| Outputs | **kanshi** 1.9 | wdisplays (GUI), `wlr-randr` | niri configures outputs itself; kanshi may be unnecessary there. |
+| Wallpaper | **swaybg** 1.2.2 | swww (transitions; not packaged) | Wallpaper selection and palettes belong to [theming.md](theming.md); here only "set the background per output". |
+| Volume/brightness OSD | **wob** 0.15 | swayosd (not packaged), dunst progress notifications | wob is a tiny bar fed from a pipe; dunst's progress hint needs nothing new. |
+| Polkit agent | **lxpolkit** or `mate-polkit` | polkit-gnome (not in F44) | **Missing from the old plan:** without an agent, GUI apps cannot ask for admin rights outside GNOME. |
+| Keyring / pinentry | gnome-keyring + pinentry-gnome3 (installed) | | Check that both work outside GNOME (pinentry for `pass` and the YubiKey). |
+| Logout menu | swaynag (built in) | wlogout, nwg-bar (packaged) | Optional eye candy. |
 
-All packages listed are available in Fedora 44 (versions checked 2026-10-08).
+## SwayFX: porting the i3 config
 
-| Current X11 / i3 piece | Sway counterpart | Notes |
-|---|---|---|
-| `xsession.target` | `sway-session.target` (via `sway-systemd`) | Sway units use `PartOf=`/`WantedBy=sway-session.target`. |
-| `xsettingsd.service` | `gsettings` in the Sway config; optionally `xsettingsd` (1.0.2) for XWayland apps | Native Wayland GTK apps read `org.gnome.desktop.interface` (gtk-theme, icon-theme, cursor-theme, font-name) via `gsettings`, e.g. `exec_always gsettings set org.gnome.desktop.interface gtk-theme …`. xsettingsd only helps legacy apps running through XWayland. The current unit's reload logic (`Xft.dpi`, `i3-msg restart`, polybar) doesn't carry over: Wayland scales per output (`output * scale`), and Sway reloads with `swaymsg reload`. |
-| polybar | **waybar** (0.15.0) | polybar is X11-only. |
-| `xss-dimmer` / screen locker | **swayidle** (1.9.0) + **swaylock** (1.8.6) | swayidle handles dimming, locking and DPMS via timeouts. |
-| Wallpaper timer (pywal + feh/hsetroot) | Same timer; **swaybg** (1.2.2) in place of feh/hsetroot | pywal works unchanged. Only the "set background" command changes. |
-| redshift | **wlsunset** (0.4.0) or **gammastep** (2.0.11) | gammastep is the redshift fork with Wayland support; wlsunset is a smaller native tool. |
-| xrandr output setup | **kanshi** (1.9.0) | Output profiles that switch automatically with what's plugged in. |
-| Notification daemon (GNOME provides one today) | **mako** (1.11.0) or **dunst** (1.13.2, supports Wayland) | Needed under Sway for `notify-send` to work. The chezmoi `notifier` variable stays `notify-send` either way; dunst/mako are daemons, `notify-send` is the client. |
+**Feasibility: high.** Sway/SwayFX read i3 config syntax and speak the i3 IPC protocol, so most of
+`home/private_dot_config/i3/config.tmpl` (driven by the `.i3.*` chezmoi data) carries over: bindings, modes, workspaces,
+`workspace_layout tabbed`, marks, `focus_follows_mouse`, floating rules and the gaps settings.
 
-### chezmoi structure
-
-- Add Sway entries to `.chezmoidata/systemd.yaml`: install lists, using the `dnf:` / `pipx:` keys already in use.
-- Add `.chezmoitemplates/systemd/<unit>.yaml` per-unit settings, mirroring the X11 ones.
-- Render unit templates from absolute paths. Anchor home-relative `.filesystem.*` values with `joinPath .chezmoi.homeDir` behind an `osIsAbs` guard, as done for `xsettingsd.service` in chezmoi commit `dcbb3d4`. Otherwise `stat` and `realpath` resolve against chezmoi's working directory.
-- Templates that run commands at render time must use `.chezmoitemplates/safe-output.sh` (chezmoi commit `31644a7`), so a broken tool can't abort `chezmoi apply`.
-- Package installs go through chezmoi `run_onchange_` installers (a Fedora package list), consistent with the tooling plan in [migration-steps.md](../log/migration-steps.md) (step 6).
-
-### Steps (not yet scheduled)
-
-- [ ] 1.1 Install `sway`, `sway-systemd`, `xdg-desktop-portal-wlr` via a chezmoi Fedora package installer. Confirm a Sway entry appears at the login screen next to GNOME.
-- [ ] 1.2 Minimal Sway config in chezmoi (`private_dot_config/sway/config.tmpl`): start the session target, `gsettings` theming, output scale.
-- [ ] 1.3 Units scoped to the Sway session, one commit each: waybar, mako or dunst, swayidle (+ swaylock), kanshi, wlsunset or gammastep, wallpaper (swaybg + existing pywal timer).
-- [ ] 1.4 Decide on xsettingsd under Sway (only if XWayland apps look wrong).
-- [ ] 1.5 Verify that switching between GNOME and Sway at the login screen leaves no Sway units running under GNOME (`systemctl --user list-units --state=active`).
-- [ ] 1.6 (after Phase 0a of the chezmoi restructure) Split the i3 config into a shared fragment plus `i3`/`sway` wrappers; verify the i3 output is unchanged.
-- [ ] 1.7 Port the X-specific i3 items in the table above, one commit each: `app_id` rules, `i3-input` prompt wrapper, `grim`/`slurp` screenshot, swayidle/swaylock, input settings, then waybar.
-
-### i3 config to Sway: preserving the existing setup (added 2026-10-15)
-
-**Feasibility: high.** Sway reads i3 config syntax and speaks the i3 IPC protocol, so most of `private_dot_config/i3/config.tmpl` (355 lines, driven by the `.i3.*` chezmoi data) carries over: bindings, modes, workspaces, `workspace_layout tabbed`, marks, `focus_follows_mouse`, floating rules and the built-in gaps (inner/outer/top/left/right, `smart_gaps`, `smart_borders`, `hide_edge_borders`). Sway has gaps natively, so i3-gaps is not needed. The work is in the X-specific pieces, listed below. Packages checked in Fedora 44: `rofi` 2.0.0 (native Wayland), `dunst` 1.13.2, `waybar` 0.15.0, `swaylock` 1.8.6, `grim` 1.5.0, `slurp` 1.5.0, `wl-clipboard` 2.2.1, `wtype` 0.4, `fuzzel` 1.14.0.
-
-**Approach: one source of truth for both WMs.** Do not fork the config. Split `config.tmpl` into a shared fragment (`.chezmoitemplates/wm/common`: keys, modes, workspaces, gaps, floating rules, all driven by the existing `.i3.*` data) plus thin `i3/config.tmpl` and `sway/config.tmpl` wrappers that include it and add WM-specific lines. Keep the i3 output byte-identical (compare `chezmoi cat` before and after the split).
+**One source of truth for i3 and SwayFX.** Split `config.tmpl` into a shared fragment (`home/.chezmoitemplates/wm/common`)
+plus thin `i3/config.tmpl` and `sway/config.tmpl` wrappers that add WM-specific lines (SwayFX effects go in the sway
+wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and after the split).
 
 | i3 config item | Change for Sway |
 |---|---|
-| `set_from_resource $fg/$bg` (pywal via Xresources) | `include` the file pywal writes for Sway (`~/.cache/wal/colors-sway`), or `set $fg/$bg` from a generated include. |
-| `for_window [class="..."]` rules (Firefox sharing indicator, `dropdown`, `Nm-connection-editor`, `Shadow`) | Use `app_id` for native Wayland windows; `class` still works for XWayland apps. Find real values with `swaymsg -t get_tree`. `window_role` rules (PictureInPicture) need a `title` match instead. |
-| `i3-input -F ... -P prompt` (7 bindings: screenshot filename, marks, swap/move to mark, rename workspace) | No Sway equivalent. Write one small prompt wrapper (`rofi -dmenu -p` or `fuzzel --dmenu`) that runs `swaymsg "<template with %s>"`; replace all 7 bindings with it. |
-| `i3-nagbar` (exit confirm), `i3-msg exit` | `swaynag`, `swaymsg exit`. |
-| `exec_always ... xss-lock` | `swayidle` + `swaylock` (units in 1.3). |
-| `$refresh_i3status` (`killall -SIGUSR1 i3status`) on media keys | waybar signal (`pkill -SIGRTMIN+N waybar`) or drop if the media module polls. |
-| `~/bin/screenshot` (`maim` + `xclip`) | Rewrite with `grim` + `slurp` + `wl-copy`; same arguments (`desktop`, `window [name]`) so the bindings stay as they are. |
-| `dunstctl` bindings, `notify-send` | Unchanged: dunst runs on Wayland. |
-| `rofi` launchers, `kitty`, `playerctl`, brightness script, `cmus` | Unchanged (rofi 2.0 is Wayland-native; check the brightness script for `xbacklight`/`xrandr`). |
-| `i3altlayout` (python script) | Probably works: `i3ipc` also talks to Sway via `SWAYSOCK`. Test. |
-| `betterlockscreen`, `i3-wpd` | X-only; `swaylock` replaces the locker. Decide about `i3-wpd` when inspecting it. |
-| Input (keyboard layout, repeat, touchpad) | Sway `input` blocks replace `setxkbmap`/`xset`/`xinput`; check the session script (`.xsession`) for what it set and port each item. |
-| polybar | **Largest item.** polybar is X11-only; rebuild as waybar modules (workspaces, clock, battery, network, volume, weather) with the same colors via pywal. Note: no `polybar` directory is in `private_dot_config` in chezmoi today; locate the live config first. |
+| `set_from_resource $fg/$bg` (pywal via Xresources) | `include` a generated colors file. Interim: pywal's `~/.cache/wal/colors-sway`; long term the theming cache ([theming.md](theming.md)). |
+| `for_window [class="..."]` rules (Firefox sharing indicator, `dropdown`, `Nm-connection-editor`, `Shadow`) | `app_id` for native Wayland windows; `class` still works for XWayland. Find values with `swaymsg -t get_tree`. `window_role` rules (PictureInPicture) need a `title` match. |
+| `i3-input -F ... -P prompt` (7 bindings: screenshot filename, marks, swap/move to mark, rename workspace) | One small prompt wrapper (`rofi -dmenu -p`) that runs `swaymsg "<template with %s>"`; replace all 7. |
+| `i3-nagbar` (exit confirm), `i3-msg exit` | `swaynag`, `swaymsg exit` (under uwsm: `uwsm stop`). |
+| `exec_always ... xss-lock`, `loginctl lock-session` | swayidle + swaylock; `loginctl lock-session` keeps working once swayidle handles the `lock` event. |
+| `$refresh_i3status` on media keys | waybar signal (`pkill -SIGRTMIN+N waybar`), or drop if the module polls. |
+| `~/bin/screenshot` (`maim` + `xclip`) | Rewrite with `grim` + `slurp` + `wl-copy`; same arguments (`desktop`, `window [name]`). |
+| Volume keys (`set-pulseaudio-volume.bash`) and brightness / keyboard backlight keys (`adjust-brightness.bash`) | The scripts are missing (above). Replace with `wpctl`/`pactl` and `brightnessctl` (`-d '*kbd_backlight*'` for the keyboard), feeding the OSD. Also fixes an existing bug: line 80 defines `$audio_intput`, but the mic-mute binding uses `$audio_input`. |
+| `dunstctl` bindings, `notify-send` | Unchanged. |
+| `rofi` launchers, `kitty`, `playerctl`, `cmus` | Unchanged. |
+| `i3altlayout` (python, i3ipc) | Probably works through `SWAYSOCK`. Test. |
+| `betterlockscreen`, `i3-wpd` | X-only; swaylock replaces the locker. Decide about `i3-wpd` when inspecting it. |
+| Input (keyboard layout, repeat, touchpad) | Sway `input` blocks replace `setxkbmap`/`xset`/`xinput`; port each item from `.xsession`. |
+| `exec_always ~/.xsession` | Drop for Sway; its jobs move to units or `input`/`output` blocks. |
+| polybar | **Largest item**; rebuilt as waybar (config to be located first). |
 
-Order of work: 1.1 and 1.2 (session boots), then the shared-fragment split, then the table items above in the order dunst/rofi (no change), screenshot, `i3-input` replacement, idle/lock, waybar last.
+## Daily-driver features (from MH's notes, 2026-10-17)
 
-**Cross-plan constraints:** new files go in `home/` once the chezmoi restructure (Phase 0a in [boco-merge.md](boco-merge.md)) is done, so do that first or the paths change mid-way. Wayland-specific files do not need a WSL guard; scope by session (units) and by installed tool.
+- **Lock screen, idle, power:** swayidle timeouts (dim, lock, screen off), `before-sleep` lock, logind lid and
+  power-button behavior. MH to give preferred timings at that step.
+- **Hibernation: blocked (checked 2026-10-17).** Secure Boot puts the kernel in lockdown `integrity` mode, which
+  disables hibernation (`/sys/power/disk` reads `[disabled]`; `/sys/power/state` offers only `freeze mem`), and zram
+  swap could not hold an image anyway. Options: suspend only (recommended); or a disk swap file plus disabling Secure
+  Boot (not recommended).
+- **Keyboard backlight and volume/brightness keys:** `brightnessctl` + `wpctl`, with an OSD (table above).
+- **Password picker:** a WM-bound script: list `pass` entries in rofi, take the first line of the chosen entry, copy with
+  `wl-copy --sensitive`, clear after 45 s; OTP (`pass otp`) as a second action. **Pitfall:** `pass -c` calls plain
+  `wl-copy` without the sensitive hint (checked in `/usr/bin/pass`), so the running cliphist would store every password
+  and wl-clip-persist would keep it after `pass` clears the clipboard. Verify cliphist skips `--sensitive` copies before
+  relying on it. `rofi-pass` is X11-only; `tessen` is not packaged.
+- **Clipboard picker:** the history backend exists; add the UI (`cliphist list | rofi -dmenu | cliphist decode | wl-copy`,
+  or the clipse TUI in a floating kitty).
+- **Dropdown terminal:** kitty with `--class dropdown` exists (`kitty/bin/launch_session`); under Sway use `app_id`
+  `dropdown` plus the scratchpad (`scratchpad show` toggle) and a size/position rule.
+- **Keybindings:** opacity up/down (`opacity plus 0.05` / `minus`), dismiss notification and notification history
+  (existing `dunstctl` bindings).
+- **Keybinding helper (which-key):** `wlr-which-key` (github.com/MaxVerevkin/wlr-which-key): a which-key.nvim-style
+  popup with nested submenus, each entry running a command; YAML config with font, color, border and corner-radius
+  theming. Needs layer-shell (all four compositors; verify on niri and Hyprland). Install with
+  `cargo install --locked`, pinned. Design: a leader key opens it, and its YAML is the single definition of the leader
+  menus, identical across compositors. Then:
+  - a searchable rofi list of all bindings, built from that YAML plus the compositor's own bindings parsed from its config;
+  - mode hints: waybar's `sway/mode` shows the active mode for free; a popup of a mode's keys (driven by
+    `swaymsg -t subscribe` mode events) comes later.
 
-### Open questions
+## Greeter (last step)
 
-1. ~~mako or dunst?~~ **Recommend dunst**: it is already configured (`private_dot_config/dunst`), runs on Wayland, and keeps the `dunstctl` bindings and your styling unchanged.
-2. ~~wlsunset or gammastep?~~ **Recommend gammastep**: a redshift fork that reads the same settings, so the existing redshift config ports directly. wlsunset is simpler but would mean re-expressing the config.
-3. Keep the i3/X11 units in chezmoi long-term, or retire them once Sway is established? (Session-scoping keeps them inert, so there is no urgency; the shared config fragment above keeps i3 usable.)
+Keep GDM through the trial (reliable, installed, lists every `wayland-sessions` entry). Then:
+
+| | Look / customization | Fedora 44 | Notes |
+|---|---|---|---|
+| GDM | Poor (theming means patching gnome-shell resources) | installed | the baseline |
+| **SDDM** 0.21 | High: QML themes, many community themes | official | mature; most eye candy among packaged options |
+| greetd + gtkgreet 0.8 | Medium: GTK + CSS | official | minimal and robust |
+| **greetd + ReGreet** | Medium-high: GTK4, CSS, background | not packaged (cargo) | popular with tiling setups |
+| greetd + tuigreet 0.9 | Low: text mode | official | zero overhead |
+| ly 1.4 | Text mode with animations | Fedora updates | light, less mainstream |
+| LightDM + web greeter | High: HTML/CSS | LightDM yes, web greeters no | greeter runs on X11 |
+| cosmic-greeter 1.10 | Polished | Fedora updates | pulls in COSMIC pieces |
+
+All of them read `wayland-sessions/`. Switching is system-level (`/etc`, `systemctl enable`), outside chezmoi's home
+scope: a sudo installer script plus a documented rollback (`systemctl enable --force gdm`). The greeter runs as its own
+user, so matching its look to the desktop theme needs a small root-side sync. Shortlist: SDDM or greetd + ReGreet.
+
+## chezmoi structure
+
+- New files go under `home/` (Phase 0a is done).
+- Package installs: one installer for the compositor set and Wayland helpers (COPRs enabled with pinned names), until
+  the D32 package map lands; then migrate.
+- Units: `home/.chezmoidata/systemd.yaml` install lists, `home/.chezmoitemplates/systemd/<unit>.yaml` per-unit settings,
+  unit files in `home/private_dot_config/private_systemd/private_user/`, mirroring the X11 ones.
+- Render unit templates from absolute paths (`joinPath .chezmoi.homeDir` behind an `osIsAbs` guard, as for
+  `xsettingsd.service`). Render-time commands go through `.chezmoitemplates/safe-output.sh`.
+- Guards: Wayland-only files key off the `display_server` host data (as the clipboard stack does) and installed tools
+  (`lookPath`); no WSL guard needed.
+
+## Steps (proposed order, 2026-10-17; awaiting MH)
+
+1. **Packages and sessions:** install SwayFX (COPR), niri, Hyprland (COPR), Wayfire, uwsm (meson installer), portals,
+   polkit agent. Each session appears in GDM; GNOME unaffected.
+2. **Session plumbing:** `wayland-wm-session.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
+   joins it. Verify that logging into GNOME afterwards leaves no helper units running.
+3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical.
+4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
+5. **Input, outputs, keys:** `input` blocks, kanshi, volume/brightness/keyboard-backlight keys with OSD, gammastep.
+6. **X-specific config items:** `app_id` rules, screenshot rewrite, `i3-input` wrapper, exit/nag, dropdown terminal,
+   opacity keys.
+7. **waybar** with tray (the polybar replacement).
+8. **Pickers:** password picker (with the sensitive-clipboard check), clipboard picker.
+9. **which-key** leader menus, then the bindings cheat sheet.
+10. **Minimal configs** for niri, Hyprland, Wayfire, reusing the helper target; trial period; pick the main compositor.
+11. **Greeter.**
+
+Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
+
+## Open questions
+
+1. Where are the polybar config and the i3 helper scripts (volume, brightness, `xss-lock`)? Another machine, or rewrite?
+2. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
+3. Notifications: is dunst's `history-pop` enough for "notification log", or switch to SwayNotificationCenter?
