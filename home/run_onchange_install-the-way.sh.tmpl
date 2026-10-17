@@ -9,7 +9,9 @@
 {{- $osKey := .chezmoi.os -}}
 {{- if eq $osKey "darwin" -}}{{- $osKey = "macos" -}}{{- end -}}
 {{- $assetName := printf "the-way-%s.tar.gz" $osKey -}}
-{{- $sha := dig $osKey "" .theWay.checksums -}}
+{{- /* Upstream ships x86_64 builds only; any other arch must skip, not fetch the wrong binary. */ -}}
+{{- $sha := "" -}}
+{{- if eq .chezmoi.arch "amd64" -}}{{- $sha = dig $osKey "" .theWay.checksums -}}{{- end -}}
 {{- $assetURL := printf "https://github.com/out-of-cheese-error/the-way/releases/download/%s/%s" $v $assetName }}
 
 set -eu
