@@ -1,6 +1,6 @@
 ---
 summary: Phased plan to merge the employer-era (BOCO) chezmoi repo into this one: decisions, guards, phases, checklists
-status: Phases 0 and 1 done and on main (Phase 1 force-pushed 2026-10-17); Phase 2 (Neovim) is next
+status: Phases 0-2 done (Phase 2 on branch boco-merge/2-nvim, not yet merged/pushed); Phase 3 next
 updated: 2026-10-17
 ---
 
@@ -184,11 +184,32 @@ Pins must be exact, >=14 days old, with a Linux x86_64 asset.
   first apply, and BOCO's `_the-way` was committed as a 0-byte file). Static `_cht`, `_nb`, `_nbterm` stay as files.
   Status 2026-10-16: `fzf`, `cheat`, `cht-sh`, `the-way` (+ widgets), `nb`, `dnote`, `dstask`, `d2`, and `clipse` (not BOCO; added 2026-10-16) done on `boco-merge/1-tools`. The helpers below are done too (2026-10-16); `functions/bd` was rewritten to call `bd-track`, and `docstring` and `.zprofile` were duplicates and are not ported.
 
-### Phase 2: Neovim (all BOCO plugins and themes) — NEXT (branch `boco-merge/2-nvim`, off `main` at `d4d1b4c`)
-Copy all ~35 plugin specs and the config files that differ (`init.lua`, `config/*.lua`, `plugins/{chezmoi,example,
-formatting,treesitter}.lua`). BOCO wins; reconcile the lockfile (`lazyvim-lock.json` here vs `lazy-lock.json`) by
-running `:Lazy restore`/`sync` on a clean profile. Skip `*.bak`. `mason.lua` is WSL-flavoured: check, guard if so.
-Port `run_once_install_neovim_deps` for Fedora.
+### Phase 2: Neovim (all BOCO plugins and themes) — DONE on branch `boco-merge/2-nvim` (11 commits; not yet merged/pushed), 2026-10-17
+Ported all 39 BOCO plugin specs (15 themes + 19 features + the 4 shared chezmoi/example/formatting/treesitter) and the
+config files, into this repo's `private_dot_config/nvim/` (note: this repo nests `.config` as `private_`; `norm()` in
+`compare-trees.py` strips the prefix, so paths still match 1:1). BOCO won throughout. Outcomes and corrections to the
+plan's assumptions:
+- **`mason.lua` is NOT WSL-flavoured** — it is a dual-OmniSharp .NET/C# LSP setup. No WSL guard needed. It is also the
+  *modern* mason pattern (`mason-org/*` + `automatic_enable`, mason-lspconfig 2.0), so it superseded this repo's old
+  `mason-lspconfig.lua` (`williamboman/*` + manual `setup()`); `html`+`purescriptls` folded into its lists. OmniSharp is
+  inert here (not in `ensure_installed`, `run_on_start=false`).
+- **BOCO uses blink.cmp, not nvim-cmp** (see `snippets.lua`). The stale committed lock was from 2023 (LazyVim 10.8.2) and
+  misled an initial nvim-cmp assumption. Supertab preserved as blink's `super-tab` keymap preset (`cmp.lua`); telescope-
+  fzf-native preserved (`telescope.lua`); symbols-outline dropped (BOCO's `aerial.lua` covers it).
+- **init.lua**: BOCO's == this repo's minus the Python-host preamble, so the host-prog setter consolidated into BOCO's
+  templated `options.lua.tmpl` (reads new `.filesystem.venvDir`) and `init.lua.tmpl` became a plain `init.lua`.
+- **Lockfile reconciled on a clean profile** against current LazyVim 16.0.1 (122 plugins; treesitter on its `main`
+  branch). Validated by a headless load exercising treesitter/LSP/cmp/formatting with no config errors. The big snag was
+  lazy.nvim's "too many rounds of missing plugins", caused by rock builds (oxocarbon's dev fennel rockspec, image.nvim's
+  magick) failing on this host's hererocks/Lua-5.1 path → fixed with `rocks = { enabled = false }` in `lazy.lua`.
+- **`run_once_install_neovim_deps.sh.tmpl`**: ported distro-gated (original Debian `apt-get` logic kept under `else`;
+  Fedora `dnf` branch with verified names). Only the venv/pip provider step was live-tested (venv rebuilt at
+  `~/.venv/neovim`); the `sudo dnf`/gem/npm steps run on the next full `chezmoi apply`. Manifest migration of its OS
+  packages deferred to D32.
+- `venvDir`/`npmDir` added to `.chezmoi.yml.tmpl` (absolute paths). Themes coexist: BOCO's set + this repo's
+  `colorschemes.lua`/`kanagawa`/`lush`; active colorscheme is gruvbox (BOCO's `colorscheme.lua`).
+Remaining (not blockers): image.nvim inline rendering is off until rocks/magick is set up; `ruff` binary and mason LSP
+servers (jedi, ruff) install on demand.
 
 ### Phase 3: timers and services (needs Phase 0)
 - **`sync-repos` (low priority).** Its use-case in BOCO history was a single entry: a daily auto-commit and push of
