@@ -47,3 +47,13 @@ sudo dnf install -y chafa
 {{ else -}}
 sudo apt-get install -y chafa ueberzug
 {{ end -}}
+
+# Lua rocks toolchain. lazy.nvim builds luarocks (e.g. image.nvim's `magick`)
+# against Neovim's LuaJIT/Lua 5.1 via hererocks, since the system luarocks is
+# built for Lua 5.4; magick also needs the ImageMagick development headers.
+command -v hererocks >/dev/null 2>&1 || pipx install hererocks
+{{ if eq .chezmoi.osRelease.id "fedora" -}}
+sudo dnf install -y ImageMagick-devel
+{{ else -}}
+sudo apt-get install -y libmagickwand-dev
+{{ end -}}
