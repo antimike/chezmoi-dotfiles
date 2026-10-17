@@ -5,6 +5,8 @@ $filesystem := dict
   "sourceDir" "Source"
   "scriptDir" (joinPath ".local" "bin" )
   "tmpDir" "/tmp"
+  "venvDir" (joinPath .chezmoi.homeDir ".venv")
+  "npmDir" (joinPath .chezmoi.homeDir ".npm-packages")
 -}}
 {{- $osid := .chezmoi.os -}}
 {{- if hasKey .chezmoi.osRelease "id" -}}
