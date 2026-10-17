@@ -10,7 +10,11 @@ updated: 2026-10-15
 - Conventional commits `type(scope): description`; one logical unit per commit; trailer `Co-Authored-By` as configured.
 - `main` is trunk. Significant work on a feature branch (`boco-merge/<phase>`, `docs-…`), merged when its checklist passes.
 - Porting a file from the reference clone: add trailer `Source: AudensAurantius/chezmoi@<sha>:home/<path>`
-  (`git -C ~/Source/chezmoi-boco log -1 --format=%h -- home/<path>`).
+  (`git -C ~/Source/chezmoi-boco log -1 --format=%h -- home/<path>`). The SHAs are not objects in this repo (unrelated
+  histories); they resolve in the public upstream. Check the SHA is an upstream commit
+  (`git -C ~/Source/chezmoi-boco merge-base --is-ancestor <sha> upstream/main`). If it is only in the private clone's
+  own commits, use `Source: antimike/chezmoi-boco@<sha>:home/<path>` instead. Trailers written before 2026-10-16 all use
+  the upstream form; they were not rewritten (would need a force-push of `main`).
 - Pushes use the `antimike.github.com` SSH alias (needs the YubiKey; test with `ssh -T git@antimike.github.com`). Claude may not create public repos; MH does.
 - Keep real client/employer detail out of commits to public repos: scan first, show MH the redaction diff (D19).
 

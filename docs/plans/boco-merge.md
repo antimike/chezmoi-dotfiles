@@ -45,7 +45,8 @@ Files already adapted for Fedora or fixed on this machine; re-diff but do not ov
   (see "Employer-specific content"). Run `gitleaks` and show MH the redaction diff before committing.
 - Copy files, don't cherry-pick (unrelated histories; `home/X` vs `X`). One logical unit per commit,
   conventional message, trailer `Source: AudensAurantius/chezmoi@<sha>:home/<path>`
-  (`git -C ~/Source/chezmoi-boco log -1 --format=%h -- home/<path>`).
+  (`git -C ~/Source/chezmoi-boco log -1 --format=%h -- home/<path>`; private-only commits use
+  `antimike/chezmoi-boco@<sha>`, see `conventions.md`).
 - Feature branch off `BOCO-migration` per phase (`boco-merge/<phase>`). Never `chezmoi init/apply`
   against the clone. Apply named targets only, then `chezmoi status`.
 - Chezmoi ignores source mode bits: scripts invoked by path need `executable_`. Verify after apply.
