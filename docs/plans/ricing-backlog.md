@@ -49,19 +49,19 @@ that were already handled or that differ from the old plan.
 | background images, pywal | [theming.md](theming.md) "Wallpapers", "Palette generation" | pywal's maintenance status flagged; generator to be compared |
 | lush? (nvim) | [theming.md](theming.md) "nvim" | inverted variant dropped as a default (contrast handled by the generator) |
 | sleep timeout / power settings | [wayland-desktop.md](wayland-desktop.md) "Daily-driver features" | timings from MH at that step |
-| password picker | same | pitfall: `pass -c` would leak into cliphist |
-| clipboard picker | same | **backend done** (clipboard stack + clipse); UI open |
+| password picker | same | `~/.local/bin/pass` wrapper (2026-10-16) already marks copies sensitive; check PATH under uwsm; `passmenu` already bound in i3 |
+| clipboard picker | same | **mostly done**: clipboard stack + `clipboard-history` fzf picker; rofi front end and binding open |
 | i3 -> Sway | [wayland-desktop.md](wayland-desktop.md) | **changed:** SwayFX full port, plus a niri/Hyprland/Wayfire trial |
 | compositor? | same, "Compositors" | **resolved:** the compositor is the WM under Wayland; picom goes away |
 | dunst (alternatives?) | same, helper table, open question 3 | **conflict:** D29 chose dunst; SwayNotificationCenter noted as the alternative |
 | passwordless sudo via YubiKey | "Permissions and security" above | unchanged (`pam-u2f` already installed) |
 | greeter (lightdm?) | [wayland-desktop.md](wayland-desktop.md) "Greeter" | GDM kept through the trial; lightdm installed but unused |
 | keybind helper (rofi?) | same, "Daily-driver features" | `wlr-which-key` leader menus + a rofi cheat sheet |
-| polybar replacement, system tray | same, waybar | polybar config not found on this machine |
+| polybar replacement, system tray | same, waybar | polybar config is in `antimike/i3-config-mbp`; waybar's tray module replaces stalonetray |
 | icon config / styling | [theming.md](theming.md) "Core pattern" | |
 | redshift replacement | [wayland-desktop.md](wayland-desktop.md) helper table | gammastep (D29) |
 | dropdown terminal | same, "Daily-driver features" | kitty `--class dropdown` launcher already exists |
-| keybinds: opacity, notifications, volume/brightness | same | volume/brightness scripts missing; `$audio_intput` typo in the i3 config |
+| keybinds: opacity, notifications, volume/brightness | same | scripts in `antimike/i3-config-mbp`; `$audio_intput` typo in the i3 config |
 | lock screen | same | swaylock (gtklock as the prettier alternative) |
 | keyboard backlight | same | `brightnessctl` |
 | hibernation? | same | **blocked** by Secure Boot lockdown (checked) |

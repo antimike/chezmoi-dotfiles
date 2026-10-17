@@ -15,9 +15,9 @@ project: [theming.md](theming.md). Loose items: [ricing-backlog.md](ricing-backl
 ## Current state of zbook (checked 2026-10-17)
 
 - Fedora 44, GNOME on Wayland. **GDM** is the active display manager; `lightdm` is installed but unused.
-- i3 and polybar are installed but unused. **Not in chezmoi and not on this machine:** the polybar config, and the
-  i3 helper scripts the i3 config calls (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`,
-  `xss-lock`), plus kitty's `open-notes.bash` ([../open-items.md](../open-items.md)). Recover them from another machine or rewrite.
+- i3 and polybar are installed but unused. The polybar config and the i3 helper scripts the i3 config calls
+  (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`, kitty's `open-notes.bash`) are
+  not in chezmoi or on this machine; they are in MH's **`antimike/i3-config-mbp`** repo (below).
 - Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack.target` running `cliphist@text`,
   `cliphist@image` and `wl-clip-persist`; the clipse installer), started explicitly by a Wayland session, never by GNOME.
 - Already installed: `dunst`, `rofi` 2.0 (Wayland-native), `kitty` 0.47, `cliphist`, `wl-clipboard`, `brightnessctl`,
@@ -25,6 +25,19 @@ project: [theming.md](theming.md). Loose items: [ricing-backlog.md](ricing-backl
 - Secure Boot is on and swap is zram only (8G). Both matter for hibernation (below).
 - Existing X11/i3 session units (`xsession.target`, `xsettingsd`, xss-dimmer, wallpaper timer, redshift, polybar,
   picom, autorandr) stay; they are scoped to the i3 session and inert elsewhere.
+
+## Source repos for the i3 setup (MH, 2026-10-17)
+
+All public `antimike` repos. Surveyed by file list only (2026-10-17); read each script before porting.
+
+| Repo | Last push | What it holds | Use here |
+|---|---|---|---|
+| **i3-config-mbp** | 2023-07 | The i3 config's home: `bin/` (volume, brightness, screenshot, `open-notes`, xss-lock/dimmer, polybar launchers, `set-background`, `set-lockscreen`, `set-lightdm-background`, `system-tray.sh` = stalonetray), `bin/widgets/` (fzf `font-picker`, kitty `theme-picker`, `rofi-wifi`, `rofi-mediaplayer`), `bin/utils/` (`sort-images-by-color`, `generate-color-profile.py`), `dotfiles/polybar.conf`, xkb layouts, systemd units (the source of chezmoi's X11 units) | **Primary port source.** Scripts get Wayland rewrites (`xdotool`, `xclip`, `maim` are X11). |
+| i3-python | 2022-03 | i3ipc and playerctl examples (`player-manager.py`, `notify.py`) | Mine for the media-player tooling. |
+| i3altlayout | 2021-04 | Fork of deadc0de6/i3altlayout (i3ipc auto-split) | Test on SwayFX; not needed on niri/Hyprland. Submodule of i3-config-mbp. |
+| i3-wpd | 2020-11 | Fork of jomiq/i3-wpd (X11 wallpaper daemon) | Superseded by [theming.md](theming.md); check for ideas only. Submodule of i3-config-mbp. |
+| i3wm-configuration, arcolinux-i3wm | 2022-03, 2021-09 | Forks of others' dotfiles, mined for ideas | Reference only. |
+| i3lock-fancy | 2021-09 | Fork of an X11 locker | Not needed (swaylock/gtklock). |
 
 ## Compositors
 
@@ -69,7 +82,7 @@ versions checked 2026-10-08 and 2026-10-17.
 
 | Need | Recommendation | Alternatives | Trade-off |
 |---|---|---|---|
-| Bar + tray | **waybar** 0.15 | ironbar, eww, quickshell (none packaged) | waybar has sway, hyprland, niri and river modules, CSS styling and a tray; the others are more programmable but heavier to maintain. Rebuild the polybar modules (workspaces, clock, battery, network, volume, weather) here. |
+| Bar + tray | **waybar** 0.15 (tray is a built-in module: no stalonetray) | ironbar, eww, quickshell (none packaged) | waybar has sway, hyprland, niri and river modules, CSS styling and a tray; the others are more programmable but heavier to maintain. Rebuild the polybar modules (workspaces, clock, battery, network, volume, weather) here. |
 | Notifications | **dunst** (keep, D29) | **SwayNotificationCenter** 0.12.6 (packaged), mako | dunst keeps your config and `dunstctl` bindings; history only via `history-pop`. swaync adds a notification-center panel (a real notification log, Do Not Disturb, waybar integration) at the cost of a new config. Revisit if the "notification log" item needs more than history-pop. |
 | Lock screen | **swaylock** 1.8.6 | gtklock 4.0 (packaged, CSS-themed), swaylock-effects (blur/clock; not packaged), hyprlock (COPR) | swaylock is minimal and robust; gtklock looks better and stays packaged. Both use ext-session-lock, so either works across compositors. |
 | Idle / DPMS | **swayidle** 1.9 | hypridle (COPR) | swayidle drives dim, lock and output power off from timeouts, plus `before-sleep` lock. |
@@ -78,7 +91,7 @@ versions checked 2026-10-08 and 2026-10-17.
 | Outputs | **kanshi** 1.9 | wdisplays (GUI), `wlr-randr` | niri configures outputs itself; kanshi may be unnecessary there. |
 | Wallpaper | **swaybg** 1.2.2 | swww (transitions; not packaged) | Wallpaper selection and palettes belong to [theming.md](theming.md); here only "set the background per output". |
 | Volume/brightness OSD | **wob** 0.15 | swayosd (not packaged), dunst progress notifications | wob is a tiny bar fed from a pipe; dunst's progress hint needs nothing new. |
-| Polkit agent | **lxpolkit** or `mate-polkit` | polkit-gnome (not in F44) | **Missing from the old plan:** without an agent, GUI apps cannot ask for admin rights outside GNOME. |
+| Polkit agent | **mate-polkit** 1.28 (GTK3) | lxpolkit, xfce-polkit (GTK, minimal), polkit-kde / lxqt-policykit (Qt), hyprpolkitagent (COPR); polkit-gnome is not in F44 | **Missing from the old plan:** without an agent, GUI apps cannot ask for admin rights outside GNOME (GNOME Shell has its own). mate-polkit is maintained, GTK (matches the theming), and shows PAM messages such as a pam-u2f touch prompt. Runs as a helper unit. |
 | Keyring / pinentry | gnome-keyring + pinentry-gnome3 (installed) | | Check that both work outside GNOME (pinentry for `pass` and the YubiKey). |
 | Logout menu | swaynag (built in) | wlogout, nwg-bar (packaged) | Optional eye candy. |
 
@@ -101,7 +114,7 @@ wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and af
 | `exec_always ... xss-lock`, `loginctl lock-session` | swayidle + swaylock; `loginctl lock-session` keeps working once swayidle handles the `lock` event. |
 | `$refresh_i3status` on media keys | waybar signal (`pkill -SIGRTMIN+N waybar`), or drop if the module polls. |
 | `~/bin/screenshot` (`maim` + `xclip`) | Rewrite with `grim` + `slurp` + `wl-copy`; same arguments (`desktop`, `window [name]`). |
-| Volume keys (`set-pulseaudio-volume.bash`) and brightness / keyboard backlight keys (`adjust-brightness.bash`) | The scripts are missing (above). Replace with `wpctl`/`pactl` and `brightnessctl` (`-d '*kbd_backlight*'` for the keyboard), feeding the OSD. Also fixes an existing bug: line 80 defines `$audio_intput`, but the mic-mute binding uses `$audio_input`. |
+| Volume keys (`set-pulseaudio-volume.bash`) and brightness / keyboard backlight keys (`adjust-brightness.bash`) | Scripts are in i3-config-mbp; port or replace with `wpctl`/`pactl` and `brightnessctl` (`-d '*kbd_backlight*'` for the keyboard), feeding the OSD. Also fixes an existing bug: line 80 defines `$audio_intput`, but the mic-mute binding uses `$audio_input`. |
 | `dunstctl` bindings, `notify-send` | Unchanged. |
 | `rofi` launchers, `kitty`, `playerctl`, `cmus` | Unchanged. |
 | `i3altlayout` (python, i3ipc) | Probably works through `SWAYSOCK`. Test. |
@@ -119,13 +132,16 @@ wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and af
   swap could not hold an image anyway. Options: suspend only (recommended); or a disk swap file plus disabling Secure
   Boot (not recommended).
 - **Keyboard backlight and volume/brightness keys:** `brightnessctl` + `wpctl`, with an OSD (table above).
-- **Password picker:** a WM-bound script: list `pass` entries in rofi, take the first line of the chosen entry, copy with
-  `wl-copy --sensitive`, clear after 45 s; OTP (`pass otp`) as a second action. **Pitfall:** `pass -c` calls plain
-  `wl-copy` without the sensitive hint (checked in `/usr/bin/pass`), so the running cliphist would store every password
-  and wl-clip-persist would keep it after `pass` clears the clipboard. Verify cliphist skips `--sensitive` copies before
-  relying on it. `rofi-pass` is X11-only; `tessen` is not packaged.
-- **Clipboard picker:** the history backend exists; add the UI (`cliphist list | rofi -dmenu | cliphist decode | wl-copy`,
-  or the clipse TUI in a floating kitty).
+- **Password picker:** a WM-bound script: list `pass` entries in rofi, then `pass show -c` (or `pass otp -c`) on the
+  choice. `/usr/bin/pass` copies with plain `wl-copy`, but the **`~/.local/bin/pass` wrapper** (built and tested
+  2026-10-16, [../open-items.md](../open-items.md)) adds `--sensitive`, and cliphist skips sensitive copies. The wrapper
+  only works when `~/.local/bin` precedes `/usr/bin` on PATH, which today comes from `.zshenv`. A compositor-launched
+  script may not get that PATH, so the picker calls the wrapper by absolute path, and step 2 checks
+  `systemctl --user show-environment` under uwsm. The i3 config binds `passmenu` (`$mod+p`, `$mod+Shift+p --type`
+  through `.i3.keys.programs`); upstream passmenu supports Wayland (`wtype` for typing) and calls `pass show -c`,
+  so it may be enough with the same PATH check. `rofi-pass` is X11-only; `tessen` is not packaged.
+- **Clipboard picker:** backend and an fzf picker exist (`clipboard-history`, `clipboard-history-audit`); add a rofi
+  front end or run `clipboard-history` in a floating kitty, and bind it.
 - **Dropdown terminal:** kitty with `--class dropdown` exists (`kitty/bin/launch_session`); under Sway use `app_id`
   `dropdown` plus the scratchpad (`scratchpad show` toggle) and a size/position rule.
 - **Keybindings:** opacity up/down (`opacity plus 0.05` / `minus`), dismiss notification and notification history
@@ -133,11 +149,26 @@ wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and af
 - **Keybinding helper (which-key):** `wlr-which-key` (github.com/MaxVerevkin/wlr-which-key): a which-key.nvim-style
   popup with nested submenus, each entry running a command; YAML config with font, color, border and corner-radius
   theming. Needs layer-shell (all four compositors; verify on niri and Hyprland). Install with
-  `cargo install --locked`, pinned. Design: a leader key opens it, and its YAML is the single definition of the leader
-  menus, identical across compositors. Then:
-  - a searchable rofi list of all bindings, built from that YAML plus the compositor's own bindings parsed from its config;
-  - mode hints: waybar's `sway/mode` shows the active mode for free; a popup of a mode's keys (driven by
-    `swaymsg -t subscribe` mode events) comes later.
+  `cargo install --locked`, pinned.
+- **Keybinding manifest (generate, never parse; MH wants no drift).** One chezmoi data file
+  (`home/.chezmoidata/keybindings.yaml`) is the only place bindings are defined. chezmoi renders from it: each
+  compositor's binding section (sway `bindsym`, niri `binds {}`, Hyprland `bind =`, Wayfire `[command]`), the
+  wlr-which-key YAML, and the data behind the rofi cheat sheet. Each entry has a chord *or* a leader-menu path, a
+  description, and an action:
+  - `exec:` commands are the same in every compositor;
+  - WM-native actions (focus, move, layout) use logical names with a per-compositor translation table. Only the core
+    set is translated for the minimal compositors; an entry without a translation for a compositor is skipped there
+    (and listed by the render check).
+  - A render-time check rejects duplicate chords per compositor and mode, as in D33's zsh keybinding manifest; the same
+    pattern, so share the design.
+  - The cheat sheet reads the rendered manifest, not the compositor configs; optional runtime audit for SwayFX:
+    compare against `swaymsg -t get_config`.
+  - Starting point: `.i3.keys` in `home/.chezmoidata/i3.yaml` already drives the i3 config's named keys, modes and
+    program bindings.
+  Parsing compositor configs into YAML (the reverse direction) was rejected: variables, `include`, modes and four
+  syntaxes make it fragile, and parsed bindings have no descriptions.
+- **Mode hints:** waybar's `sway/mode` shows the active mode for free; a popup of a mode's keys (driven by
+  `swaymsg -t subscribe` mode events and the manifest) comes later.
 
 ## Greeter (last step)
 
@@ -183,7 +214,8 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    opacity keys.
 7. **waybar** with tray (the polybar replacement).
 8. **Pickers:** password picker (with the sensitive-clipboard check), clipboard picker.
-9. **which-key** leader menus, then the bindings cheat sheet.
+9. **Keybinding manifest** (start it in step 3, when the shared fragment is split), then which-key leader menus and the
+   cheat sheet rendered from it.
 10. **Minimal configs** for niri, Hyprland, Wayfire, reusing the helper target; trial period; pick the main compositor.
 11. **Greeter.**
 
@@ -191,6 +223,7 @@ Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
 
 ## Open questions
 
-1. Where are the polybar config and the i3 helper scripts (volume, brightness, `xss-lock`)? Another machine, or rewrite?
+1. (Answered 2026-10-17: in `antimike/i3-config-mbp`.) Do the custom xkb layouts in i3-config-mbp (`dotfiles/xkb`, a
+   ThinkPad X1 keymap) matter on zbook?
 2. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
 3. Notifications: is dunst's `history-pop` enough for "notification log", or switch to SwayNotificationCenter?
