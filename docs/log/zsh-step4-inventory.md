@@ -6,7 +6,7 @@ updated: 2026-10-16
 
 # zsh switch-over: inventory (sub-step 1)
 
-Plan: [../plans/boco-merge.md](../plans/boco-merge.md) (Phase 0, "zsh switch-over"). Taken before any template change, on `main` at `10a7675`.
+Plan: [../plans/boco-merge.md](../plans/boco-merge.md) (Phase 0, "zsh switch-over"). Taken before any template change, on `main` at `1f5d2dd`.
 Raw baseline files (not in the repo): `~/.local/state/claude-migration-backups/zsh-step4/` (`env-*`, `alias`, `functions`, `fpath`, `path`, `options`, `bindkey-all`, `zstyle`, `widgets`, `timing`, `zshrc.live`, `zshenv.live`).
 
 ## Live-shell baseline
@@ -51,7 +51,7 @@ BOCO `opts.zsh` = this repo's `set_options.zsh` (identical, line for line) + the
 
 ## Switch-over results (2026-10-16, scratch pty render, clean environment)
 
-`zshenv` switch: shell state identical to before. `zshrc` switch (`3b44920`): environment, options, aliases, `fpath`, `zstyle`, widgets and completions identical; warm startup about 0.14 s (was 0.18 s); stderr empty (was three `dephell` realpath errors); 50 fewer zinit-internal functions (loaded before only because of the `dephell` snippet); `^X^R` is `redisplay` instead of `_read_comp` (not traced; rarely used). Cleanup commit: removing `0115.fzf.yaml` dropped `^R`, Tab (fzf-tab), `^T` and `^G*` (80 functions, 46 widgets); MH uses all of them, so BOCO's fzf shell files were pulled forward from Phase 1 the same day. Against the last fzf-working render the only differences are additions (`^X^L`, fzf's completion helpers, `FZF_DEFAULT_COMMAND`). `fzf --zsh` rebinds Tab to `fzf-completion` in the insert keymap, so Tab is re-bound to `fzf-tab-complete` in `fzf.yaml`. Corrections to the first draft of this file: the BOCO `compinit` line quotes its glob qualifier, so its dump is never refreshed (kept unquoted here; `m-20` is days, not hours); BOCO's `filesystem` values are absolute while this repo's are relative, so the template is anchored with `$HOME`.
+`zshenv` switch: shell state identical to before. `zshrc` switch (`999671c`): environment, options, aliases, `fpath`, `zstyle`, widgets and completions identical; warm startup about 0.14 s (was 0.18 s); stderr empty (was three `dephell` realpath errors); 50 fewer zinit-internal functions (loaded before only because of the `dephell` snippet); `^X^R` is `redisplay` instead of `_read_comp` (not traced; rarely used). Cleanup commit: removing `0115.fzf.yaml` dropped `^R`, Tab (fzf-tab), `^T` and `^G*` (80 functions, 46 widgets); MH uses all of them, so BOCO's fzf shell files were pulled forward from Phase 1 the same day. Against the last fzf-working render the only differences are additions (`^X^L`, fzf's completion helpers, `FZF_DEFAULT_COMMAND`). `fzf --zsh` rebinds Tab to `fzf-completion` in the insert keymap, so Tab is re-bound to `fzf-tab-complete` in `fzf.yaml`. Corrections to the first draft of this file: the BOCO `compinit` line quotes its glob qualifier, so its dump is never refreshed (kept unquoted here; `m-20` is days, not hours); BOCO's `filesystem` values are absolute while this repo's are relative, so the template is anchored with `$HOME`.
 
 Not visible to the scratch render: the live home has unmanaged leftovers that the real shell still loads or keeps. `~/.local/share/zsh/snippets/pipx.zsh` (hand-installed 2023 argcomplete handler for `pipx yq dephell`) is sourced by the snippet loader as before; `~/.local/share/zsh/widgets/` (parked) and `~/.local/share/zsh/completion/` (renamed) stay on disk until removed by hand.
 

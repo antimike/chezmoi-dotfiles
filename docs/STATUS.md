@@ -9,7 +9,7 @@ updated: 2026-10-15
 ## Where we are
 - Claude Code migration (BOCO/WSL2 → zbook, Fedora 44): **done** except the claude-mem evaluation. Log: [log/migration-steps.md](log/migration-steps.md).
 - Dev environment is functional: chezmoi applied, tools pinned, `bd`/`bd-track`, `claude-state` sync and restic backups running, GPG on the YubiKey.
-- `main` is trunk and in sync with origin (pushed 2026-10-16, `923d83b`). The `boco-merge/0a`, `0b` and `0c-zsh` branches are merged and deleted. Docs consolidated into this tree on 2026-10-15.
+- `main` is trunk and in sync with origin (pushed 2026-10-16, `2feda22`). The `boco-merge/0a`, `0b` and `0c-zsh` branches are merged and deleted. Docs consolidated into this tree on 2026-10-15.
 - `@docs/STATUS.md` import in `CLAUDE.md` verified working (2026-10-15): STATUS.md is in context at session start without a Read.
 - BOCO merge **Phase 0a done and on `main`** (2026-10-15): chezmoi source root is now `home/`; docs, `tools/`, `CLAUDE.md`, `.envrc` and `.ripgreprc` stay at the repo root.
 - BOCO merge **Phase 0 done** (2026-10-16): `is-wsl` helper, `work_tooling` key, systemd reload script, git/GPG/SSH config (branch `0b`, on local `main`); zsh switch-over (branch `0c-zsh`, applied and merged; snapshot in `~/.local/state/claude-migration-backups/zsh-apply/`). Details: [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md), [zsh-plugins.md](zsh-plugins.md). New tools: `tools/zsh-probe/`, `tools/home-snapshot/`.

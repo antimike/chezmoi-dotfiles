@@ -58,8 +58,8 @@ All packages listed are available in Fedora 44 (versions checked 2026-10-08).
 
 - Add Sway entries to `.chezmoidata/systemd.yaml`: install lists, using the `dnf:` / `pipx:` keys already in use.
 - Add `.chezmoitemplates/systemd/<unit>.yaml` per-unit settings, mirroring the X11 ones.
-- Render unit templates from absolute paths. Anchor home-relative `.filesystem.*` values with `joinPath .chezmoi.homeDir` behind an `osIsAbs` guard, as done for `xsettingsd.service` in chezmoi commit `a3f16cb`. Otherwise `stat` and `realpath` resolve against chezmoi's working directory.
-- Templates that run commands at render time must use `.chezmoitemplates/safe-output.sh` (chezmoi commit `59adab1`), so a broken tool can't abort `chezmoi apply`.
+- Render unit templates from absolute paths. Anchor home-relative `.filesystem.*` values with `joinPath .chezmoi.homeDir` behind an `osIsAbs` guard, as done for `xsettingsd.service` in chezmoi commit `dcbb3d4`. Otherwise `stat` and `realpath` resolve against chezmoi's working directory.
+- Templates that run commands at render time must use `.chezmoitemplates/safe-output.sh` (chezmoi commit `31644a7`), so a broken tool can't abort `chezmoi apply`.
 - Package installs go through chezmoi `run_onchange_` installers (a Fedora package list), consistent with the tooling plan in [migration-steps.md](../log/migration-steps.md) (step 6).
 
 ### Steps (not yet scheduled)
