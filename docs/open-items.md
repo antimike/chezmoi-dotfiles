@@ -11,7 +11,8 @@ updated: 2026-10-16
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| BOCO chezmoi merge, rest of Phase 0 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| Merge `boco-merge/0c-zsh` into `main`, then push `main` | MH approval | Phase 0 is otherwise done; [STATUS.md](STATUS.md) |
+| BOCO chezmoi merge, Phases 1-6 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
 | zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
@@ -39,6 +40,8 @@ updated: 2026-10-16
 | Timers fail while the YubiKey is unplugged | info | retry next run; consider a dedicated unattended password path if annoying |
 | Known gaps: java pin, Go version mismatch, unmanaged `yq`, `tofi` | Claude | [bootstrap-debt.md](bootstrap-debt.md) |
 | `.chezmoi.yml` doctor warning (`suspicious-entries`) | info | cosmetic; renaming would create a second config |
+| Stale `rtx` RPM (`rtx-2024.0.0-1`, 2023; the old name of mise) still installed; its completion `_rtx` was dropped in the zsh apply. Remove with `dnf remove rtx`, or restore `_rtx` from the 2026-10-16 snapshot | MH | `/usr/bin/rtx` |
+| zinit's `~/.zcompdump` is reused with `-C` by `fast-syntax-highlighting`'s `zicompinit`, so new completions only appear after deleting it (`rm ~/.zcompdump*`); `.zcompdump.zbook.220817` (2024) is a leftover | info | found 2026-10-16 |
 | rustup: `~/.cargo/bin` holds a stale toolchain (cargo 1.74.0, 2023) that is off `PATH`; the packaged cargo is 1.98.1. Decide: managed rustup installer + current `stable` + `PATH`, or remove `~/.cargo` | MH + Claude | left out of `zshenv` on purpose (2026-10-16) |
 | Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
 | `^X^R` is `redisplay` instead of `_read_comp` since the zshrc switch (rarely used completion-debug key) | info | not traced; the D33 audit would surface this kind of change |
