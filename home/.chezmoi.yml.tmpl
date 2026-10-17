@@ -44,6 +44,26 @@ data:
   {{- else -}}
     "notify-send"
   {{- end }}
+  # Display server of the graphical session: "wayland", "x11" or "none" (no
+  # graphical session, e.g. over ssh). Detected once, when `chezmoi init`
+  # generates this config, from the session environment (XDG_SESSION_TYPE, then
+  # WAYLAND_DISPLAY and DISPLAY, since XWayland sets DISPLAY inside a Wayland
+  # session). Templates read it as `dig "display_server" "x11" .` so a config
+  # generated before this key existed still renders. Re-run `chezmoi init` from
+  # the session you use, or edit the generated config, to change it. It selects
+  # builds and tools; it does not say whether the compositor supports the
+  # clipboard-history protocol (GNOME's does not, Sway's does).
+  display_server: {{ if eq (env "XDG_SESSION_TYPE") "wayland" -}}
+    "wayland"
+  {{- else if eq (env "XDG_SESSION_TYPE") "x11" -}}
+    "x11"
+  {{- else if env "WAYLAND_DISPLAY" -}}
+    "wayland"
+  {{- else if env "DISPLAY" -}}
+    "x11"
+  {{- else -}}
+    "none"
+  {{- end }}
   # Gates employer-only tooling (VPN stack, rano). False here; true on a future
   # work laptop. Use as {{ "{{ if .work_tooling }}" }} inline guards.
   work_tooling: false
