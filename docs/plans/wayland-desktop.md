@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: planning; order of work proposed 2026-10-17, awaiting MH's agreement; no desktop config changed yet
+status: planning done; order of work agreed (MH, 2026-10-17); uwsm adopted (D38); no desktop config changed yet
 updated: 2026-10-17
 ---
 
@@ -103,7 +103,7 @@ versions checked 2026-10-08 and 2026-10-17.
 | Need | Recommendation | Alternatives | Trade-off |
 |---|---|---|---|
 | Bar + tray | **waybar** 0.15 (tray is a built-in module: no stalonetray) | ironbar, eww, quickshell (none packaged) | waybar has sway, hyprland, niri and river modules, CSS styling and a tray; the others are more programmable but heavier to maintain. Rebuild the polybar modules (workspaces, clock, battery, network, volume, weather) here. |
-| Notifications | **dunst** (keep, D29) | **SwayNotificationCenter** 0.12.6 (packaged), mako | dunst keeps your config and `dunstctl` bindings; history only via `history-pop`. swaync adds a notification-center panel (a real notification log, Do Not Disturb, waybar integration) at the cost of a new config. Revisit if the "notification log" item needs more than history-pop. |
+| Notifications | **SwayNotificationCenter** 0.12.6 (recommended 2026-10-17; MH to confirm) | dunst (installed, D29), mako | swaync: popups plus a slide-out panel that is a real notification log, Do Not Disturb, panel widgets (MPRIS controls, volume/brightness sliders, buttons), waybar module (count, DND), styled with GTK CSS like waybar (fits [theming.md](theming.md)). Cost: new config; `dunstctl` bindings become `swaync-client`; heavier than dunst. dunst: rich INI rules and scripts, history only via `dunstctl history-pop`/`history`, no UI. mako: the minimal option. |
 | Lock screen | **swaylock** 1.8.6 | gtklock 4.0 (packaged, CSS-themed), swaylock-effects (blur/clock; not packaged), hyprlock (COPR) | swaylock is minimal and robust; gtklock looks better and stays packaged. Both use ext-session-lock, so either works across compositors. |
 | Idle / DPMS | **swayidle** 1.9 | hypridle (COPR) | swayidle drives dim, lock and output power off from timeouts, plus `before-sleep` lock. |
 | Launcher, dmenu prompts | **rofi** 2.0 (keep) | fuzzel 1.14, wofi | rofi keeps all existing themes and modi. fuzzel is faster and simpler; keep it in mind for prompts. |
@@ -243,7 +243,7 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 - Guards: Wayland-only files key off the `display_server` host data (as the clipboard stack does) and installed tools
   (`lookPath`); no WSL guard needed.
 
-## Steps (proposed order, 2026-10-17; awaiting MH)
+## Steps (order agreed by MH, 2026-10-17)
 
 0. **Safety first:** the [display-session recovery runbook](../runbooks/display-session-recovery.md) checks (console
    login, etckeeper snapshot); udev symlinks for the GPUs.
@@ -271,6 +271,6 @@ Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
 
 ## Open questions
 
-1. Which physical sockets are `DP-4..6` (the NVIDIA-wired ports)?
-2. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
-3. Notifications: is dunst's `history-pop` enough for "notification log", or switch to SwayNotificationCenter?
+1. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
+2. Notifications: confirm SwayNotificationCenter over dunst (comparison in the helper table).
+3. Which physical sockets are `DP-4..6` (the NVIDIA-wired ports)? In the backlog until MH is at the desk.

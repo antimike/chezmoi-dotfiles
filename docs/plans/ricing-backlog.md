@@ -26,6 +26,11 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
 - [ ] Investigate browser options
 - [ ] Nix config derivations (exploration notes exist in the reference clone's `docs/`)
 
+## Hardware checks
+- [ ] Find which physical sockets are `DP-4..6`, the external ports wired to the NVIDIA card (plug a monitor into each
+  port, then `for c in /sys/class/drm/card*-*; do echo $c $(cat $c/status); done`). Decides whether compositors need
+  the NVIDIA device ([wayland-desktop.md](wayland-desktop.md), "GPUs"). MH, at the desk.
+
 ## Permissions and security
 - [ ] Passwordless `sudo` and touch authorization with the YubiKey (`pam-u2f`, installed but not in any PAM stack yet; MH wants it, 2026-10-17). Do it as its own step, not with a display-manager change ([../runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md)); polkit prompts then accept a touch too.
 - [ ] New SSH keys for GitHub and other services (GitHub already works via the YubiKey; others open)

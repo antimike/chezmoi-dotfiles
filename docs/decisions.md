@@ -1,5 +1,5 @@
 ---
-summary: Decision log (D1–D36) for the Claude Code migration, chezmoi merge, Sway and docs; one line per decision
+summary: Decision log (D1–D43) for the Claude Code migration, chezmoi merge, desktop and docs; one line per decision
 status: current
 updated: 2026-10-17
 ---
@@ -58,11 +58,12 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 |---|---|
 | D29 | Add a Sway session beside GNOME. Units are scoped to their session target, not excluded per host. Keep dunst and use gammastep. One shared WM config fragment drives both i3 and Sway. *(Partly superseded by D37: SwayFX instead of plain Sway; the fragment now drives i3 and SwayFX.)* |
 | D37 | Trial several compositors side by side, each listed by GDM: **SwayFX gets the full i3 port** and is the daily-driver target; niri, Hyprland and Wayfire (`simple-tile`) get minimal configs. Pick the main compositor after the trial (MH, 2026-10-17). SwayFX and Hyprland come from COPRs, pinned. |
-| D38 (**draft**, awaiting MH) | Run every compositor session through **uwsm** (meson install to `/usr/local`, pinned), and scope shared helper units to one hand-written `wayland-wm-session.target` that each compositor starts, not to `graphical-session.target` (GNOME starts that too). Rejected: per-compositor helper targets (four copies), `sway-systemd` (Sway only). |
+| D38 | Run every compositor session through **uwsm** (meson install to `/usr/local`, pinned), and scope shared helper units to one hand-written `wayland-wm-session.target` that each compositor starts, not to `graphical-session.target` (GNOME starts that too). Rejected: per-compositor helper targets (four copies), `sway-systemd` (Sway only). Accepted by MH, 2026-10-17. |
 | D39 (**draft**, awaiting MH) | Theming uses the **cache-include pattern**: chezmoi manages app configs that include generated files from `~/.cache/theme/current/`; the switcher writes only the cache. Wallpaper images are not in chezmoi (fetcher cache, optional git-annex); palettes come from the primary output's image, with outputs drawn from one palette cluster. Detail: [plans/theming.md](plans/theming.md). |
 | D40 | Password picker is an own rofi/fuzzel script that never calls `pass -c`: it pipes `pass show` into `wl-copy --sensitive` (and can type with `wtype`); the `~/.local/bin/pass` wrapper still guards CLI `pass -c`. Defence in depth (MH, 2026-10-17). |
 | D41 | Compositors render on the Intel iGPU; the NVIDIA card is kept for compute and opened by compositors only for scanout to its own ports (`DP-4..6`) if those are used. Stable colon-free DRM device symlinks via udev (MH, 2026-10-17). |
 | D42 (**draft**) | One `keybindings` data tree for all apps (compositors, wlr-which-key, zsh, kitty, nvim): `generate` sections render bindings, `catalog` sections (nvim) only list them for the cheat sheet and checks. Chords and WM actions use i3/Sway syntax, translated per compositor by a table keyed on the i3 command strings. Extends D33. Detail: [plans/wayland-desktop.md](plans/wayland-desktop.md). |
+| D43 | Removable drives: known drives (by UUID) automount at fixed paths; unknown drives are not automounted but get a notification with a mount action (udiskie). Safer than automounting untrusted filesystems (MH, 2026-10-17). |
 | D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. Since 2026-10-17 both are listed in `.gitleaksignore`, so a scan shows none. |
 
 ## Tooling (proposed)

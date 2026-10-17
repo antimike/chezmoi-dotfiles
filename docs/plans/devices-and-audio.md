@@ -70,8 +70,9 @@ machine and settled on playerctl; the ecosystem has moved since, so this starts 
 - **Known drives at fixed paths:** udisks can't choose mount points per device. Options:
   - `/etc/fstab` entries by UUID with `noauto,nofail,x-udisks-auth` and a chosen mount point (system-level, via a sudo installer);
   - or a udev rule.
-- **Security decision for MH:** automounting *unknown* drives mounts untrusted filesystems. udisks already uses
-  `nosuid,nodev`. Alternative: for unknown drives, a notification with a mount action instead of mounting outright.
+- **Unknown drives: notify, then mount (MH, 2026-10-17; D43).** Automounting unknown drives would mount untrusted
+  filesystems. udiskie runs with automount off for them and shows a notification with a mount action; known drives
+  (by UUID) mount automatically at their fixed paths. udisks mounts with `nosuid,nodev` either way.
 
 ## Wi-Fi
 
@@ -85,5 +86,5 @@ machine and settled on playerctl; the ecosystem has moved since, so this starts 
 2. playerctl + playerctld, media keys, waybar `mpris`.
 3. kanshi profiles + the unknown-monitor fallback + "save layout as profile" script.
 4. Bluetooth picker; `AutoEnable`.
-5. udiskie unit + mount-path policy (decision above).
+5. udiskie unit (notify-then-mount for unknown drives, D43) + fixed paths for known drives.
 6. Wi-Fi picker (networkmanager-dmenu), tray applet.
