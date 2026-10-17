@@ -272,7 +272,7 @@ keep message data out of the repo.
 
 ## Related plan: Sway
 
-Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned in [sway.md](sway.md), not here, to keep one source of truth. Sequencing: do Phase 0a (`home/` layout) first; Sway work then lands under `home/`.
+Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned in [wayland-desktop.md](wayland-desktop.md), not here, to keep one source of truth. Sequencing: do Phase 0a (`home/` layout) first; Sway work then lands under `home/`.
 
 ## Per-phase checklist
 
