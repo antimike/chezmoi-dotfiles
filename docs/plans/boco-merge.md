@@ -226,7 +226,7 @@ timer and `~/.config/sync-repos` stay unmanaged until an entry is added; script 
 tasks due the same evening), `rano` (installer, monitor, weekly report, all `work_tooling`-guarded; employer report
 recipient moved to data key `rano.report_email`), and the reload script's long-running-services list
 (`rano-monitor.service`). The reload script became `run_after_` the same day (guard flips were missed).
-**In progress on `boco-merge/3-hooks`:** the gitleaks hook rollout below. **Next:** `sync-repos` hardening (below).
+**Hook rollout done on `boco-merge/3-hooks` (unmerged) except `bd-track`/`claude-config` (deferred, open item).** **Next:** `sync-repos` hardening (below).
 - **`sync-repos` (D28, amended by D36).** Its BOCO use-case (`~/.timewarrior`) is obsolete. Its list holds **only repos
   chezmoi itself provisions** (fixed paths, so the `sync-repos-list` template stays; no mani). Unattended commits must
   scan for secrets **inside the script**, not via a per-clone hook, which can be silently missing (`claude-config`
@@ -278,7 +278,7 @@ Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned i
 1. `tools/compare-trees.py` shows the files moved from only-BOCO to both.
 2. `chezmoi diff` on the new targets is understood; apply those targets only; `chezmoi status` clean (apart from ` R reload-systemd-user.sh`, which runs on every apply).
 3. Guards hold: nothing WSL- or work-only is managed on this host (see Guards acceptance).
-4. `gitleaks detect --no-git --no-banner -s .` shows only the 2 accepted findings (`home/private_dot_config/private_systemd/private_user/private_polybar-weather.service.tmpl`, `home/private_dot_jupyter/private_certs/private_service-key.pem`; accepted by MH 2026-10-15); anything new is a stop.
+4. `gitleaks dir --no-banner .` finds no leaks (the 2 accepted findings are in `.gitleaksignore`, D30); anything is a stop.
 5. Grep changed files with the pattern list in the private `client-terms.md`; expect nothing.
 6. Tick [../bootstrap-debt.md](../bootstrap-debt.md) if a hand-installed tool is now managed; push the branch.
 

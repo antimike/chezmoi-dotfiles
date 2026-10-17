@@ -57,7 +57,7 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | # | Decision |
 |---|---|
 | D29 | Add a Sway session beside GNOME. Units are scoped to their session target, not excluded per host. Keep dunst and use gammastep. One shared WM config fragment drives both i3 and Sway. |
-| D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. |
+| D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. Since 2026-10-17 both are listed in `.gitleaksignore`, so a scan shows none. |
 
 ## Tooling (proposed)
 
