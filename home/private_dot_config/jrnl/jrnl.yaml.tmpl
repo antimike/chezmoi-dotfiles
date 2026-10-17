@@ -12,7 +12,7 @@ indent_character: '|'
 journals:
   default:
     encrypt: true
-    journal: /home/***REMOVED***/.local/share/jrnl/journal.txt
+    journal: {{ joinPath .chezmoi.homeDir .filesystem.appData "jrnl" "journal.txt" }}
 linewrap: 79
 tagsymbols: '@'
 template: false

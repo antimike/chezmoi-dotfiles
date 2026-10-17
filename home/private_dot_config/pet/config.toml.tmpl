@@ -1,5 +1,5 @@
 [General]
-  snippetfile = "/home/***REMOVED***/.config/pet/snippet.toml"
+  snippetfile = "{{ joinPath .chezmoi.homeDir ".config" "pet" "snippet.toml" }}"
   editor = "nvim"
   column = 40
   selectcmd = "fzf"
