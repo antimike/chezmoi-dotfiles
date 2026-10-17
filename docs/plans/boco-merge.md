@@ -182,7 +182,7 @@ Pins must be exact, >=14 days old, with a Linux x86_64 asset.
   Installer-generated, decided 2026-10-16: for tools with a completion command (`cheat`, `dstask`, `the-way`) the installer writes
   `completions/_<tool>` through `.chezmoitemplates/install-completion.sh`, not a render-time `output` template (that renders empty on a
   first apply, and BOCO's `_the-way` was committed as a 0-byte file). Static `_cht`, `_nb`, `_nbterm` stay as files.
-  Status 2026-10-16: `fzf`, `cheat`, `cht-sh`, `the-way` (+ widgets), `nb`, `dnote`, `dstask`, `d2`, and `clipse` (not BOCO; added 2026-10-16) done on `boco-merge/1-tools`. The helpers below are done too (2026-10-16) except `functions/bd` (held; see `open-items.md`); `docstring` and `.zprofile` were duplicates and are not ported.
+  Status 2026-10-16: `fzf`, `cheat`, `cht-sh`, `the-way` (+ widgets), `nb`, `dnote`, `dstask`, `d2`, and `clipse` (not BOCO; added 2026-10-16) done on `boco-merge/1-tools`. The helpers below are done too (2026-10-16); `functions/bd` was rewritten to call `bd-track`, and `docstring` and `.zprofile` were duplicates and are not ported.
 
 ### Phase 2: Neovim (all BOCO plugins and themes)
 Copy all ~35 plugin specs and the config files that differ (`init.lua`, `config/*.lua`, `plugins/{chezmoi,example,
