@@ -1,0 +1,19 @@
+#!/bin/zsh -f
+# bd — `bd start <issue-id>` and `bd stop [<issue-id>]` run bd-track, which does
+# the time tracking: it claims the bead and appends a tagged start or stop event
+# to this session's log. Everything else goes to the real bd. bd has no start or
+# stop of its own, so nothing is shadowed.
+#
+# This is an interactive-shell convenience: scripts and hooks that call `bd`
+# get the real binary, never this function.
+case "$1" in
+  start|stop)
+    if (( $+commands[bd-track] )); then
+      command bd-track "$@"
+    else
+      print -u2 "bd: bd-track not found on PATH"
+      return 127
+    fi
+    ;;
+  *) command bd "$@" ;;
+esac
