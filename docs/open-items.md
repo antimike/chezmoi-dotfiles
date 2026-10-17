@@ -11,7 +11,7 @@ updated: 2026-10-17
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| BOCO chezmoi merge, Phases 3-6 (Phases 0-2 done; Phase 2 on `boco-merge/2-nvim`, awaiting merge/push) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| BOCO chezmoi merge, Phases 3-6 (Phases 0-2 on `main`; Phase 3 code on `boco-merge/3-timers`, awaiting review/merge; hook rollout held) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
 | zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
@@ -22,7 +22,7 @@ updated: 2026-10-17
 |---|---|---|
 | Sway session, then shared WM config fragment | Claude | [plans/sway.md](plans/sway.md) (Phase 0a done; unblocked) |
 | claude-mem evaluation (about 30 min requirements, ~1 week trial in `CLAUDE_CONFIG_DIR=~/.claude-trial`) | MH + Claude | deferred; evidence so far favors dropping it |
-| gitleaks pre-commit hook rollout across public repos | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
+| gitleaks pre-commit hook rollout across public repos (held until MH schedules it) | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
 | zsh switch-over test (scratch-home render first) | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 0 |
 
 ## Housekeeping
@@ -51,7 +51,7 @@ updated: 2026-10-17
 | The templated i3 config is not applied (no i3 session here); kitty `notes` points at `~/.config/i3/bin/open-notes.bash`, which does not exist yet | info | 2026-10-16 |
 | Clipboard stack, built 2026-10-16 (details below), **untested end to end**: needs a Sway session, since GNOME has no data-control protocol. `cliphist` 0.7.0 is installed and tested (store, sensitive entries skipped, the picker and the audit against the real binary); on GNOME the three units fail with the protocol error and stop retrying, as designed. Built: `wl-clip-persist` v0.5.0 (source-build installer, applied), `cliphist@.service` + `wl-clip-persist.service` + `clipboard-stack.target` (applied, not enabled; Sway starts them with `exec systemctl --user start clipboard-stack.target`), `clipboard-history` (fzf picker) and `clipboard-history-audit` (gitleaks; finds formatted secrets only). `cliphist` honours `wl-copy --sensitive` itself (`CLIPBOARD_STATE`), so no handler script exists. `pass -c` copied with plain `wl-copy` (passwords would enter the history); fixed by the `~/.local/bin/pass` wrapper, which exports a `wl-copy` function adding `--sensitive` (tested with a real `pass`: -c, show -c, generate -c, otp -c; about 5-8 ms; upstream patch declined, fork not worth it). Also still to switch on `display_server`: `bin/screenshot`, vifm `yd`/`yf`, the-way `copy_cmd` (all `xclip`) | MH decides | 2026-10-16 |
 | `_mise.tmpl` and `_pdm.tmpl` render empty on a first apply (render-time `output`); convert to installer-generated like `cheat`. Their completions already sit on `fpath`, but the files stay empty until a second apply | Claude | optional |
-| `dstask-notify` script and systemd units are not ported yet | Claude | Phase 3 (timers) |
+| Stray empty `~/.dstask` (accidental auto-init); remove it, or keep it and apply the `dstask-notify` targets | MH | Phase 3, 2026-10-17 |
 | Untested on non-Linux/non-amd64 hosts: the darwin and arm64 checksum rows for fzf, cheat, dnote, d2, dstask (darwin only), the-way (macos amd64 only) | info | rows verified against upstream, not run |
 
 | `PASSWORD_STORE_ENABLE_EXTENSIONS` is set by the zsh snippet and `~/.bash_env`, so only interactive shells have it; a launcher or Sway keybinding that runs `pass dmenu` directly does not. Put it in `~/.config/environment.d/` if that bites | info | 2026-10-16 |
