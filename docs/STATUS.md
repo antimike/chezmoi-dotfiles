@@ -16,7 +16,7 @@ updated: 2026-10-15
 - A private doc (keys, findings, client terms) is committed in `~/Source/chezmoi-boco` but **not pushed** (waiting for MH's OK).
 
 ## Next actions (in order)
-1. **BOCO merge Phases 1–6** ([plans/boco-merge.md](plans/boco-merge.md)), one `boco-merge/<phase>` branch each. Phase 1 is in progress on `boco-merge/1-tools` (not pushed): all eight tool installers are done, tested and applied (fzf, cheat, cht-sh, the-way + widgets, nb, dnote, dstask, d2); the helpers (`tutor`, `claude-init`, `etckeeper-secret-audit`, `functions/{bd,docstring}`, `snippets/{pass,dotnet}.zsh`, `.bash_aliases`, `.bash_env`, `.zprofile`, `.bashrc`) remain, then push.
+1. **BOCO merge Phases 1–6** ([plans/boco-merge.md](plans/boco-merge.md)), one `boco-merge/<phase>` branch each. Phase 1 is in progress on `boco-merge/1-tools` (not pushed): all tool installers are done and tested (fzf, cheat, cht-sh, the-way + widgets, nb, dnote, dstask, d2 applied; clipse tested but not installed, since GNOME lacks the clipboard protocol it needs); the helpers (`tutor`, `claude-init`, `etckeeper-secret-audit`, `functions/{bd,docstring}`, `snippets/{pass,dotnet}.zsh`, `.bash_aliases`, `.bash_env`, `.zprofile`, `.bashrc`) remain. Before the first push, rewrite history to purge client-term hits (rehearsed; see `open-items.md`), then force-push `main` with MH's OK.
 2. Sway work ([plans/sway.md](plans/sway.md)); Phase 0a is done, so it can start.
 3. Atlassian/Jira review pass and gitleaks hook rollout when MH schedules them.
 
