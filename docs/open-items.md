@@ -46,7 +46,7 @@ updated: 2026-10-16
 | fzf `--bash` Alt-C and `**` completion verified in a scratch home only; darwin/arm64 checksum rows are untested on those hosts | info | 2026-10-16 |
 
 | **History rewrite before the first push (agreed 2026-10-16, not yet run).** The tracked tree has no client-term hits, but history still does: 28 paths (the okular recents list incl. an employer name, the old username in many files, an employer/client name in two early plan docs) and 4 commit messages. A rehearsal in a mirror clone (`git filter-repo`: drop the okular and vifminfo paths, scrub the pattern from blobs and messages) left 0 hits, 216 commits, and a tip tree identical to the current one. Real run: bundle backup, rewrite in place, re-add `origin`, map old SHAs in the docs, force-push `main` (MH confirms), then ask GitHub support to purge cached views. Do it once, right before the push | MH + Claude | rehearsed 2026-10-16 |
-| Apply the templated configs (jrnl, kitty `notes`, pet, i3): the live copies still point at a previous machine's home. `chezmoi diff` shows only the path lines | MH | not applied |
+| The templated i3 config is not applied (no i3 session here); kitty `notes` points at `~/.config/i3/bin/open-notes.bash`, which does not exist yet | info | 2026-10-16 |
 | Clipboard stack for Sway: `cliphist` (in Fedora) + `wl-clip-persist` (no release assets, no Fedora package; needs a pinned cargo build, tied to the rustup decision) + `clipse` (installer done). GNOME has no data-control protocol, so none of the Wayland managers can record there. `xclip` users still to switch on `display_server`: `bin/screenshot`, vifm `yd`/`yf`, the-way `copy_cmd` | MH decides | 2026-10-16 |
 | `_mise.tmpl` and `_pdm.tmpl` render empty on a first apply (render-time `output`); convert to installer-generated like `cheat`. Their completions already sit on `fpath`, but the files stay empty until a second apply | Claude | optional |
 | `dstask-notify` script and systemd units are not ported yet | Claude | Phase 3 (timers) |
@@ -54,6 +54,7 @@ updated: 2026-10-16
 | Untested on non-Linux/non-amd64 hosts: the darwin and arm64 checksum rows for fzf, cheat, dnote, d2, dstask (darwin only), the-way (macos amd64 only) | info | rows verified against upstream, not run |
 
 ## Closed recently
+- jrnl, kitty `notes` and pet path fixes applied (2026-10-16, snapshot in `~/.local/state/claude-migration-backups/path-fixes/`).
 - Completions on `fpath` (2026-10-16): the zshrc puts `~/.local/share/zsh/completions` on `fpath` before `compinit` and rescans when a file there is newer than the dump (`-C` never looks for new files); the `zinit creinstall` hook and its symlinks are gone. Measured: a full scan costs about 9 ms more with 26 extra completions, a cached start nothing.
 - Client-term cleanup of the tracked tree (2026-10-16): zero hits. Home paths templated (jrnl, kitty notes, pet, i3, the-way), two man pages use `~`, and the dead README symlinks, `vifminfo.json` and `create_okularrc` are removed. History is a separate item above.
 - `display_server` host key (`"wayland"`, `"x11"`, `"none"`) detected at `chezmoi init`; first user is the clipse installer (clipse v1.2.1, Wayland and X11 builds).
