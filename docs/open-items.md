@@ -43,7 +43,6 @@ updated: 2026-10-16
 | rustup: `~/.cargo/bin` holds a stale toolchain (cargo 1.74.0, 2023) that is off `PATH`; the packaged cargo is 1.98.1. Decide: managed rustup installer + current `stable` + `PATH`, or remove `~/.cargo` | MH + Claude | left out of `zshenv` on purpose (2026-10-16) |
 | Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
 | `^X^R` is `redisplay` instead of `_read_comp` since the zshrc switch (rarely used completion-debug key) | info | not traced; the D33 audit would surface this kind of change |
-| bash `PATH` order: after `~/.bashrc` runs, `/usr/bin` precedes `~/.local/bin` (pyenv/asdf/conda lines), so bash `fzf` resolves to the Fedora 0.73.1, not the pinned 0.74.4; zsh is correct | Claude | found 2026-10-16; fix with the `.bashrc`/`.bash_env` port later in Phase 1 |
 | fzf `--bash` Alt-C and `**` completion verified in a scratch home only; darwin/arm64 checksum rows are untested on those hosts | info | 2026-10-16 |
 
 | New zsh completions are invisible until `zinit creinstall -q ~/.local/share/zsh/completions` runs and `~/.zcompdump*` is removed: `completions/` is not on `fpath`; files reach it as symlinks in `zinit/completions`, made only by the `atpull` hook. The Phase 1 installers write `_cheat`, `_dstask`, `_the-way` there (linked by hand on 2026-10-16). Proposal: put the directory on `fpath` in the zshrc (then no creinstall is needed), after a zsh-probe run | MH decides, Claude | found 2026-10-16 |
@@ -55,6 +54,7 @@ updated: 2026-10-16
 | Untested on non-Linux/non-amd64 hosts: the darwin and arm64 checksum rows for fzf, cheat, dnote, d2, dstask (darwin only), the-way (macos amd64 only) | info | rows verified against upstream, not run |
 
 ## Closed recently
+- bash `PATH` order (2026-10-16): conda's hook put `/usr/bin` first; `~/.bashrc` now re-asserts `~/.local/bin` last. Note `python` in bash still resolves to `/usr/bin/python` because the pyenv shims sit behind `/usr/bin`; not addressed.
 - Phase 1 tool installers (2026-10-16, branch `boco-merge/1-tools`): cheat 5.1.0, cht.sh (+ `cht`), the-way v0.20.3 (+ widgets), nb 7.25.5, dnote cli-v0.16.0, dstask v1.0.1, d2 v0.9.0, with a shared completion helper. Fixed BOCO bugs: the dstask URL returned 404 and its hashes matched un-uploaded files; the-way fetched the x86_64 build on arm64; `_the-way` was a 0-byte file; `the-way.toml` hard-coded a foreign home. Applied with a snapshot in `~/.local/state/claude-migration-backups/tools-apply/`.
 - fzf, Phase 1 item 1 (2026-10-16, branch `boco-merge/1-tools`): v0.74.4 pinned, installer, `fzf --bash` integration; applied to `~/.local/bin/fzf` and `~/.bashrc.d` (snapshot in `~/.local/state/claude-migration-backups/fzf-apply/`).
 - Phase 0 of the BOCO merge (2026-10-16): `is-wsl`, `work_tooling`, systemd reload script, git/GPG/SSH config, zsh switch-over (applied, merged, pushed). Stale `rtx` RPM removed by MH.
