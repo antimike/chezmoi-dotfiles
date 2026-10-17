@@ -1,17 +1,11 @@
-{{- /* Re-run whenever any unit source under private_systemd/private_user/ changes.
-     The hash-comments block below makes chezmoi re-invoke this script when the
-     source content changes; otherwise `run_onchange_` is a no-op. The hash covers
-     raw source, so a unit flipping between rendering and rendering empty (tool
-     appeared or vanished) does not re-trigger it by itself. */ -}}
+{{- /* Runs on every apply (`run_after_`), not `run_onchange_`: a unit can start
+     or stop rendering because its guard flipped (a tool or directory appeared or
+     vanished) without any source change, and a source-hash trigger misses that. */ -}}
 {{- $unitDir := joinPath .chezmoi.sourceDir "private_dot_config/private_systemd/private_user" -}}
 #!/usr/bin/env bash
 # systemd --user units reload: regenerate daemon state, (re-)enable the timers
 # managed here, and disable timers whose source has been removed. Idempotent:
-# safe to run on every change.
-#
-{{ range (glob (joinPath $unitDir "*")) -}}
-# hash: {{ base . }}: {{ include . | sha256sum }}
-{{ end }}
+# safe to run on every apply.
 set -euo pipefail
 
 if ! command -v systemctl >/dev/null 2>&1; then

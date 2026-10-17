@@ -12,8 +12,8 @@ private_dot_config/private_systemd/private_user/
   <name>.timer.tmpl          # when to run it
 dot_local/bin/
   executable_<name>.tmpl     # the actual script invoked by the service
-run_onchange_after_reload-systemd-user.sh.tmpl
-                             # reloads + enables timers after any change
+run_after_reload-systemd-user.sh.tmpl
+                             # reloads + enables timers on every apply
                              # (see "The reload script" below)
 ```
 
@@ -69,13 +69,13 @@ fi
 
 ## The reload script
 
-`home/run_onchange_after_reload-systemd-user.sh.tmpl` (ported from BOCO) runs `systemctl --user daemon-reload` and enables the managed timers after any change under `private_dot_config/private_systemd/private_user/`. The `run_onchange_after_` prefix plus a hash-comments block (one `# hash:` line per unit source file) makes chezmoi re-run it when a source file changes. The hash covers raw source, so a unit flipping between rendering and rendering empty (tool appeared or vanished) does not re-trigger it by itself; run the script by hand after such a change: `chezmoi execute-template < ~/.local/share/chezmoi/home/run_onchange_after_reload-systemd-user.sh.tmpl | bash`.
+`home/run_after_reload-systemd-user.sh.tmpl` (ported from BOCO) runs `systemctl --user daemon-reload` and enables the managed timers on **every full apply** (`run_after_`). It was `run_onchange_` with a hash of the unit sources until 2026-10-17; that missed units that start or stop rendering because a guard flipped (a tool or directory appeared or vanished) with no source change, which installed `dstask-notify.timer` without enabling it. Cost: about 1.5 s per full apply; targeted applies (`chezmoi apply <target>`) do not run scripts. Side effect: `chezmoi status` always lists ` R reload-systemd-user.sh`.
 
 Behaviour:
 - Enables (`enable --now`) every managed timer that exists in `~/.config/systemd/user/` **and has an `[Install]` section**. Static timers (no `[Install]`, started by their session target, e.g. `wallpaper.timer`, `polybar-weather.timer`) are skipped; enabling them would fail and start them outside their session.
 - **Removed timers are disabled.** After each run the enabled set is written to `~/.local/state/chezmoi-systemd/timers.list`. On the next run, a name in that file that is no longer desired (source deleted, or the unit now renders empty) gets `systemctl --user disable --now`. Only names the script recorded are ever disabled. No state file means a first run, which disables nothing. A leftover unit file in `~/.config/systemd/user/` is **not** deleted; remove it by hand.
 - On hosts with `enable_user_lingering`, tries `sudo -n loginctl enable-linger` if lingering is off, printing a hint instead of failing when sudo is unavailable.
-- Long-running (non-timer) services are not handled; add them to the script explicitly when one is ported.
+- Long-running (non-timer) services are enabled from an explicit `long_running_services` list in the script, only when the unit rendered on this host; they are not disabled automatically if it later stops rendering. Never list oneshot services there; their timers start them.
 
 ## Checklist for adding a new timer
 
