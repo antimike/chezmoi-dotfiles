@@ -1,0 +1,28 @@
+# Pinned wl-clip-persist release, consumed by run_onchange_install-wl-clip-persist.sh.tmpl.
+#
+# wl-clip-persist (https://github.com/Linus789/wl-clip-persist) keeps the Wayland
+# clipboard alive after the program that set it exits. It is not on crates.io,
+# has no release binaries and no Fedora package, so the installer builds it from
+# source. The pin is the git commit of the tag: git verifies a commit hash by
+# content, which a GitHub archive tarball does not guarantee over time. The
+# repository's Cargo.lock pins all dependencies (and their checksums), and the
+# build uses `cargo build --locked`.
+#
+# Pin rule: exact tag, at least 14 days old. v0.5.0 = 2025-09-23 (upstream's
+# latest); MIT. Builds in under a minute with Fedora's cargo 1.98.1 (needs Rust
+# 1.85). Needs a compositor with ext-data-control-v1 or wlr-data-control
+# (Sway has them; GNOME does not), so it only builds where the `display_server`
+# host key is "wayland".
+#
+# Top-level key is camelCase because hyphens break Go template dot-access.
+#
+# To bump:
+#   1. version: new upstream tag, "v"-prefixed
+#   2. commit:  git ls-remote https://github.com/Linus789/wl-clip-persist.git 'refs/tags/<tag>^{}' refs/tags/<tag>
+#               (use the peeled ^{} line if the tag is annotated)
+#   3. check Cargo.lock still builds with --locked, then commit; the rendered
+#      script hash changes, so the installer re-runs.
+wlClipPersist:
+  version: "v0.5.0"
+  commit:  "e26fde01c13922e3a65049dafb7d5adfbc52626e"
+  repo:    "https://github.com/Linus789/wl-clip-persist.git"

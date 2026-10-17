@@ -1,0 +1,73 @@
+#!/bin/sh
+# run_onchange_install-wl-clip-persist.sh.tmpl — build and install wl-clip-persist
+# (github.com/Linus789/wl-clip-persist) to ~/.local/bin.
+#
+# Built from source (no release binaries, not on crates.io, not in Fedora).
+# The pin in .chezmoidata/wl-clip-persist.yaml is a tag plus its commit hash:
+# the installer clones the tag shallowly and refuses to build unless HEAD is
+# exactly that commit, then builds with `cargo build --release --locked`, so
+# dependency versions and checksums come from the repository's Cargo.lock.
+# Cargo runs dependency build scripts; that is the trust this takes beyond the
+# pin.
+#
+# Only runs on Linux hosts whose `display_server` host key is "wayland"
+# (see .chezmoi.yml.tmpl). Skips with a note (exit 0), rather than failing
+# `chezmoi apply`, on other hosts or when git or cargo is missing.
+{{- $ds := dig "display_server" "x11" . -}}
+{{- $run := and (eq .chezmoi.os "linux") (eq $ds "wayland") -}}
+{{- $v := .wlClipPersist.version -}}
+
+set -eu
+
+VERSION={{ $v | quote }}
+EXPECTED_COMMIT={{ .wlClipPersist.commit | quote }}
+REPO_URL={{ .wlClipPersist.repo | quote }}
+INSTALL_PATH={{ joinPath .chezmoi.homeDir ".local" "bin" "wl-clip-persist" | quote }}
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+
+if [ "$ENABLED" != 1 ]; then
+  echo "wl-clip-persist installer: needs Linux with display_server=wayland (this host: {{ .chezmoi.os }}, {{ $ds }}); skipping" >&2
+  exit 0
+fi
+for tool in git cargo; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "wl-clip-persist installer: '$tool' not found; install it (see packages.yaml) and re-run; skipping" >&2
+    exit 0
+  fi
+done
+
+# Idempotency guard: `wl-clip-persist --version` prints "wl-clip-persist 0.5.0".
+if [ -x "$INSTALL_PATH" ] \
+    && [ "$("$INSTALL_PATH" --version 2>/dev/null | cut -d' ' -f2)" = "${VERSION#v}" ]; then
+  echo "wl-clip-persist installer: $VERSION already installed at $INSTALL_PATH" >&2
+  exit 0
+fi
+
+mkdir -p "$(dirname "$INSTALL_PATH")"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+echo "wl-clip-persist installer: cloning $REPO_URL at $VERSION" >&2
+git -c advice.detachedHead=false clone -q --depth 1 --branch "$VERSION" "$REPO_URL" "$tmp_dir/src"
+
+actual=$(git -C "$tmp_dir/src" rev-parse HEAD)
+if [ "$EXPECTED_COMMIT" != "$actual" ]; then
+  echo "wl-clip-persist installer: commit mismatch for $VERSION" >&2
+  echo "  expected: $EXPECTED_COMMIT" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+echo "wl-clip-persist installer: building (cargo build --release --locked)" >&2
+cargo build --release --locked --quiet \
+  --manifest-path "$tmp_dir/src/Cargo.toml" --target-dir "$tmp_dir/target"
+
+binary="$tmp_dir/target/release/wl-clip-persist"
+if [ ! -x "$binary" ]; then
+  echo "wl-clip-persist installer: build produced no binary" >&2
+  exit 1
+fi
+
+mv "$binary" "$INSTALL_PATH"
+echo "wl-clip-persist installer: $VERSION installed to $INSTALL_PATH" >&2
