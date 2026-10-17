@@ -34,7 +34,10 @@ def main() -> None:
         return
 
     now = datetime.datetime.now(datetime.timezone.utc)
-    end_of_today = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    # End of the *local* day: in UTC it would cut off tasks due this evening.
+    end_of_today = datetime.datetime.now().astimezone().replace(
+        hour=23, minute=59, second=59, microsecond=999999
+    )
     # Go zero value used by dstask when no due date is set.
     GO_ZERO = datetime.datetime(1, 1, 1, tzinfo=datetime.timezone.utc)
 
