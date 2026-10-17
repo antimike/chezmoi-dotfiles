@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# home-snapshot: save paths under $HOME and restore them exactly.
+#
+# Meant as the escape route for risky applies (shell startup files, desktop configs): take a
+# snapshot first, and if the result is broken, restore it from a shell that does not depend on
+# the thing you changed:
+#
+#   env -i HOME="$HOME" PATH=/usr/bin:/bin bash --noprofile --norc home-snapshot restore <dir>
+#
+# usage:
+#   home-snapshot create <dir> <path>...   paths are relative to $HOME; a path that does not exist
+#                                          yet is recorded as absent (restore then deletes it)
+#   home-snapshot restore <dir>            delete each recorded path, then extract the saved copy
+#   home-snapshot list <dir>               show what a snapshot holds
+#   home-snapshot selftest                 exercise create/restore against a throwaway $HOME
+#
+# Uses only bash, tar, rm, mkdir and cp. Paths are validated because restore runs rm -rf.
+set -euo pipefail
+
+die() { echo "home-snapshot: $*" >&2; exit 1; }
+
+valid_path() { # relative, non-empty, no "." or ".." components
+  local p="$1" part
+  [[ -n "$p" && "$p" != /* ]] || return 1
+  IFS=/ read -ra parts <<<"$p"
+  for part in "${parts[@]}"; do
+    [[ -n "$part" && "$part" != "." && "$part" != ".." ]] || return 1
+  done
+}
+
+cmd_create() {
+  local dir="${1:?usage: home-snapshot create <dir> <path>...}"
+  shift
+  [[ $# -gt 0 ]] || die "create needs at least one path"
+  [[ ! -e "$dir/manifest" ]] || die "$dir already holds a snapshot"
+  local n=0 path
+  for path in "$@"; do # validate everything before writing anything
+    path="${path#"$HOME"/}"
+    valid_path "$path" || die "invalid path: '$path' (must be relative to \$HOME, no . or .. or empty parts)"
+  done
+  mkdir -p "$dir"
+  : >"$dir/manifest"
+  for path in "$@"; do
+    path="${path#"$HOME"/}"
+    if [[ -e "$HOME/$path" || -L "$HOME/$path" ]]; then
+      n=$((n + 1))
+      tar -C "$HOME" -cf "$dir/$n.tar" -- "$path"
+      printf 'present\t%s\t%s\n' "$path" "$n.tar" >>"$dir/manifest"
+    else
+      printf 'absent\t%s\t-\n' "$path" >>"$dir/manifest"
+    fi
+  done
+  echo "snapshot written to $dir ($(wc -l <"$dir/manifest") paths)"
+}
+
+cmd_restore() {
+  local dir="${1:?usage: home-snapshot restore <dir>}" state path tarball
+  [[ -f "$dir/manifest" ]] || die "no snapshot in $dir"
+  while IFS=$'\t' read -r state path tarball; do # validate everything before deleting anything
+    valid_path "$path" || die "invalid path in manifest: $path"
+  done <"$dir/manifest"
+  while IFS=$'\t' read -r state path tarball; do
+    rm -rf -- "${HOME:?}/$path"
+    if [[ "$state" == present ]]; then
+      mkdir -p -- "$(dirname -- "$HOME/$path")"
+      tar -C "$HOME" -xf "$dir/$tarball"
+      echo "restored $path"
+    else
+      echo "removed  $path (did not exist)"
+    fi
+  done <"$dir/manifest"
+}
+
+cmd_list() {
+  local dir="${1:?usage: home-snapshot list <dir>}"
+  [[ -f "$dir/manifest" ]] || die "no snapshot in $dir"
+  cat "$dir/manifest"
+}
+
+cmd_selftest() {
+  local root fake snap
+  root="$(mktemp -d "${XDG_CACHE_HOME:-$HOME/.cache}/home-snapshot-selftest.XXXXXX")"
+  fake="$root/home"
+  snap="$root/snap"
+  mkdir -p "$fake/.config/app" "$fake/.local/share/tool/sub"
+  echo old >"$fake/.rc"
+  echo cfg >"$fake/.config/app/conf"
+  echo data >"$fake/.local/share/tool/sub/file"
+  ln -s ../.rc "$fake/.config/link"
+  before="$(cd "$fake" && find . \( -type f -o -type l \) | sort | while read -r f; do
+    printf '%s ' "$f"
+    if [[ -L "$f" ]]; then readlink "$f"; else cat "$f"; fi
+  done)"
+  HOME="$fake" "$0" create "$snap" .rc .config/app .config/link .local/share/tool .cache/new >/dev/null
+  echo new >"$fake/.rc"
+  rm -rf "$fake/.local/share/tool" "$fake/.config/link"
+  echo junk >"$fake/.config/app/extra"
+  mkdir -p "$fake/.cache/new" && echo x >"$fake/.cache/new/f"
+  env -i HOME="$fake" PATH=/usr/bin:/bin bash --noprofile --norc "$0" restore "$snap" >/dev/null
+  after="$(cd "$fake" && find . \( -type f -o -type l \) | sort | while read -r f; do
+    printf '%s ' "$f"
+    if [[ -L "$f" ]]; then readlink "$f"; else cat "$f"; fi
+  done)"
+  if [[ "$before" == "$after" && ! -e "$fake/.cache/new" ]]; then
+    rm -rf -- "$root"
+    echo "selftest: restore reproduced the original tree exactly"
+  else
+    echo "selftest FAILED; left $root for inspection" >&2
+    exit 1
+  fi
+}
+
+case "${1:-}" in
+  create) shift; cmd_create "$@" ;;
+  restore) shift; cmd_restore "$@" ;;
+  list) shift; cmd_list "$@" ;;
+  selftest) cmd_selftest ;;
+  *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

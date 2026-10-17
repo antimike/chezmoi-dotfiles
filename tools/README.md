@@ -6,6 +6,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 |---|---|
 | [compare-trees.py](compare-trees.py) | Path-level comparison of two chezmoi source trees (the BOCO survey) |
 | [zsh-probe/](zsh-probe/) | Render the zsh files into a scratch home, dump the resulting shell state, and diff two dumps |
+| [home-snapshot/](home-snapshot/) | Save paths under `$HOME` and restore them exactly: the escape route for a risky apply |
 
 ## zsh-probe
 
@@ -23,3 +24,14 @@ What the dump holds (one `<name>.txt` each): `env`, `env-zshenv-only` (what `zsh
 
 Limits: it records shell *state*, not behaviour. It does not open an fzf picker or press a key. The startup timing is `zsh -i -c exit` (no turbo plugins) and is a smoke test, not a benchmark. Random ids and the scratch path are normalised; if two renders of one tree ever differ, find the new nondeterministic value and add it to `normalise()`.
 Why the harness is built the way it is (pty, clean environment, scheduler wait): see the module docstring in `zsh-probe.py`. The planned keybinding audit (D33) should reuse `pty_session()`.
+
+## home-snapshot
+
+```sh
+tools/home-snapshot/home-snapshot create ~/.local/state/claude-migration-backups/zsh-apply/$(date +%F-%H%M) \
+    .zshrc .zshenv .config/chezmoi/chezmoi.yml .local/share/zsh .local/share/zinit/completions .cache/zcomp
+# ... apply, test ...
+env -i HOME="$HOME" PATH=/usr/bin:/bin bash --noprofile --norc tools/home-snapshot/home-snapshot restore <dir>
+```
+
+Paths are relative to `$HOME`. A path that does not exist at `create` time is recorded as absent, and `restore` deletes it again. Restoring replaces whatever is there with the saved copy (files, directories and symlinks), so use it only on paths you are prepared to roll back wholesale. `restore` is plain bash plus `tar`/`rm`, so it works even when zsh or Python is broken. `home-snapshot selftest` checks create/restore against a throwaway home. Run `restore` through `env -i … bash --noprofile --norc` when the thing you changed could break your login shell.
