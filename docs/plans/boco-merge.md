@@ -226,14 +226,15 @@ timer and `~/.config/sync-repos` stay unmanaged until an entry is added; script 
 tasks due the same evening), `rano` (installer, monitor, weekly report, all `work_tooling`-guarded; employer report
 recipient moved to data key `rano.report_email`), and the reload script's long-running-services list
 (`rano-monitor.service`). The reload script became `run_after_` the same day (guard flips were missed).
-**Hook rollout done on `boco-merge/3-hooks` (unmerged) except `bd-track`/`claude-config` (deferred, open item).** **Next:** `sync-repos` hardening (below).
-- **`sync-repos` (D28, amended by D36).** Its BOCO use-case (`~/.timewarrior`) is obsolete. Its list holds **only repos
-  chezmoi itself provisions** (fixed paths, so the `sync-repos-list` template stays; no mani). Unattended commits must
-  scan for secrets **inside the script**, not via a per-clone hook, which can be silently missing (`claude-config`
-  and `chess_trainer` have committed configs whose hooks were never installed here). Next step: port `claude-state-sync`'s behaviour into `sync-repos` (gitleaks on
-  the staged set, refuse if gitleaks is missing, `pull --rebase --autostash` before push, `notify` on failure), list
-  `~/.claude/projects` as its first entry, and retire `claude-state-sync`. Deferred: one `dstask` repo provisioned by
-  chezmoi (remote + run_once clone), then listed.
+**Hook rollout done on `boco-merge/3-hooks` (unmerged) except `bd-track`/`claude-config` (deferred, open item).** `sync-repos` hardening done the same day (below).
+- **`sync-repos` (D28, amended by D36). Hardened 2026-10-17 (`d1e5cdf`, `6ad8fe4`).** Its list holds only repos chezmoi
+  provisions or knows the fixed path of; the first entry is `~/.claude/projects` (claude-state), so the dedicated
+  `claude-state-sync` timer was retired (`.chezmoiremove` deletes its files). Per repo: `git add -A`, gitleaks on the
+  staged set inside the script (refuses without gitleaks), commit, `pull --rebase --autostash` (a conflicting rebase is
+  aborted), push; one `notify` per failed run. Waits up to 120 s for `nm-online`; the service retries 3 times 15 min
+  apart (`Restart=on-failure`). Tested against scratch repos (secret refused, conflict aborted, no-upstream, missing
+  repo) and live on claude-state (pushed 2 commits stranded by earlier DNS failures). Retry not observed live.
+  Deferred: chezmoi provisioning of claude-state (clone on a new machine) and of one `dstask` repo.
 - **gitleaks pre-commit hooks (D35).** Hooks protect commits made by hand; each repo opts in by committing a
   `.pre-commit-config.yaml` with a `local`/`system` gitleaks hook (`gitleaks git --pre-commit --staged --redact
   --no-banner`; `protect` is deprecated in gitleaks 8.30). Roll out to the public repos (`chezmoi-dotfiles`,

@@ -11,7 +11,7 @@ updated: 2026-10-17
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| BOCO chezmoi merge: merge `boco-merge/3-hooks`, then `sync-repos` hardening (D36), then Phases 4-6 | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| BOCO chezmoi merge: Phases 4-6 (Phase 3 done 2026-10-17 apart from the deferred bd-repo hooks) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
 | zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
@@ -23,6 +23,8 @@ updated: 2026-10-17
 | Sway session, then shared WM config fragment | Claude | [plans/sway.md](plans/sway.md) (Phase 0a done; unblocked) |
 | claude-mem evaluation (about 30 min requirements, ~1 week trial in `CLAUDE_CONFIG_DIR=~/.claude-trial`) | MH + Claude | deferred; evidence so far favors dropping it |
 | **Hooks in `bd-track` and `claude-config` (deferred by MH, 2026-10-17).** Both commit `.beads/hooks/` built for `core.hooksPath=.beads/hooks`, but neither clone sets it, so no hooks run (bd's or pre-commit's). `bd-track`'s `pre-commit` has no pre-commit-framework step; `claude-config`'s step fails open without `.venv` (none in this clone), skipping gitleaks too. Proposed: `install-hooks` sets `core.hooksPath` where `.beads/hooks/` is tracked, both repos call gitleaks before the `.venv` check. **Investigate first:** MH recalls bd hooks being problematic on the WSL work laptop (WSL-specific or not is unknown); check what each bd 1.3 hook does. Also `bd` warns `.beads` is 0755 in `claude-config` (wants 0700) | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 3 |
+| chezmoi provisioning of `claude-state`: today a new machine clones it by hand ([runbooks/memory-and-backups.md](runbooks/memory-and-backups.md)), so strictly it does not meet D36's "chezmoi-provisioned" rule; it is listed because its path is fixed. Option: a `run_once_before_` script that clones into `~/.claude/projects` when it is not yet a repo (it may already exist, made by Claude Code) | MH + Claude | D36, 2026-10-17 |
+| `sync-repos` retry (`Restart=on-failure`, 15 min) not yet observed live; check the journal after the next resume-time failure | info | 2026-10-17 |
 | One `dstask` repo provisioned by chezmoi (private remote created by MH, run_once clone), then added to the `sync-repos` list (D36) | MH + Claude | deferred |
 | Optional `init.templateDir` hook so new clones get gitleaks before `install-hooks` runs | Claude | deferred (D35) |
 | zsh switch-over test (scratch-home render first) | Claude | [plans/boco-merge.md](plans/boco-merge.md), Phase 0 |
@@ -61,6 +63,7 @@ updated: 2026-10-17
 | Observed, not changed: `claude-init` writes `.claude/settings.local.json` with `Bash(git:*)` (includes `git push`) | info | 2026-10-16 |
 
 ## Closed recently
+- **`sync-repos` hardened; `claude-state-sync` retired (2026-10-17).** In-script gitleaks, `pull --rebase`, `notify`, network wait and retries; claude-state is its first entry. Found: 3 of the last 4 claude-state syncs had failed on DNS at resume, 2 commits stranded locally (now pushed).
 - **gitleaks hook rollout (2026-10-17, `boco-merge/3-hooks`)**, except the deferred bd repos. Red/green tested with a fake GitHub token in chezmoi, `chess_trainer`, `resume-builder` and `claude-state`. Gotchas: pre-commit refuses to run while `.pre-commit-config.yaml` has unstaged edits (stage it with the test file); `claude-state`'s whitelist `.gitignore` ignores files outside `*/memory/`; its project folders start with `-`, so pass `--` to git and `rm`.
 - **YubiKey not found after a reboot (2026-10-17):** pcscd held the CCID interface; `scdaemon.conf` with `disable-ccid` + `pcsc-shared`, gated on pcscd being installed (D34).
 - **Reload script runs on every apply (2026-10-17):** renamed to `run_after_reload-systemd-user.sh.tmpl` and the source-hash block dropped, so timers whose guard flips are enabled by the next full apply. Tested by disabling `dstask-notify.timer` and running a plain `chezmoi apply` (re-enabled). Costs about 1.5 s per full apply; `chezmoi status` now always lists ` R reload-systemd-user.sh`.
