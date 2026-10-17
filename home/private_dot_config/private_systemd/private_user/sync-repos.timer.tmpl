@@ -1,4 +1,4 @@
-{{ if and (lookPath "git") (includeTemplate "sync-repos-list" . | trim) -}}
+{{ if and (lookPath "git") (lookPath "gitleaks") (includeTemplate "sync-repos-list" . | trim) -}}
 [Unit]
 Description=Daily trigger for sync-repos.service
 

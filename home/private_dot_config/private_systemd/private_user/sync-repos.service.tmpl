@@ -2,9 +2,16 @@
 [Unit]
 Description=Daily git auto-commit + push for repos in ~/.config/sync-repos/repos.conf
 Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_sync-repos.tmpl
+# Retry budget: 4 starts per 2 h (the first run plus 3 retries 15 min apart).
+StartLimitIntervalSec=2h
+StartLimitBurst=4
 
 [Service]
 Type=oneshot
 ExecStart=%h/.local/bin/sync-repos
 Nice=10
+# Pushes fail while offline (the timer fires right after resume) or while the
+# YubiKey is unplugged; retry instead of waiting for the next day.
+Restart=on-failure
+RestartSec=15min
 {{- end }}

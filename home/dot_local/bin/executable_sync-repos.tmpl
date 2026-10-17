@@ -7,23 +7,31 @@
 # Config source of truth: .chezmoitemplates/sync-repos-list
 # Rendered to:            ~/.config/sync-repos/repos.conf
 #
-# Per-repo behavior:
-#   - If the working tree is dirty, `git add -A` + commit "auto-sync: YYYY-MM-DD"
-#   - If an upstream is configured, `git push`
-#   - Errors in one repo do not abort the rest; exit status reflects any failure
+# Per-repo behavior (D36):
+#   - `git add -A`; if anything is staged, scan it with gitleaks *here* (never
+#     rely on a per-clone hook) and refuse to commit on a finding or when
+#     gitleaks is missing; then commit "chore(sync): <host> <UTC time>"
+#   - If an upstream is configured: `git pull --rebase --autostash`, then push.
+#     A failed rebase is aborted, so the repo is never left mid-rebase.
+#   - Errors in one repo do not abort the rest; any failure sends one
+#     notification (via ~/.claude/scripts/notify) and a non-zero exit, so
+#     systemd retries (Restart=on-failure in the service).
 #
 # Safe to run manually alongside the timer: flock guards against overlap.
 
 set -euo pipefail
 shopt -s extglob
 
-CONFIG="${HOME}/.config/sync-repos/repos.conf"
+# The SYNC_REPOS_* overrides exist for testing against scratch repos.
+CONFIG="${SYNC_REPOS_CONFIG:-${HOME}/.config/sync-repos/repos.conf}"
 LOCK="${XDG_RUNTIME_DIR:-/tmp}/sync-repos.lock"
+NOTIFY="${SYNC_REPOS_NOTIFY:-${HOME}/.claude/scripts/notify}"
 
 log() { logger -t sync-repos -- "$*"; echo "sync-repos: $*" >&2; }
 
 # Executable-dependency guard: git is template-guarded above; flock and logger
-# are checked here.
+# are checked here. gitleaks is checked per commit, so a missing gitleaks still
+# lets already-made commits be pushed.
 for cmd in flock logger; do
     command -v "$cmd" >/dev/null 2>&1 || {
         echo "sync-repos: missing required command: $cmd" >&2
@@ -36,9 +44,52 @@ done
 exec 9>"$LOCK"
 flock -n 9 || { log "another instance holds the lock; exiting"; exit 0; }
 
-today="$(date +%F)"
-status=0
+# After boot or resume the timer (Persistent=true) can fire before the network
+# is up; wait briefly instead of failing the push. Retries beyond this are the
+# service's Restart=on-failure.
+if command -v nm-online >/dev/null 2>&1; then
+    nm-online -q -t 120 || log "network not online after 120s; trying anyway"
+fi
 
+stamp="$(hostname) $(date -u +%Y-%m-%dT%H:%MZ)"
+
+# Prints the reason and returns non-zero on failure.
+sync_one() {
+    local repo="$1"
+    cd "$repo" || { echo "cannot cd"; return 1; }
+
+    # git's own output goes to stderr (the journal); stdout carries only the
+    # failure reason, which the caller captures.
+    git add -A >&2
+    if ! git diff --cached --quiet; then
+        command -v gitleaks >/dev/null 2>&1 \
+            || { echo "gitleaks not installed; refusing to commit"; return 1; }
+        gitleaks git --pre-commit --staged --redact --no-banner >&2 \
+            || { echo "gitleaks found secrets in staged changes; commit aborted"; return 1; }
+        git commit -q -m "chore(sync): ${stamp}" >&2 \
+            || { echo "git commit failed"; return 1; }
+        log "committed in ${repo}"
+    fi
+
+    if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+        log "no upstream for ${repo}; committed locally only"
+        return 0
+    fi
+    if ! git pull --rebase --autostash -q >&2; then
+        if [ -d "$(git rev-parse --git-path rebase-merge)" ] \
+           || [ -d "$(git rev-parse --git-path rebase-apply)" ]; then
+            git rebase --abort >&2 || true
+            echo "rebase conflict with upstream (aborted); resolve by hand"
+        else
+            echo "git pull failed (network or auth; YubiKey plugged in?)"
+        fi
+        return 1
+    fi
+    git push -q >&2 || { echo "git push failed (network or auth; YubiKey plugged in?)"; return 1; }
+    log "pushed ${repo}"
+}
+
+failures=()
 while IFS= read -r repo || [ -n "$repo" ]; do
     repo="${repo%%#*}"                 # strip inline comment
     repo="${repo##+([[:space:]])}"     # strip leading whitespace
@@ -47,27 +98,20 @@ while IFS= read -r repo || [ -n "$repo" ]; do
 
     if [ ! -d "$repo/.git" ]; then
         log "skip: $repo has no .git directory"
-        status=1
+        failures+=("${repo/#"$HOME"/\~}: no .git directory")
         continue
     fi
 
-    (
-        cd "$repo"
-        if ! git diff --quiet \
-           || ! git diff --cached --quiet \
-           || [ -n "$(git ls-files --others --exclude-standard)" ]; then
-            git add -A
-            git commit -m "auto-sync: ${today}" >/dev/null
-            log "committed in ${repo}"
-        fi
-        if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
-            git push --quiet
-            log "pushed ${repo}"
-        else
-            log "no upstream for ${repo}; skipped push"
-        fi
-    ) || { log "error syncing ${repo}"; status=1; }
+    if ! reason="$(sync_one "$repo")"; then
+        log "error syncing ${repo}: ${reason}"
+        failures+=("${repo/#"$HOME"/\~}: ${reason}")
+    fi
 done < "$CONFIG"
 
-exit "$status"
+if [ "${#failures[@]}" -gt 0 ]; then
+    if [ -x "$NOTIFY" ]; then
+        "$NOTIFY" --urgent "sync-repos failed (${#failures[@]})" "$(printf '%s\n' "${failures[@]}")" || true
+    fi
+    exit 1
+fi
 {{- end }}
