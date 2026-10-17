@@ -32,6 +32,7 @@ packages:
     - pass-otp
     - restic
     # Desktop helpers (i3 / notifications / clipboard)
+    - cliphist
     - dunst
     - ImageMagick
     - kitty
