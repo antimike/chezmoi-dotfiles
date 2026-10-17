@@ -78,7 +78,12 @@ if command -v mise >/dev/null; then
 	eval "$(mise activate bash)"
 	eval "$(mise completion bash 2>/dev/null)"
 fi
-command -v chezmoi >/dev/null && eval "$(chezmoi completion bash)"
+# chezmoi completion, unless `chezmoi` resolves to an asdf shim: a shim without an
+# installed version prints an error and takes about 200 ms to do it, on every shell.
+if chezmoi_path=$(command -v chezmoi) && [[ $chezmoi_path != */.asdf/shims/* ]]; then
+	eval "$(chezmoi completion bash 2>/dev/null)"
+fi
+unset chezmoi_path
 command -v direnv >/dev/null && eval "$(direnv hook bash)"
 
 # claude-mem worker (held with the claude-mem evaluation; inert without bun)
