@@ -39,6 +39,10 @@ updated: 2026-10-16
 | Timers fail while the YubiKey is unplugged | info | retry next run; consider a dedicated unattended password path if annoying |
 | Known gaps: java pin, Go version mismatch, unmanaged `yq`, `tofi` | Claude | [bootstrap-debt.md](bootstrap-debt.md) |
 | `.chezmoi.yml` doctor warning (`suspicious-entries`) | info | cosmetic; renaming would create a second config |
+| rustup: `~/.cargo/bin` holds a stale toolchain (cargo 1.74.0, 2023) that is off `PATH`; the packaged cargo is 1.98.1. Decide: managed rustup installer + current `stable` + `PATH`, or remove `~/.cargo` | MH + Claude | left out of `zshenv` on purpose (2026-10-16) |
+| Unmanaged zsh leftovers: `snippets/pipx.zsh` (2023 argcomplete handler; overlaps the managed `_python_argcomplete` completion, Phase 1 skips generated completions), parked `widgets/`, old `completion/` | Claude | triage after the zsh apply |
+| `^X^R` is `redisplay` instead of `_read_comp` since the zshrc switch (rarely used completion-debug key) | info | not traced; the D33 audit would surface this kind of change |
+| fzf installer (`run_onchange_install-fzf.sh.tmpl`, pinned release + checksums) and `.bashrc.d/fzf-*` | Claude | Phase 1; the zsh side is already done |
 
 ## Closed recently
 - BOCO merge Phase 0a (`home/` layout), merged and pushed 2026-10-15; the 2 gitleaks findings are accepted as expected.
