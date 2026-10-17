@@ -198,10 +198,13 @@ plan's assumptions:
   fzf-native preserved (`telescope.lua`); symbols-outline dropped (BOCO's `aerial.lua` covers it).
 - **init.lua**: BOCO's == this repo's minus the Python-host preamble, so the host-prog setter consolidated into BOCO's
   templated `options.lua.tmpl` (reads new `.filesystem.venvDir`) and `init.lua.tmpl` became a plain `init.lua`.
-- **Lockfile reconciled on a clean profile** against current LazyVim 16.0.1 (122 plugins; treesitter on its `main`
-  branch). Validated by a headless load exercising treesitter/LSP/cmp/formatting with no config errors. The big snag was
-  lazy.nvim's "too many rounds of missing plugins", caused by rock builds (oxocarbon's dev fennel rockspec, image.nvim's
-  magick) failing on this host's hererocks/Lua-5.1 path → fixed with `rocks = { enabled = false }` in `lazy.lua`.
+- **Lockfile reconciled on a clean profile** against current LazyVim 16.0.1 (123 plugins; treesitter on its `main`
+  branch). Validated by a headless load exercising treesitter/LSP/cmp/formatting with no config errors, via the new
+  `tools/nvim-lazy-sync/` helper. The big snag was lazy.nvim's "too many rounds of missing plugins" — an *install-failure*
+  loop, not a spec problem: rock builds (oxocarbon's dev fennel rockspec, image.nvim's magick) failed because the system
+  luarocks is Lua 5.4 while Neovim is LuaJIT/5.1. Fixed with `rocks = { enabled = true, hererocks = true }` (forcing
+  lazy's isolated 5.1 luarocks) plus `hererocks` + `ImageMagick-devel` in the installer. (image.nvim's magick rock still
+  does not load — inline rendering stays off; see open-items.)
 - **`run_once_install_neovim_deps.sh.tmpl`**: ported distro-gated (original Debian `apt-get` logic kept under `else`;
   Fedora `dnf` branch with verified names). Only the venv/pip provider step was live-tested (venv rebuilt at
   `~/.venv/neovim`); the `sudo dnf`/gem/npm steps run on the next full `chezmoi apply`. Manifest migration of its OS

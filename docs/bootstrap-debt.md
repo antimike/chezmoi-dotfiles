@@ -20,12 +20,14 @@ Tick an item once a `run_` script or managed file reproduces it from scratch.
 - [ ] `bd-track`: installed by hand via `just install-dev`. The installer
       (`run_onchange_install-bd-track.sh.tmpl`, pinned to `v0.5.1`) is in place;
       tick this once it has run on a clean host.
-- [ ] Neovim providers (the `~/.venv/neovim` pynvim/neovim venv, `gem install
-      neovim`, `npm -g neovim`, and `latexmk`/`biber`/`chafa`): now owned by
-      `run_once_install_neovim_deps.sh.tmpl` (Phase 2, distro-gated). Only the
-      venv/pip step has run on this host (rebuilt 2026-10-17 at `~/.venv/neovim`,
-      replacing the old versioned `~/.venv/neovim-3.11.8`); the `sudo dnf`/gem/npm
-      steps fire on the next full `chezmoi apply`. Tick once that has happened.
+- [ ] Neovim providers and rocks toolchain (the `~/.venv/neovim` pynvim/neovim
+      venv, `gem install neovim`, `npm -g neovim`, `latexmk`/`biber`/`chafa`,
+      `hererocks` via pipx, and `ImageMagick-devel`): now owned by
+      `run_once_install_neovim_deps.sh.tmpl` (Phase 2, distro-gated). On this host
+      the venv/pip step ran (rebuilt 2026-10-17 at `~/.venv/neovim`, replacing the
+      old versioned `~/.venv/neovim-3.11.8`) and hererocks + ImageMagick-devel were
+      installed by hand; the `sudo dnf`/gem/npm steps fire on the next full
+      `chezmoi apply`. Tick once that has happened.
 
 ## Known gaps
 

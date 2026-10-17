@@ -26,6 +26,15 @@ What the dump holds (one `<name>.txt` each): `env`, `env-zshenv-only` (what `zsh
 Limits: it records shell *state*, not behaviour. It does not open an fzf picker or press a key. The startup timing is `zsh -i -c exit` (no turbo plugins) and is a smoke test, not a benchmark. Random ids and the scratch path are normalised; if two renders of one tree ever differ, find the new nondeterministic value and add it to `normalise()`.
 Why the harness is built the way it is (pty, clean environment, scheduler wait): see the module docstring in `zsh-probe.py`. The planned keybinding audit (D33) should reuse `pty_session()`.
 
+## nvim-lazy-sync
+
+```sh
+uv run tools/nvim-lazy-sync/nvim-lazy-sync.py --clean    # full clean-profile reconcile
+uv run tools/nvim-lazy-sync/nvim-lazy-sync.py            # sync + verify in place
+```
+
+Regenerates the lazy.nvim lockfile (`home/lazyvim-lock.json`, symlinked to `~/.config/nvim/lazy-lock.json`) under a systemd process cap + timeout, then runs a headless load probe that scans `:messages` for real errors ("too many rounds of missing plugins", init.lua errors) while ignoring cosmetic noise. `--clean` wipes the installed plugins/state/cache and truncates the lockfile first, so the whole graph resolves fresh — use it after a big LazyVim jump. Full rationale and the luarocks/hererocks + treesitter-main gotchas are in [nvim-lazy-sync/README.md](nvim-lazy-sync/README.md) and the script's docstring.
+
 ## home-snapshot
 
 ```sh
