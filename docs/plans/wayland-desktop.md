@@ -269,7 +269,13 @@ makes SwayFX usable every day; anything not done by the deadline, **Tuesday 2026
 functional part of its step, not the whole step; scripts from `i3-config-mbp` are ported only when an item needs them.
 
 - [ ] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a
-      test call. First, because it is the item most likely to fail at the worst moment.
+      test call. First, because it is the item most likely to fail at the worst moment. **Must also work with an
+      external monitor plugged in** (MH, 2026-10-18: that is the interview setup), so this item pulls the external
+      monitor item forward. Fallback MH accepts: a GNOME session for meetings and interviews. State 2026-10-18: the
+      portal stack is in place (`xdg-desktop-portal-wlr` running, Fedora's `sway-portals.conf` routes ScreenCast and
+      Screenshot to it, slurp installed for the output picker); PipeWire sees the camera (V4L2 and libcamera) and both
+      mics. Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
+      InputCapture via the deprecated `UseIn` key); harmless for screen sharing.
 - [ ] **Lock, idle, power** (step 4): swaylock, swayidle, logind lid handling, lock before suspend; suspend and resume
       tested on this hybrid Intel/NVIDIA machine.
 - [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
