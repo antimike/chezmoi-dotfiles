@@ -278,7 +278,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
 - [ ] **kitty errors fixed** (the two known errors in [../open-items.md](../open-items.md); the full BOCO merge stays later).
 - [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
-- [ ] **Keyring unlock prompts** (D51; built 2026-10-18 on branch `wayland/keyring`, **login test pending**). Symptom:
+- [ ] **Keyring unlock prompts** (D51; merged 2026-10-18, **fresh-boot test pending**). Symptom:
       Chromium, and GPG/SSH use without the YubiKey, asked to unlock the "system keyring"; GNOME never did. Cause
       (journal, 2026-10-18 boot): GDM's PAM step started gnome-keyring and unlocked the login keyring
       (`gkr-pam: ... unlocked keyring`), but the handoff (`gnome-keyring-daemon --start`) lives in GNOME-only XDG
@@ -296,7 +296,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       no daemon at login: PAM starts one (`--login` in its command line) and the sway `exec` must take it over;
       (b) **re-login**, a daemon survives from an earlier session: PAM's open-session step unlocks it (journal:
       `unable to locate daemon control file`, `stashed password`, then `unlocked login keyring`). **Path (b) passed
-      the automatic checks 2026-10-18** (16:11 login; daemon from 14:57, D-Bus-activated, no prompt). The first
+      2026-10-18** (automatic checks, then MH's manual checks: Chromium, YubiKey unplugged) (16:11 login; daemon from 14:57, D-Bus-activated, no prompt). The first
       `keyring-check` required `--login` and failed that path wrongly; fixed in `f81a443`. **Path (a), the one the
       sway `exec` exists for, is untested: run `keyring-check` after the next reboot.** If it fails there, use the D51
       fallback (`gnome-keyring-daemon.socket`).
