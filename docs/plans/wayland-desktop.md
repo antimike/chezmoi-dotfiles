@@ -319,8 +319,11 @@ Console fallback first: if the session does not come up, Ctrl+Alt+F3, log in, `j
 
 **Results 2026-10-17 (MH, first SwayFX login):** 1: all four `active`. 2: `WAYLAND_DISPLAY=wayland-1`, `SWAYSOCK` set,
 `WLR_DRM_DEVICES=/dev/dri/igpu`. 3: `eDP-1`, LG Display. 4: the copy was the newest `cliphist` entry. GDM listed the uwsm
-entries (MH logged in through `SwayFX (uwsm)`). 5: pending. After the next login also confirm that no picom error
-appears (fix above).
+entries (MH logged in through `SwayFX (uwsm)`). 5 (GNOME, 2026-10-17): all four `inactive`, passed.
+picom still failed on the next SwayFX login (23:13): lingering keeps the user manager alive across logins, and
+the XDG autostart generator only re-runs on `daemon-reload`. Its unit dated from before the mask was deployed (a
+targeted apply does not run `run_after_reload-systemd-user.sh`). `systemctl --user daemon-reload` removed it. Still to do:
+confirm no picom error on the next SwayFX login.
 
 ## Open questions
 
