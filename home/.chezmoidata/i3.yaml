@@ -39,11 +39,24 @@ i3:
   colors:
     fg:
       name: i3wm.color7
-      default: #f0f0f0
+      default: "#f0f0f0"
     bg:
       name: i3wm.color3
-      default: #f0f0f0
-  font: Iosevka-Nerd-Font-Complete-Mono 12
+      default: "#285577"
+    # Inactive tabs/windows: must differ from bg, or tabs look like one title bar
+    inactive_fg:
+      name: i3wm.color15
+      default: "#aaaaaa"
+    inactive_bg:
+      name: i3wm.color8
+      default: "#333333"
+    unfocused_fg:
+      name: i3wm.color7
+      default: "#888888"
+    unfocused_bg:
+      name: i3wm.color0
+      default: "#222222"
+  font: pango:Iosevka Nerd Font 12
   mouse:
     warping: none
     follow_with_focus: no

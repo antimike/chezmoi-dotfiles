@@ -284,6 +284,24 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    fixed in the session: the picom package's XDG autostart entry ran under SwayFX (uwsm starts
    `xdg-desktop-autostart.target`) and failed; masked by a managed `~/.config/autostart/picom.desktop` (`Hidden=true`).
 3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. i3 is kept (D49).
+   **Built 2026-10-17** (branch `wayland/3-fragment-split`): body in `home/.chezmoitemplates/wm/common`, called with
+   `.wm` = `i3` or `sway`; `i3/config.tmpl` and `sway/config.tmpl` are thin wrappers. The split commit (`134ac2a`)
+   renders i3 byte-identically; separate fix commits follow (color fallbacks were `<no value>`: unquoted `#` in YAML;
+   font without `pango:`; undefined `$minimal_border`; launcher template read the wrong keys, so `passmenu --type`
+   lost its options; `$audio_intput` typo). The sway wrapper sets `$fg`/`$bg` from the fallbacks, a no-op
+   `$refresh_i3status`, `corner_radius`, swaynag/`uwsm stop` exit keys, the placeholder bar and the uwsm exec.
+   Checked: `sway -C` clean (negative control fails as expected), live `swaymsg reload` clean.
+   **i3-only blocks** (SwayFX gets them when their step ports them): volume and brightness keys (scripts missing; step
+   5); screenshot keys and the 7 `i3-input` prompts (step 6); the `nop` bindings `new-workspace`, `container-info`,
+   `workspace-info`, `kitty_media`, `kitty_notepad` (consumer is `i3-companion` in `i3wm-configuration`, not deployed;
+   step 6); startup `i3altlayout`, `~/.xsession`, `xss-lock`, `guake`, kitty launchers (step 6; `xss-lock` → step 4);
+   `$mod+Shift+w` (`wallpaper.service` does not exist); `restart` (no Sway equivalent).
+   The keybinding manifest (step 9) is not started: the byte-identical check needs the hand-written bindings, so it
+   gets its own branch after this merge.
+   **MH key check 2026-10-17: passed**, except that tabs were invisible: every `client.*` state used `$bg`/`$fg`, so the
+   active tab looked like the rest and a tabbed container read as one title bar (not `smart_borders` or
+   `hide_edge_borders`: ruled out with screenshots of two test tabs). Fixed with `inactive_*`/`unfocused_*` colors in
+   `.i3.colors` (interim greys, MH approved from a live preview). **Merged to `main` 2026-10-17.**
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
    stack and media control, kanshi profiles, Bluetooth, removable drives, Wi-Fi); `input` blocks;
