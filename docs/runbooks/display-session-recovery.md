@@ -53,6 +53,23 @@ sudo systemctl start gdm`. Only after a successful login and logout, make it the
 | Password rejected only in the greeter | PAM change (e.g. pam-u2f) | Console login (if it works there, the greeter's PAM file differs); `sudo etckeeper` rollback of `/etc/pam.d`. |
 | Nothing boots to a login at all | | Fedora live USB, mount the root filesystem, revert `/etc` with etckeeper (`git -C /mnt/etc log`/`checkout`) or re-enable GDM with `ln -sf /usr/lib/systemd/system/gdm.service /mnt/etc/systemd/system/display-manager.service`. |
 
+## System-level installs
+
+Everything chezmoi's installers have put outside `$HOME`, and how to remove it. Paths are the zbook ones from
+2026-10-17; another host may differ (for example, no `--unsupported-gpu` without the nvidia driver, no `dgpu` link on
+a single-GPU host). The per-host records in the fourth column are the truth for this machine. A managed
+`chezmoi-system` command to list and undo these is planned ([../open-items.md](../open-items.md)).
+
+| What | Installed by | System paths | Per-host record | Undo |
+|---|---|---|---|---|
+| GPU symlinks `/dev/dri/igpu`, `dgpu` | `run_onchange_install-udev-dri-symlinks.sh.tmpl` | `/etc/udev/rules.d/61-dri-stable-names.rules` | staged copy in `~/.local/state/chezmoi-system/`; etckeeper | `sudo rm` the rule, `sudo udevadm control --reload` (or etckeeper checkout) |
+| COPR repos `swayfx/swayfx`, `sdegler/hyprland` (D45) | `run_onchange_install-packages.sh.tmpl` (`coprs`) | `/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:<owner>:<project>.repo` | etckeeper | `sudo dnf copr remove <owner>/<project>` (after removing its packages) |
+| Wayland packages (`packagesWayland`) | `run_onchange_install-packages.sh.tmpl` | rpm-managed | `dnf history` (transaction 19 on zbook) | `sudo dnf history undo 19`, or `dnf remove` selected packages; `sudo dnf swap swayfx sway` keeps a Sway |
+| uwsm 0.27.0 and the uwsm GDM entries | `run_onchange_install-uwsm.sh.tmpl` | `/usr/local/{bin,libexec/uwsm,lib/systemd/user,share/uwsm,share/wayland-sessions,share/man,share/doc/uwsm,share/licenses/uwsm}` (51 paths) | `~/.local/state/chezmoi-system/uwsm/v0.27.0/files.txt` | `sudo sh ~/.local/state/chezmoi-system/uwsm/v0.27.0/uninstall.sh` |
+| User lingering | `run_onchange_after_enable-linger.sh.tmpl` | `/var/lib/systemd/linger/<user>` | `loginctl show-user <user> -p Linger` | `loginctl disable-linger` |
+
+Removing uwsm or a compositor package never affects the GNOME session; the rollback card below is for login problems.
+
 ## Rollback card
 
 ```
