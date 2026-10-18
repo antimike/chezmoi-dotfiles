@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: steps 0 and 1 done (2026-10-17); step 2 login checks 1-5 and picom re-check passed; uwsm adopted (D38)
+status: steps 0 and 1 done (2026-10-17); step 2 done and merged (2026-10-17); uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -275,7 +275,7 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    entries. Not yet seen on the GDM screen. Do not log into them before step 2 (no config, no `WLR_DRM_DEVICES`).
 2. **Session plumbing:** `wm-helpers-wayland.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
    joins it. Verify that logging into GNOME afterwards leaves no helper units running.
-   **Built 2026-10-17** (branch `wayland/2-session-plumbing`, applied): `wm-helpers-wayland.target` (`BindsTo=`/`After=`
+   **Built 2026-10-17** (branch `wayland/2-session-plumbing`, merged as `565b002`): `wm-helpers-wayland.target` (`BindsTo=`/`After=`
    `graphical-session.target`, `Wants=clipboard-stack-wayland.target`, no `[Install]`); `~/.config/uwsm/env` exports
    `WLR_DRM_DEVICES`/`AQ_DRM_DEVICES=/dev/dri/igpu` when the symlink exists; `~/.config/sway/config` (minimal, swaybar
    date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
