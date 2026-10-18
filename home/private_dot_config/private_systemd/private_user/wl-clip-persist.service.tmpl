@@ -2,7 +2,7 @@
 [Unit]
 Description=Keep the Wayland clipboard after its source program exits
 Documentation=https://github.com/Linus789/wl-clip-persist
-PartOf=clipboard-stack.target
+PartOf=clipboard-stack-wayland.target
 After=graphical-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
 # Stops retrying on a compositor without the data-control protocol (GNOME).

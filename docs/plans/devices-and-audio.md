@@ -7,7 +7,7 @@ updated: 2026-10-17
 # Devices and audio plan
 
 Part of the SwayFX daily driver ([wayland-desktop.md](wayland-desktop.md), step 5). Compositor-agnostic where possible:
-helpers run under the shared `wayland-wm-session.target`. **Goal (MH, 2026-10-17):** as much automatic device handling
+helpers run under the shared `wm-helpers-wayland.target`. **Goal (MH, 2026-10-17):** as much automatic device handling
 as possible; pickers (rofi or fuzzel) for the cases that need a choice. MH had trouble getting audio right on a previous
 machine and settled on playerctl; the ecosystem has moved since, so this starts with a review.
 

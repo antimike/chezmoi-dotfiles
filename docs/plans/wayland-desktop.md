@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: steps 0 and 1 done (2026-10-17); next step 2; uwsm adopted (D38)
+status: steps 0 and 1 done (2026-10-17); step 2 login checks 1-5 and picom re-check passed; uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -15,15 +15,16 @@ project: [theming.md](theming.md). Loose items: [ricing-backlog.md](ricing-backl
 ## Current state of zbook (checked 2026-10-17)
 
 - Fedora 44, GNOME on Wayland. **GDM** is the active display manager; `lightdm` is installed but unused.
-- i3 and polybar are installed but unused. The polybar config and the i3 helper scripts the i3 config calls
-  (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`, kitty's `open-notes.bash`) are
-  not in chezmoi or on this machine; they are in MH's **`antimike/i3-config-mbp`** repo (below).
-- Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack.target` running `cliphist@text`,
+- i3 and polybar are installed but unused. The i3 config is deployed (`~/.config/i3/config`) but **broken**: the helper
+  scripts it calls (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`, kitty's
+  `open-notes.bash`) and the polybar config are not in chezmoi or on this machine; they are in MH's
+  **`antimike/i3-config-mbp`** repo (below). Under D48 i3 is either fixed or removed (see "Keeping i3 working" below).
+- Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack-wayland.target` running `cliphist@text`,
   `cliphist@image` and `wl-clip-persist`; the clipse installer), started explicitly by a Wayland session, never by GNOME.
 - Already installed: `dunst`, `rofi` 2.0 (Wayland-native), `kitty` 0.47, `cliphist`, `wl-clipboard`, `brightnessctl`,
   `xdg-desktop-portal-gtk`, `gnome-keyring`, `pinentry-gnome3`, `pam-u2f`.
 - Secure Boot is on and swap is zram only (8G). Both matter for hibernation (below).
-- Existing X11/i3 session units (`xsession.target`, `xsettingsd`, xss-dimmer, wallpaper timer, redshift, polybar,
+- Existing X11/i3 session units (`wm-helpers-x11.target`, `xsettingsd`, xss-dimmer, wallpaper timer, redshift, polybar,
   picom, autorandr) stay; they are scoped to the i3 session and inert elsewhere.
 
 ## Source repos for the i3 setup (MH, 2026-10-17)
@@ -89,11 +90,14 @@ of the i3 config. A runner-up can stay installed after the trial if its config s
   `run_onchange_install-wl-clip-persist.sh.tmpl`. Not in Fedora's repos. The Hyprland COPR ships an older uwsm (0.24.3
   on 2026-10-17; upstream 0.27.1): do not install that one.
 - **Overlap:** with uwsm, do not use `sway-systemd` or start `niri.service` directly; one session model for all four.
-- **Shared helpers:** a hand-written `wayland-wm-session.target` (`BindsTo=graphical-session.target`, no `[Install]`).
+- **"Helpers"** means the systemd user services that run per-session background programs for whichever compositor is
+  running (clipboard history now; bar, notifications, idle, night light, outputs, wallpaper, polkit agent later). The
+  target only groups them; scripts run from keybindings are not helpers. Naming: `wm-helpers-<scope>.target` (D47).
+- **Shared helpers:** a hand-written `wm-helpers-wayland.target` (`BindsTo=graphical-session.target`, no `[Install]`).
   Every compositor's config starts it. Shared units (bar, notifications, idle, gamma, outputs, wallpaper, clipboard)
-  use `PartOf=`/`WantedBy=wayland-wm-session.target`. GNOME also starts `graphical-session.target`, which is why
+  use `PartOf=`/`WantedBy=wm-helpers-wayland.target`. GNOME also starts `graphical-session.target`, which is why
   helpers cannot hang off that directly. This keeps the existing rule: **scope units by session, not by host.**
-  `clipboard-stack.target` joins it (`Wants=` from the new target).
+  `clipboard-stack-wayland.target` joins it (`Wants=` from the new target).
 - Portals: `xdg-desktop-portal-wlr` for screen sharing and screenshots on wlroots compositors; `xdg-desktop-portal-gtk`
   (installed) for file pickers. niri and Hyprland want their own portal backends (`-gnome` and `-hyprland`); check each
   in its minimal config.
@@ -127,6 +131,17 @@ versions checked 2026-10-08 and 2026-10-17.
 **One source of truth for i3 and SwayFX.** Split `config.tmpl` into a shared fragment (`home/.chezmoitemplates/wm/common`)
 plus thin `i3/config.tmpl` and `sway/config.tmpl` wrappers that add WM-specific lines (SwayFX effects go in the sway
 wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and after the split).
+
+**Keeping i3 working (D48, D49).** The repo must not ship a broken i3 config, so the port fixes i3 along the way. i3
+stays for MH's old MacBook Pro (a possible future X11 host); zbook is the test bed until then. Rules:
+- Helper scripts both WMs need (volume, brightness, keyboard backlight, OSD, notes launcher, screenshot) are ported
+  **once** to `~/.local/bin` and work in X11 and Wayland sessions, like `clip` (check `$WAYLAND_DISPLAY` only where the
+  tools differ; `wpctl`, `brightnessctl` and `dunstctl` do not). The shared fragment calls them, so i3 and SwayFX use the
+  same paths; nothing new goes into `~/.config/i3/bin/`. They must not assume zbook's hardware: backlight and
+  keyboard-backlight device names (Apple's differ) come from host data or detection.
+- i3-only helpers found in the mining pass (step 6) are ported for i3 or dropped together with their bindings; none stay
+  referenced but missing.
+- i3's done check is an **i3 login test** on zbook (none yet), run once the steps above have touched its config.
 
 | i3 config item | Change for Sway |
 |---|---|
@@ -258,16 +273,26 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    `~/.local/state/chezmoi-system/uwsm/v0.27.0/`); GDM entries `SwayFX (uwsm)`, `niri (uwsm)`, `Wayfire (uwsm)` in
    `/usr/local/share/wayland-sessions`, plus the COPR's `Hyprland (uwsm-managed)` and the packages' own non-uwsm
    entries. Not yet seen on the GDM screen. Do not log into them before step 2 (no config, no `WLR_DRM_DEVICES`).
-2. **Session plumbing:** `wayland-wm-session.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
+2. **Session plumbing:** `wm-helpers-wayland.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
    joins it. Verify that logging into GNOME afterwards leaves no helper units running.
-3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical.
+   **Built 2026-10-17** (branch `wayland/2-session-plumbing`, applied): `wm-helpers-wayland.target` (`BindsTo=`/`After=`
+   `graphical-session.target`, `Wants=clipboard-stack-wayland.target`, no `[Install]`); `~/.config/uwsm/env` exports
+   `WLR_DRM_DEVICES`/`AQ_DRM_DEVICES=/dev/dri/igpu` when the symlink exists; `~/.config/sway/config` (minimal, swaybar
+   date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
+   Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
+   **Login test 2026-10-17 (MH):** checks 1-5 and the picom re-check passed (results under "Step 2 login test"). Found and
+   fixed in the session: the picom package's XDG autostart entry ran under SwayFX (uwsm starts
+   `xdg-desktop-autostart.target`) and failed; masked by a managed `~/.config/autostart/picom.desktop` (`Hidden=true`).
+3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. i3 is kept (D49).
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
    stack and media control, kanshi profiles, Bluetooth, removable drives, Wi-Fi); `input` blocks;
-   volume/brightness/keyboard-backlight keys with OSD; gammastep.
+   volume/brightness/keyboard-backlight keys with OSD; gammastep. The key scripts go to `~/.local/bin` and work in
+   both session types; the i3 bindings switch to them too ("Keeping i3 working").
 6. **Mining pass** over i3-config-mbp, i3wm-configuration and arcolinux-i3wm (scripts worth porting), then the
    **X-specific config items:** `app_id` rules, screenshot rewrite, `i3-input` wrapper, exit/nag, dropdown terminal,
-   opacity keys.
+   opacity keys. Each script found is ported (to `~/.local/bin`, both session types), ported i3-only, or dropped with
+   its bindings. Then the **i3 login test**, if i3 is kept.
 7. **waybar** with tray (the polybar replacement).
 8. **Pickers:** password picker (with the sensitive-clipboard check), clipboard picker, **notification history browser**
    (`dunstctl history` JSON → `jq` → rofi; Enter = `history-pop <ID>`, a custom key = `history-rm <ID>`; raise
@@ -281,7 +306,26 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 
 Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
 
+## Step 2 login test
+
+Console fallback first: if the session does not come up, Ctrl+Alt+F3, log in, `journalctl --user -b -u 'wayland-wm@*'`
+(see the [recovery runbook](../runbooks/display-session-recovery.md)). In the SwayFX session (`$mod+Return` opens kitty):
+
+1. `systemctl --user is-active wm-helpers-wayland.target clipboard-stack-wayland.target cliphist@text.service wl-clip-persist.service`: all `active`.
+2. `systemctl --user show-environment | grep -E 'WAYLAND_DISPLAY|SWAYSOCK|WLR_DRM'`: all three set.
+3. `swaymsg -t get_outputs | grep -E '"name"|make'`: the panel is listed (rendering on Intel).
+4. Copy text in kitty, then `cliphist list | head -1`: the copy is there.
+5. `$mod+Shift+e` → "Yes, exit": back at GDM. Log into GNOME; the command in 1 prints `inactive` for all four.
+
+**Results 2026-10-17 (MH, first SwayFX login):** 1: all four `active`. 2: `WAYLAND_DISPLAY=wayland-1`, `SWAYSOCK` set,
+`WLR_DRM_DEVICES=/dev/dri/igpu`. 3: `eDP-1`, LG Display. 4: the copy was the newest `cliphist` entry. GDM listed the uwsm
+entries (MH logged in through `SwayFX (uwsm)`). 5 (GNOME, 2026-10-17): all four `inactive`, passed.
+picom still failed on the next SwayFX login (23:13): lingering keeps the user manager alive across logins, and
+the XDG autostart generator only re-runs on `daemon-reload`. Its unit dated from before the mask was deployed (a
+targeted apply does not run `run_after_reload-systemd-user.sh`). `systemctl --user daemon-reload` removed it.
+Re-check (MH, 2026-10-17): the next SwayFX login showed no picom error and `journalctl --user -b | grep picom` had nothing after 23:13, passed.
+
 ## Open questions
 
-1. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
+1. ~~Keep the i3/X11 units long-term, or retire them?~~ Keep, and keep them working (D48, D49).
 2. Which physical sockets are `DP-4..6` (the NVIDIA-wired ports)? In the backlog until MH is at the desk.

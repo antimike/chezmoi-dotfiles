@@ -3,3 +3,7 @@
 .local/bin/claude-state-sync
 .config/systemd/user/claude-state-sync.service
 .config/systemd/user/claude-state-sync.timer
+# Session targets renamed to wm-helpers-<scope> on 2026-10-17 (D47).
+.config/systemd/user/wayland-wm-session.target
+.config/systemd/user/clipboard-stack.target
+.config/systemd/user/xsession.target

@@ -1,7 +1,7 @@
 ---
 summary: Working rules for sessions in this repo: commits, branches, public-repo scans, push/auth, chezmoi, shell quirks
 status: current
-updated: 2026-10-15
+updated: 2026-10-17
 ---
 
 # Conventions
@@ -29,6 +29,9 @@ updated: 2026-10-15
 - Chezmoi ignores source mode bits: scripts invoked by path need an `executable_` prefix.
 - Template guards: tool present = `lookPath`; WSL = shared `is-wsl` helper; employer-only = `work_tooling` (D25).
 - Render-time commands go through `.chezmoitemplates/safe-output.sh`.
+- No broken code or configs (D48): what chezmoi deploys must work where it renders. If it cannot be fixed yet, guard it
+  out or remove it, and keep an open item until it is fixed.
+- Helpers needed in more than one session type go in `~/.local/bin` and work in X11 and Wayland (`clip` is the model).
 
 ## Shell and tools
 - zsh does not word-split unquoted variables: use arrays (`"${files[@]}"`) or `${=var}`.

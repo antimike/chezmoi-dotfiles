@@ -2,7 +2,7 @@
 [Unit]
 Description=Clipboard history (cliphist), %i entries
 Documentation=https://github.com/sentriz/cliphist man:wl-paste(1)
-PartOf=clipboard-stack.target
+PartOf=clipboard-stack-wayland.target
 After=graphical-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
 # Stops retrying on a compositor without the data-control protocol (GNOME).
