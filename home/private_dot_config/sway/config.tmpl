@@ -7,6 +7,9 @@
 # theming cache exists.
 set $fg {{ .i3.colors.fg.default }}
 set $bg {{ .i3.colors.bg.default }}
+{{- range $c := list "inactive_fg" "inactive_bg" "unfocused_fg" "unfocused_bg" }}
+set ${{ $c }} {{ (get $.i3.colors $c).default }}
+{{- end }}
 # No status bar signal yet (waybar, step 7).
 set $refresh_i3status true
 

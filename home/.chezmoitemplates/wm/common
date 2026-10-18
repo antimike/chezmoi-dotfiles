@@ -37,12 +37,15 @@ default_floating_border {{.i3.borders.default_floating_border}}
 # it fails to get colors from Xresources.
 set_from_resource $fg {{.i3.colors.fg.name}} {{.i3.colors.fg.default}}
 set_from_resource $bg {{.i3.colors.bg.name}} {{.i3.colors.bg.default}}
+{{- range $c := list "inactive_fg" "inactive_bg" "unfocused_fg" "unfocused_bg" }}
+set_from_resource ${{ $c }} {{ (get $.i3.colors $c).name }} {{ (get $.i3.colors $c).default }}
+{{- end }}
 {{- end }}
 
 # class                 border  backgr. text indicator child_border
 client.focused          $bg     $bg     $fg  $bg       $bg
-client.focused_inactive $bg     $bg     $fg  $bg       $bg
-client.unfocused        $bg     $bg     $fg  $bg       $bg
+client.focused_inactive $inactive_bg $inactive_bg $inactive_fg $inactive_bg $inactive_bg
+client.unfocused        $unfocused_bg $unfocused_bg $unfocused_fg $unfocused_bg $unfocused_bg
 client.urgent           $bg     $bg     $fg  $bg       $bg
 client.placeholder      $bg     $bg     $fg  $bg       $bg
 
