@@ -11,11 +11,16 @@
 # removes them. If sudo cannot run non-interactively the script prints the
 # command and exits 1, so the next `chezmoi apply` retries.
 #
+# The nvidia check is made at render time: after installing or removing the
+# proprietary driver, re-run `chezmoi apply` so the entries are rewritten.
+#
 # Only runs on Linux, non-WSL hosts whose `display_server` host key is "wayland".
 # Snapshot /etc before system changes (docs/runbooks/display-session-recovery.md);
 # this touches /usr/local only, which etckeeper does not track.
 {{- $ds := dig "display_server" "x11" . -}}
 {{- $run := and (eq .chezmoi.os "linux") (eq $ds "wayland") (ne (includeTemplate "is-wsl" .) "true") }}
+{{- /* Proprietary nvidia driver loaded at render time: sessions' nvidiaArgs apply. */}}
+{{- $nvidia := not (not (stat "/sys/module/nvidia")) }}
 set -eu
 
 ENABLED={{ if $run }}1{{ else }}0{{ end }}
@@ -46,7 +51,7 @@ write_sessions() {
 [Desktop Entry]
 Name={{ .name }}
 Comment={{ .comment }}
-Exec={{ .exec }}
+Exec={{ .exec }}{{ if and $nvidia (hasKey . "nvidiaArgs") }} {{ .nvidiaArgs }}{{ end }}
 TryExec=uwsm
 DesktopNames={{ .desktopNames }}
 Type=Application

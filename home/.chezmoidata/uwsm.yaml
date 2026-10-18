@@ -28,16 +28,19 @@ uwsm:
   # Session entries written to /usr/local/share/wayland-sessions/<id>.desktop.
   # `exec` follows upstream's README: preferably a reference to the compositor's
   # own entry (`uwsm start -- foo.desktop`); a full command line must mirror the
-  # entry's Name/DesktopNames in -N/-D. Hyprland needs none: its COPR package
-  # ships hyprland-uwsm.desktop.
+  # entry's Name/DesktopNames in -N/-D. Optional `nvidiaArgs` are appended to
+  # `exec` on hosts running the proprietary nvidia driver. Hyprland needs no
+  # entry here: its COPR package ships hyprland-uwsm.desktop.
   sessions:
     - id: swayfx-uwsm
       name: "SwayFX (uwsm)"
       comment: "SwayFX under uwsm"
-      # Sway refuses to start while the proprietary nvidia module is loaded
-      # unless given --unsupported-gpu, even when it renders on the Intel GPU
-      # (D41). sway.desktop runs plain `sway`, so this cannot reference it.
-      exec: "uwsm start -N SwayFX -D sway:wlroots:swayfx -- sway --unsupported-gpu"
+      # sway.desktop runs plain `sway`, so this cannot reference it (see nvidiaArgs).
+      exec: "uwsm start -N SwayFX -D sway:wlroots:swayfx -- sway"
+      # Appended only where the proprietary nvidia module is loaded when the
+      # installer renders (/sys/module/nvidia): Sway refuses to start then unless
+      # given --unsupported-gpu, even when it renders on another GPU (D41).
+      nvidiaArgs: "--unsupported-gpu"
       desktopNames: "sway;wlroots;swayfx"
     - id: niri-uwsm
       name: "niri (uwsm)"
