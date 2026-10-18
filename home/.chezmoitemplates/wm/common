@@ -13,6 +13,7 @@ set $right {{.i3.keys.named.right}}
 set $i3_dir ~/.config/i3
 set $term kitty
 set $mediaplayer cmus
+set $minimal_border {{.i3.gaps.minimal_border_size}}
 
 font {{.i3.font}}
 
