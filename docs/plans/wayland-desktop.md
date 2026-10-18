@@ -18,12 +18,12 @@ project: [theming.md](theming.md). Loose items: [ricing-backlog.md](ricing-backl
 - i3 and polybar are installed but unused. The polybar config and the i3 helper scripts the i3 config calls
   (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`, kitty's `open-notes.bash`) are
   not in chezmoi or on this machine; they are in MH's **`antimike/i3-config-mbp`** repo (below).
-- Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack.target` running `cliphist@text`,
+- Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack-wayland.target` running `cliphist@text`,
   `cliphist@image` and `wl-clip-persist`; the clipse installer), started explicitly by a Wayland session, never by GNOME.
 - Already installed: `dunst`, `rofi` 2.0 (Wayland-native), `kitty` 0.47, `cliphist`, `wl-clipboard`, `brightnessctl`,
   `xdg-desktop-portal-gtk`, `gnome-keyring`, `pinentry-gnome3`, `pam-u2f`.
 - Secure Boot is on and swap is zram only (8G). Both matter for hibernation (below).
-- Existing X11/i3 session units (`xsession.target`, `xsettingsd`, xss-dimmer, wallpaper timer, redshift, polybar,
+- Existing X11/i3 session units (`wm-helpers-x11.target`, `xsettingsd`, xss-dimmer, wallpaper timer, redshift, polybar,
   picom, autorandr) stay; they are scoped to the i3 session and inert elsewhere.
 
 ## Source repos for the i3 setup (MH, 2026-10-17)
@@ -89,11 +89,14 @@ of the i3 config. A runner-up can stay installed after the trial if its config s
   `run_onchange_install-wl-clip-persist.sh.tmpl`. Not in Fedora's repos. The Hyprland COPR ships an older uwsm (0.24.3
   on 2026-10-17; upstream 0.27.1): do not install that one.
 - **Overlap:** with uwsm, do not use `sway-systemd` or start `niri.service` directly; one session model for all four.
-- **Shared helpers:** a hand-written `wayland-wm-session.target` (`BindsTo=graphical-session.target`, no `[Install]`).
+- **"Helpers"** means the systemd user services that run per-session background programs for whichever compositor is
+  running (clipboard history now; bar, notifications, idle, night light, outputs, wallpaper, polkit agent later). The
+  target only groups them; scripts run from keybindings are not helpers. Naming: `wm-helpers-<scope>.target` (D47).
+- **Shared helpers:** a hand-written `wm-helpers-wayland.target` (`BindsTo=graphical-session.target`, no `[Install]`).
   Every compositor's config starts it. Shared units (bar, notifications, idle, gamma, outputs, wallpaper, clipboard)
-  use `PartOf=`/`WantedBy=wayland-wm-session.target`. GNOME also starts `graphical-session.target`, which is why
+  use `PartOf=`/`WantedBy=wm-helpers-wayland.target`. GNOME also starts `graphical-session.target`, which is why
   helpers cannot hang off that directly. This keeps the existing rule: **scope units by session, not by host.**
-  `clipboard-stack.target` joins it (`Wants=` from the new target).
+  `clipboard-stack-wayland.target` joins it (`Wants=` from the new target).
 - Portals: `xdg-desktop-portal-wlr` for screen sharing and screenshots on wlroots compositors; `xdg-desktop-portal-gtk`
   (installed) for file pickers. niri and Hyprland want their own portal backends (`-gnome` and `-hyprland`); check each
   in its minimal config.
@@ -258,12 +261,12 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    `~/.local/state/chezmoi-system/uwsm/v0.27.0/`); GDM entries `SwayFX (uwsm)`, `niri (uwsm)`, `Wayfire (uwsm)` in
    `/usr/local/share/wayland-sessions`, plus the COPR's `Hyprland (uwsm-managed)` and the packages' own non-uwsm
    entries. Not yet seen on the GDM screen. Do not log into them before step 2 (no config, no `WLR_DRM_DEVICES`).
-2. **Session plumbing:** `wayland-wm-session.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
+2. **Session plumbing:** `wm-helpers-wayland.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
    joins it. Verify that logging into GNOME afterwards leaves no helper units running.
-   **Built 2026-10-17** (branch `wayland/2-session-plumbing`, applied): `wayland-wm-session.target` (`BindsTo=`/`After=`
-   `graphical-session.target`, `Wants=clipboard-stack.target`, no `[Install]`); `~/.config/uwsm/env` exports
+   **Built 2026-10-17** (branch `wayland/2-session-plumbing`, applied): `wm-helpers-wayland.target` (`BindsTo=`/`After=`
+   `graphical-session.target`, `Wants=clipboard-stack-wayland.target`, no `[Install]`); `~/.config/uwsm/env` exports
    `WLR_DRM_DEVICES`/`AQ_DRM_DEVICES=/dev/dri/igpu` when the symlink exists; `~/.config/sway/config` (minimal, swaybar
-   date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wayland-wm-session.target`.
+   date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
    Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
    **Pending (MH at the desk):** log into `SwayFX (uwsm)`, then run the checks in "Step 2 login test" below.
 3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical.
@@ -292,7 +295,7 @@ Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
 Console fallback first: if the session does not come up, Ctrl+Alt+F3, log in, `journalctl --user -b -u 'wayland-wm@*'`
 (see the [recovery runbook](../runbooks/display-session-recovery.md)). In the SwayFX session (`$mod+Return` opens kitty):
 
-1. `systemctl --user is-active wayland-wm-session.target clipboard-stack.target cliphist@text.service wl-clip-persist.service`: all `active`.
+1. `systemctl --user is-active wm-helpers-wayland.target clipboard-stack-wayland.target cliphist@text.service wl-clip-persist.service`: all `active`.
 2. `systemctl --user show-environment | grep -E 'WAYLAND_DISPLAY|SWAYSOCK|WLR_DRM'`: all three set.
 3. `swaymsg -t get_outputs | grep -E '"name"|make'`: the panel is listed (rendering on Intel).
 4. Copy text in kitty, then `cliphist list | head -1`: the copy is there.
