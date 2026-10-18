@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# clip — copy stdin to the clipboard, on Wayland or X11.
+#
+#   command | clip             copy (wl-copy on Wayland, xclip -sel clip on X11)
+#   command | clip --private   same, but marked sensitive so cliphist skips it
+#
+# Wayland is picked when $WAYLAND_DISPLAY is set. On X11 nothing records clipboard
+# history, so --private changes nothing there.
+set -euo pipefail
+
+usage() { echo "usage: command | clip [-p|--private]" >&2; exit 2; }
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "clip: '$1' not found" >&2; exit 127; }
+}
+
+private=0
+case "${1:-}" in
+  -p | --private) private=1; shift ;;
+  -h | --help) usage ;;
+  "") ;;
+  *) usage ;;
+esac
+[[ $# -eq 0 ]] || usage
+
+if [[ -t 0 ]]; then
+  echo "clip: nothing on stdin (pipe something in)" >&2
+  exit 2
+fi
+
+if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+  need wl-copy
+  if ((private)); then exec wl-copy --sensitive; else exec wl-copy; fi
+elif [[ -n "${DISPLAY:-}" ]]; then
+  need xclip
+  exec xclip -selection clipboard
+else
+  echo "clip: no graphical session (neither WAYLAND_DISPLAY nor DISPLAY is set)" >&2
+  exit 1
+fi
