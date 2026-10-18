@@ -1,4 +1,6 @@
 enable-ssh-support
+# Curses on text consoles, Fedora's GUI-aware wrapper elsewhere (see the script).
+pinentry-program {{ joinPath .chezmoi.homeDir ".local" "bin" "pinentry-auto" }}
 # Idle timeout in seconds (resets on each use); gpg-agent default is 600.
 default-cache-ttl 28800
 # Absolute cap regardless of use; gpg-agent default is 7200.

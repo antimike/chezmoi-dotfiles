@@ -15,7 +15,9 @@ installed but not enabled; sessions offered: GNOME, GNOME Classic, i3; kernel cm
 ## Before any change
 
 1. **Confirm a text console works:** `Ctrl+Alt+F3` gives a login prompt; log in with your **password** (not only the
-   YubiKey); `Ctrl+Alt+F1`/`F2` returns. If this fails, stop: fix the console first.
+   YubiKey); `Ctrl+Alt+F1`/`F2` returns. If this fails, stop: fix the console first. (Checked 2026-10-17. A zsh
+   login on a console points gpg-agent at it, so YubiKey PIN prompts use pinentry-curses there; run `sshstart` once
+   back in the GUI, or GUI-side SSH prompts stay on the console.)
 2. **Know your fallback session:** GNOME on GDM stays installed and untouched until the new setup has worked for days.
 3. **Snapshot `/etc`:** `sudo etckeeper commit "before <change>"` (etckeeper is installed). Rollback is
    `sudo etckeeper vcs log` / `checkout` of the changed files.
@@ -55,6 +57,7 @@ sudo systemctl start gdm`. Only after a successful login and logout, make it the
 
 ```
 Ctrl+Alt+F3  -> log in with the password
+               (YubiKey/SSH prompts appear here as curses; back in the GUI run  sshstart)
 sudo systemctl enable --force gdm && sudo reboot
 GRUB: e, add  systemd.unit=multi-user.target  to the linux line, Ctrl+X
 sudo etckeeper vcs log --oneline   # then checkout the changed files

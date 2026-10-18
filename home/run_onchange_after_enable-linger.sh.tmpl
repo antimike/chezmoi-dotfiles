@@ -20,6 +20,8 @@ if loginctl enable-linger "$user" 2>/dev/null; then
   :
 elif sudo -n loginctl enable-linger "$user" 2>/dev/null; then
   :
+elif [ -t 0 ] && sudo loginctl enable-linger "$user"; then
+  :
 else
   echo "linger: could not enable automatically. Run:  sudo loginctl enable-linger $user" >&2
   exit 1

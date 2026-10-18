@@ -2,6 +2,19 @@
 {{- $data := . -}}
 #!usr/bin/env zsh
 
+# GnuPG: pinentry needs the terminal. $TTY (not $(tty)) also works below the
+# instant prompt, which redirects stdin. On a text console (Ctrl+Alt+F3), point
+# the agent's startup tty and display at it too, so SSH/YubiKey prompts use
+# pinentry-curses here instead of a GUI pinentry on the hidden graphical
+# session. Back in the GUI, run `sshstart` once to move them back (GUI shells
+# do not do it on their own).
+export GPG_TTY=$TTY
+if [[ -o login && $TTY == /dev/tty[0-9]* && -z $WAYLAND_DISPLAY && -z $DISPLAY ]] \
+    && (( $+commands[gpg-connect-agent] )); then
+  export PINENTRY_USER_DATA=curses   # read by ~/.local/bin/pinentry-auto
+  gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1
+fi
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.

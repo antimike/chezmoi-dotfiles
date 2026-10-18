@@ -1,0 +1,55 @@
+# Pinned uwsm release and the uwsm-managed GDM session entries, consumed by
+# run_onchange_install-uwsm.sh.tmpl.
+#
+# uwsm (https://github.com/Vladimir-csp/uwsm, MIT) runs each Wayland compositor
+# as systemd user units (D38). Not in Fedora's repos; the Hyprland COPR ships an
+# older build (0.24.3) that is not used. Built with meson and installed to
+# /usr/local, because GDM only reads session entries from system directories.
+# The pin is the commit of the tag (lightweight tag; git checks the hash).
+#
+# Pin rule: exact tag, at least 14 days old. v0.27.0 = 2026-09-15 (v0.27.1 of
+# 2026-10-15 was too new on 2026-10-17). Build deps (packages.yaml,
+# packagesWayland): meson, scdoc, python3-dbus, python3-pyxdg; optional newt
+# (whiptail) and waitpid (util-linux).
+#
+# To bump:
+#   1. version: new upstream tag
+#   2. commit:  git ls-remote https://github.com/Vladimir-csp/uwsm.git 'refs/tags/<tag>^{}' refs/tags/<tag>
+#               (use the peeled ^{} line if the tag is annotated)
+#   3. commit the change; the rendered script hash changes, so the installer
+#      re-runs and stages the new build.
+uwsm:
+  version: "v0.27.0"
+  commit:  "f82dece2cedf308c897513f093f45025fbfdda4f"
+  repo:    "https://github.com/Vladimir-csp/uwsm.git"
+  # meson -D options. uwsm-app: fast `uwsm app` client for launchers/bindings.
+  mesonOptions:
+    - "uwsm-app=enabled"
+  # Session entries written to /usr/local/share/wayland-sessions/<id>.desktop.
+  # `exec` follows upstream's README: preferably a reference to the compositor's
+  # own entry (`uwsm start -- foo.desktop`); a full command line must mirror the
+  # entry's Name/DesktopNames in -N/-D. Optional `nvidiaArgs` are appended to
+  # `exec` on hosts running the proprietary nvidia driver. Hyprland needs no
+  # entry here: its COPR package ships hyprland-uwsm.desktop.
+  sessions:
+    - id: swayfx-uwsm
+      name: "SwayFX (uwsm)"
+      comment: "SwayFX under uwsm"
+      # sway.desktop runs plain `sway`, so this cannot reference it (see nvidiaArgs).
+      exec: "uwsm start -N SwayFX -D sway:wlroots:swayfx -- sway"
+      # Appended only where the proprietary nvidia module is loaded when the
+      # installer renders (/sys/module/nvidia): Sway refuses to start then unless
+      # given --unsupported-gpu, even when it renders on another GPU (D41).
+      nvidiaArgs: "--unsupported-gpu"
+      desktopNames: "sway;wlroots;swayfx"
+    - id: niri-uwsm
+      name: "niri (uwsm)"
+      comment: "niri under uwsm"
+      # niri-session detects it runs as a user service and execs `niri --session`.
+      exec: "uwsm start -- niri.desktop"
+      desktopNames: "niri"
+    - id: wayfire-uwsm
+      name: "Wayfire (uwsm)"
+      comment: "Wayfire under uwsm"
+      exec: "uwsm start -- wayfire.desktop"
+      desktopNames: "Wayfire;wlroots"
