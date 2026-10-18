@@ -1,0 +1,11 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Helpers shared by the uwsm-managed Wayland compositors
+Documentation=file://%h/.local/share/chezmoi/docs/plans/wayland-desktop.md
+BindsTo=graphical-session.target
+After=graphical-session.target
+Wants=clipboard-stack.target
+# No [Install] section on purpose: GNOME also starts graphical-session.target,
+# so helpers hang off this target instead, and only a compositor config starts
+# it (after `uwsm finalize`). Helper units use PartOf= this target.
+{{- end }}

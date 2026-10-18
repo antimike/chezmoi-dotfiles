@@ -3,8 +3,8 @@
 Description=Wayland clipboard history and persistence
 Documentation=file://%h/.local/share/chezmoi/docs/plans/wayland-desktop.md
 Wants=cliphist@text.service cliphist@image.service wl-clip-persist.service
+PartOf=wayland-wm-session.target
 After=graphical-session.target
 # No [Install] section on purpose: nothing starts this by default, so GNOME (no
-# data-control protocol) never tries. A Sway session starts it with
-#   exec systemctl --user start clipboard-stack.target
+# data-control protocol) never tries. wayland-wm-session.target pulls it in.
 {{- end }}
