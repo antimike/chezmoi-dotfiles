@@ -289,12 +289,17 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       daemon is installed, before `uwsm finalize`); `no-allow-external-cache` in `gpg-agent.conf`, because
       pinentry-gnome3 looked up cached passphrases in the keyring. **GPG half passed 2026-10-18** (MH: `ssh-add -l`
       without the YubiKey, no prompt). **Login test:** right after a SwayFX login, before opening Chromium, run
-      `keyring-check` (managed in `~/.local/bin`): one daemon started by PAM (`--login` in its command line; the
-      socket `/run/user/1000/keyring/control` alone proves nothing, since a D-Bus-activated daemon creates it too), no
-      `couldn't access control socket` in the session's journal, login keyring unlocked, gpg-agent option set; it then
-      lists the manual checks (Chromium, YubiKey unplugged). Negative control: in the 2026-10-18 session, started
-      before the fix, it fails the three keyring checks. If the daemon check fails, use the D51 fallback
-      (`gnome-keyring-daemon.socket`).
+      `keyring-check` (managed in `~/.local/bin`): exactly one daemon, PAM's unlock (`gkr-pam: unlocked login keyring`)
+      in this login's system journal, no `couldn't access control socket` in the session's journal, login keyring
+      unlocked, gpg-agent option set; it then lists the manual checks (Chromium, YubiKey unplugged). Two login paths
+      exist, because lingering keeps the user manager (and a daemon in it) alive across logouts: (a) **fresh boot**,
+      no daemon at login: PAM starts one (`--login` in its command line) and the sway `exec` must take it over;
+      (b) **re-login**, a daemon survives from an earlier session: PAM's open-session step unlocks it (journal:
+      `unable to locate daemon control file`, `stashed password`, then `unlocked login keyring`). **Path (b) passed
+      the automatic checks 2026-10-18** (16:11 login; daemon from 14:57, D-Bus-activated, no prompt). The first
+      `keyring-check` required `--login` and failed that path wrongly; fixed in `f81a443`. **Path (a), the one the
+      sway `exec` exists for, is untested: run `keyring-check` after the next reboot.** If it fails there, use the D51
+      fallback (`gnome-keyring-daemon.socket`).
       **Text consoles:** nothing unlocks the keyring there. `/etc/pam.d/login` (and the `system-auth`/`postlogin`
       stacks it includes) has no `pam_gnome_keyring`; a console session shares the user's systemd manager and bus, so
       it uses a graphical session's unlocked daemon if one runs, and otherwise a request activates a locked daemon whose

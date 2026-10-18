@@ -8,7 +8,7 @@ updated: 2026-10-18
 
 ## Where we are
 - **Reprioritized 2026-10-18 (D50): functional daily driver first.** MH needs to start a job search soon. The main line is the functional SwayFX checklist ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"); the keybinding manifest (Lua redesign recorded in [plans/keybinding-manifest.md](plans/keybinding-manifest.md)), the package map refactor (D32), theming and niri/Hyprland/Wayfire configs are spare-time side quests ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
-- **Keyring unlock prompts under SwayFX fixed 2026-10-18 (D51), login test pending** (branch `wayland/keyring`): the sway config takes over GDM's PAM-unlocked gnome-keyring; `gpg-agent.conf` sets `no-allow-external-cache`. No `pass` bridge. GPG half passed; **after the next login run `keyring-check`**, then merge the branch.
+- **Keyring unlock prompts under SwayFX fixed 2026-10-18 (D51)** (branch `wayland/keyring`): the sway config takes over GDM's PAM-unlocked gnome-keyring; `gpg-agent.conf` sets `no-allow-external-cache`. No `pass` bridge. GPG half passed. **Re-login path passed the automatic checks 2026-10-18** (a daemon from an earlier session survives via lingering and PAM unlocks it; `keyring-check` wrongly required a `--login` daemon, fixed in `f81a443`). Pending: the Chromium manual check, then merge; the **fresh-boot path** (the one the sway `exec` is for) is tested after the next reboot.
 - Claude Code migration (BOCO/WSL2 → zbook, Fedora 44): **done** except the claude-mem evaluation. Log: [log/migration-steps.md](log/migration-steps.md).
 - Dev environment is functional: chezmoi applied, tools pinned, `bd`/`bd-track`, `claude-state` sync and restic backups running, GPG on the YubiKey.
 - `main` is trunk (**history rewritten and force-pushed 2026-10-17**; see below), in sync with origin. All merged `boco-merge/*` branches are deleted; `boco-merge/3-hooks` is open (below). Docs consolidated into this tree on 2026-10-15.
@@ -30,7 +30,7 @@ updated: 2026-10-18
 
 ## Next actions (in order; reprioritized by MH 2026-10-18, D50)
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
-2. **First, after the next SwayFX login:** run `keyring-check` (before opening Chromium); if it passes, merge `wayland/keyring` into `main` and push (MH OK given); if the daemon check fails, apply the D51 fallback.
+2. **Keyring (D51):** MH opens Chromium (no unlock prompt expected); if clean, merge `wayland/keyring` into `main` and push (MH OK given). After the next **reboot**, run `keyring-check` again for the fresh-boot path; if it fails, apply the D51 fallback.
 3. **Functional SwayFX checklist, deadline Tuesday 2026-10-20** (MH; ideally sooner) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order: screen sharing/camera/mic in the browser; lock, idle, power (step 4); volume and brightness keys; screenshots; minimal bar; kitty errors; keybinding cheat sheet; external monitor (waiting on MH: `DP-4..6` sockets); i3 off zbook.
 4. Atlassian/Jira review pass when MH schedules it.
 5. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
