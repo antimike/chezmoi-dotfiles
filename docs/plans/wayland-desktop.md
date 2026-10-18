@@ -298,6 +298,10 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    `$mod+Shift+w` (`wallpaper.service` does not exist); `restart` (no Sway equivalent).
    The keybinding manifest (step 9) is not started: the byte-identical check needs the hand-written bindings, so it
    gets its own branch after this merge.
+   **MH key check 2026-10-17: passed**, except that tabs were invisible: every `client.*` state used `$bg`/`$fg`, so the
+   active tab looked like the rest and a tabbed container read as one title bar (not `smart_borders` or
+   `hide_edge_borders`: ruled out with screenshots of two test tabs). Fixed with `inactive_*`/`unfocused_*` colors in
+   `.i3.colors` (interim greys, MH approved from a live preview). **Merged to `main` 2026-10-17.**
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
    stack and media control, kanshi profiles, Bluetooth, removable drives, Wi-Fi); `input` blocks;
