@@ -1,0 +1,68 @@
+#!/bin/sh
+# run_onchange_install-udev-dri-symlinks.sh.tmpl — install a udev rule that
+# gives the GPUs stable, colon-free device names: /dev/dri/igpu (Intel) and
+# /dev/dri/dgpu (NVIDIA).
+#
+# Why: cardN numbering can swap between boots, and the stable
+# /dev/dri/by-path/pci-…-card names contain colons, which break the
+# colon-separated WLR_DRM_DEVICES / AQ_DRM_DEVICES lists. The compositors are
+# pointed at these symlinks instead (docs/plans/wayland-desktop.md, "GPUs").
+#
+# The rule matches the kernel driver, not a PCI address, so it is not tied to
+# one machine; a host with one GPU just gets one symlink. Limitation: an AMD
+# iGPU and an AMD dGPU both use amdgpu, so this cannot tell them apart; such a
+# host would need a rule generated from boot_vga.
+#
+# /etc is outside chezmoi's scope. The rule is staged under
+# ~/.local/state/chezmoi-system/ and installed with sudo; if sudo cannot run
+# non-interactively the script prints the commands and exits 1, so the next
+# `chezmoi apply` retries. Snapshot /etc with etckeeper before and after
+# (docs/runbooks/display-session-recovery.md).
+#
+# Only runs on Linux, non-WSL hosts whose `display_server` host key is "wayland".
+{{- $ds := dig "display_server" "x11" . -}}
+{{- $run := and (eq .chezmoi.os "linux") (eq $ds "wayland") (ne (includeTemplate "is-wsl" .) "true") }}
+set -eu
+
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+RULE_NAME=61-dri-stable-names.rules
+TARGET=/etc/udev/rules.d/$RULE_NAME
+STAGE_DIR={{ joinPath .chezmoi.homeDir ".local" "state" "chezmoi-system" | quote }}
+STAGED=$STAGE_DIR/$RULE_NAME
+
+if [ "$ENABLED" != 1 ]; then
+  echo "udev-dri-symlinks: needs non-WSL Linux with display_server=wayland (this host: {{ .chezmoi.os }}, {{ $ds }}); skipping" >&2
+  exit 0
+fi
+
+mkdir -p "$STAGE_DIR"
+cat > "$STAGED" <<'EOF'
+# Installed by chezmoi (run_onchange_install-udev-dri-symlinks.sh.tmpl).
+# Stable, colon-free names for the GPUs, for WLR_DRM_DEVICES and friends.
+SUBSYSTEM=="drm", KERNEL=="card[0-9]*", DRIVERS=="i915|xe", SYMLINK+="dri/igpu"
+SUBSYSTEM=="drm", KERNEL=="card[0-9]*", DRIVERS=="nvidia|nouveau", SYMLINK+="dri/dgpu"
+EOF
+
+if cmp -s "$STAGED" "$TARGET"; then
+  echo "udev-dri-symlinks: $TARGET is up to date" >&2
+  exit 0
+fi
+
+install_rule() {
+  "$@" install -m 0644 "$STAGED" "$TARGET"
+  "$@" udevadm control --reload
+  "$@" udevadm trigger --subsystem-match=drm --action=change
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  install_rule
+elif sudo -n true 2>/dev/null; then
+  install_rule sudo
+else
+  echo "udev-dri-symlinks: need root. Run:" >&2
+  echo "  sudo install -m 0644 '$STAGED' $TARGET" >&2
+  echo "  sudo udevadm control --reload" >&2
+  echo "  sudo udevadm trigger --subsystem-match=drm --action=change" >&2
+  exit 1
+fi
+echo "udev-dri-symlinks: installed $TARGET" >&2
