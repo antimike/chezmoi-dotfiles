@@ -5,7 +5,7 @@
 #   clipboard-history          fuzzy-pick with fzf, copy the choice with wl-copy
 #   clipboard-history --list   print the history (what cliphist list prints)
 #
-# History is recorded by the clipboard-stack.target user units (see
+# History is recorded by the clipboard-stack-wayland.target user units (see
 # ~/.config/systemd/user). Copies marked sensitive (wl-copy --sensitive) are never
 # recorded. Run clipboard-history-audit to look for secrets that slipped in.
 set -euo pipefail

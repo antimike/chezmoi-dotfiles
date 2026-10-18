@@ -56,5 +56,5 @@ bar {
 
 # uwsm: export WAYLAND_DISPLAY/SWAYSOCK and signal readiness, then start the
 # shared helpers. Outside uwsm, finalize fails and the helpers stay down.
-exec sh -c 'uwsm finalize && systemctl --user start --no-block wayland-wm-session.target'
+exec sh -c 'uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target'
 {{- end }}
