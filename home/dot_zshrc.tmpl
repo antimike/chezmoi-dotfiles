@@ -11,6 +11,7 @@
 export GPG_TTY=$TTY
 if [[ -o login && $TTY == /dev/tty[0-9]* && -z $WAYLAND_DISPLAY && -z $DISPLAY ]] \
     && (( $+commands[gpg-connect-agent] )); then
+  export PINENTRY_USER_DATA=curses   # read by ~/.local/bin/pinentry-auto
   gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1
 fi
 

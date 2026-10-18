@@ -5,19 +5,15 @@
 # console; everything else goes to Fedora's /usr/bin/pinentry wrapper as before.
 #
 # Why: gpg-agent is started from the graphical session, so its own environment
-# keeps WAYLAND_DISPLAY/DISPLAY. The Fedora wrapper sees them and picks
-# pinentry-gnome3, whose prompt then opens on the hidden graphical session and
-# the console hangs. The agent passes the requesting terminal as --ttyname
-# (GPG_TTY; for SSH, the startup tty set by `updatestartuptty`), which tells the
-# two cases apart.
-tty=
-prev=
-for arg in "$@"; do
-  [ "$prev" = --ttyname ] && tty=$arg
-  prev=$arg
-done
-
-case $tty in
-  /dev/tty[0-9]*) exec /usr/bin/pinentry-curses "$@" ;;
+# keeps WAYLAND_DISPLAY. The Fedora wrapper sees it and picks pinentry-gnome3,
+# whose prompt then opens on the hidden graphical session and the console hangs.
+# The agent passes the requesting terminal over the Assuan protocol, not on the
+# command line, and does not export TERM, so neither tells this script where the
+# request came from. It does export PINENTRY_USER_DATA from the requester's
+# session (for SSH: the value saved by `updatestartuptty`); the console branch in
+# ~/.zshrc sets it to "curses", and `sshstart` from a GUI terminal clears it.
+# (Checked with gnupg 2.4.9, 2026-10-17.)
+case ${PINENTRY_USER_DATA:-} in
+  curses) exec /usr/bin/pinentry-curses "$@" ;;
 esac
 exec /usr/bin/pinentry "$@"
