@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: step 0 done (2026-10-17); step 1 in progress on branch wayland/0-1-sessions; uwsm adopted (D38)
+status: steps 0 and 1 done (2026-10-17); next step 2; uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -253,7 +253,11 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    etckeeper `0f391be`; symlinks verified: `igpu` → i915, `dgpu` → nvidia). Found on the way: YubiKey prompts were
    unusable on the console; fixed in `dot_zshrc.tmpl` (`GPG_TTY`, `updatestartuptty` on VTs; runbook card).
 1. **Packages and sessions:** install SwayFX (COPR), niri, Hyprland (COPR), Wayfire, uwsm (meson installer), portals,
-   polkit agent. Each session appears in GDM; GNOME unaffected.
+   polkit agent. Each session appears in GDM; GNOME unaffected. **Done 2026-10-17:** packages from `packagesWayland`
+   (COPRs per D45); uwsm 0.27.0 via `run_onchange_install-uwsm.sh.tmpl` (rollback: `uninstall.sh` under
+   `~/.local/state/chezmoi-system/uwsm/v0.27.0/`); GDM entries `SwayFX (uwsm)`, `niri (uwsm)`, `Wayfire (uwsm)` in
+   `/usr/local/share/wayland-sessions`, plus the COPR's `Hyprland (uwsm-managed)` and the packages' own non-uwsm
+   entries. Not yet seen on the GDM screen. Do not log into them before step 2 (no config, no `WLR_DRM_DEVICES`).
 2. **Session plumbing:** `wayland-wm-session.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
    joins it. Verify that logging into GNOME afterwards leaves no helper units running.
 3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical.

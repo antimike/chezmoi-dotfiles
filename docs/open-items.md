@@ -20,7 +20,7 @@ updated: 2026-10-17
 ## Plans waiting on a start
 | Item | Who | Where |
 |---|---|---|
-| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial under uwsm; order of work agreed 2026-10-17; **next: step 0** (recovery-runbook checks, GPU udev symlinks), then step 1 (packages and sessions). Waiting on MH: `DP-4..6` sockets (backlog); notifications decided (dunst + history browser) | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) |
+| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial under uwsm; order of work agreed 2026-10-17; steps 0 and 1 **done 2026-10-17** (merged); **next: step 2** (session plumbing: `wayland-wm-session.target`, uwsm env with `WLR_DRM_DEVICES=/dev/dri/igpu`, minimal SwayFX config). Waiting on MH: `DP-4..6` sockets (backlog); notifications decided (dunst + history browser) | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) |
 | Devices and audio review (step 5): PipeWire/WirePlumber, playerctl (not installed), kanshi, Bluetooth, udiskie, Wi-Fi | Claude | [plans/devices-and-audio.md](plans/devices-and-audio.md) |
 | Mining pass over `i3-config-mbp`, `i3wm-configuration`, `arcolinux-i3wm` (cloned to `~/Source/antimike/`) | Claude | step 6 of [plans/wayland-desktop.md](plans/wayland-desktop.md) |
 | Theming system (theme bundles, wallpaper fetcher and palette-aware selection, fonts, pickers); after the SwayFX daily driver | Claude | [plans/theming.md](plans/theming.md) |
@@ -35,6 +35,11 @@ updated: 2026-10-17
 ## Housekeeping
 | Item | Who | Notes |
 |---|---|---|
+| Check at the next logout that GDM lists the `/usr/local/share/wayland-sessions` entries (SwayFX/niri/Wayfire (uwsm)); if not, see the runbook's first symptom row | MH | 2026-10-17 |
+| dnf pulled weak deps with the Wayland packages (foot, alacritty, fuzzel, wofi, wmenu, wf-shell, hyprpicker, Font Awesome). Decide whether the installer should pass `--setopt=install_weak_deps=False` (and whether to remove these) | MH + Claude | 2026-10-17 |
+| COPR version locking (`dnf versionlock`) for swayfx/hyprland: not set up (D45); revisit if a COPR update breaks a config | MH + Claude | 2026-10-17 |
+| The dnf run of 2026-10-17 printed `etckeeper failed to commit changes in /etc using git`, yet `/etc` was clean afterwards. Watch the next dnf runs; if it recurs, read root's `/etc/.git` state | MH | 2026-10-17 |
+| `chezmoi status` shows `MM .claude.json` (changed in source and target); reconcile before the next full `chezmoi apply` | MH + Claude | seen 2026-10-17 |
 | Delete stray remote branch `claude/implement-from-notes` in `chess_trainer` | MH approval | duplicate of `main`; deferred |
 | Second `chess_trainer` clone at `~/Source/pyprojects/chess_trainer`: no remote, 4 uncommitted changes, last commit 2024-10-30; looks stale. Check before deleting | MH | found 2026-10-17 |
 | Wire the env var for the credential moved to `pass` (consumer project unknown) | MH | details in the private doc |
@@ -66,6 +71,8 @@ updated: 2026-10-17
 | Observed, not changed: `claude-init` writes `.claude/settings.local.json` with `Bash(git:*)` (includes `git push`) | info | 2026-10-16 |
 
 ## Closed recently
+- **Wayland steps 0 and 1 (2026-10-17, branch `wayland/0-1-sessions`, merged).** Console login checked; `/etc` clean at etckeeper `0f391be`; driver-matched udev rule gives `/dev/dri/igpu` (i915) and `/dev/dri/dgpu` (nvidia); `packagesWayland` list with lazily enabled COPRs installed (SwayFX, Hyprland, niri, Wayfire, portals, mate-polkit, lock/idle/bar tools); uwsm 0.27.0 built and installed to `/usr/local` with three uwsm GDM entries (SwayFX gets `--unsupported-gpu` only while the nvidia module is loaded). Installers now prompt for sudo when `chezmoi apply` runs in a terminal (D46).
+- **YubiKey unusable on a text console (2026-10-17).** gpg-agent keeps the GUI session's `WAYLAND_DISPLAY`, so Fedora's pinentry wrapper opened the GNOME dialog on the hidden session. Fix: `~/.local/bin/pinentry-auto` (gpg-agent's `pinentry-program`) uses curses when `PINENTRY_USER_DATA=curses`, which a zsh console login sets before `updatestartuptty`; `sshstart` in a GUI terminal switches back. gnupg 2.4.9 passes neither `--ttyname` nor `TERM` to pinentry, which ruled out the first two approaches. Verified both ways by MH.
 - **`sync-repos` hardened; `claude-state-sync` retired (2026-10-17).** In-script gitleaks, `pull --rebase`, `notify`, network wait and retries; claude-state is its first entry. Found: 3 of the last 4 claude-state syncs had failed on DNS at resume, 2 commits stranded locally (now pushed).
 - **gitleaks hook rollout (2026-10-17, `boco-merge/3-hooks`)**, except the deferred bd repos. Red/green tested with a fake GitHub token in chezmoi, `chess_trainer`, `resume-builder` and `claude-state`. Gotchas: pre-commit refuses to run while `.pre-commit-config.yaml` has unstaged edits (stage it with the test file); `claude-state`'s whitelist `.gitignore` ignores files outside `*/memory/`; its project folders start with `-`, so pass `--` to git and `rm`.
 - **YubiKey not found after a reboot (2026-10-17):** pcscd held the CCID interface; `scdaemon.conf` with `disable-ccid` + `pcsc-shared`, gated on pcscd being installed (D34).
