@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: planning done; order of work agreed (MH, 2026-10-17); uwsm adopted (D38); no desktop config changed yet
+status: step 0 done (2026-10-17); step 1 in progress on branch wayland/0-1-sessions; uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -56,16 +56,18 @@ supported", so the NVIDIA card stays powered (P8, about 1 W idle) whatever the c
 - **How, per compositor:** wlroots-based (SwayFX, Wayfire): `WLR_DRM_DEVICES`, Intel first; Hyprland:
   `AQ_DRM_DEVICES`; niri: `render-drm-device` in its config. **Pitfall:** `card0`/`card1` numbering can swap between
   boots, and the stable `/dev/dri/by-path/pci-0000:00:02.0-card` contains colons, which break the colon-separated
-  `WLR_DRM_DEVICES` list. Fix: a udev rule creating colon-free symlinks (e.g. `/dev/dri/igpu`, `/dev/dri/dgpu`).
+  `WLR_DRM_DEVICES` list. Fix: a udev rule creating colon-free symlinks `/dev/dri/igpu` and `/dev/dri/dgpu`. **Done
+  2026-10-17** (`run_onchange_install-udev-dri-symlinks.sh.tmpl`): the rule matches the kernel driver (`i915|xe`,
+  `nvidia|nouveau`), not PCI addresses, so it is not zbook-specific; it cannot separate an AMD iGPU from an AMD dGPU.
 - Set the variables in the uwsm environment so every compositor gets them.
 
 ## Compositors
 
 | Compositor | Role in the trial | Fedora 44 | Notes |
 |---|---|---|---|
-| **SwayFX** | **Full i3 port; daily driver** | COPR (pin it; note it in the decision log) | Sway fork: i3 config syntax and i3 IPC (so `i3altlayout` and i3ipc scripts keep working), plus blur, rounded corners, shadows, inactive dimming. Risk: trails upstream Sway (1.11 in Fedora). Plain `sway` stays available as a fallback using the same config, minus the SwayFX-only lines. |
+| **SwayFX** | **Full i3 port; daily driver** | COPR `swayfx/swayfx` (D45) | Sway fork: i3 config syntax and i3 IPC (so `i3altlayout` and i3ipc scripts keep working), plus blur, rounded corners, shadows, inactive dimming. Risk: trails upstream Sway (1.11 in Fedora). **The COPR package conflicts with Fedora's `sway`** (it ships `/usr/bin/sway` and provides `sway`), so the two cannot be installed side by side; the fallback is `sudo dnf swap swayfx sway` with the same config, minus the SwayFX-only lines. |
 | **niri** | Minimal config | Official (26.04) | Scrolling tiling, KDL config, own IPC (`niri msg`), XWayland through `xwayland-satellite` (packaged). Stable, animated. |
-| **Hyprland** | Minimal config | COPR | Most eye candy; frequent breaking config changes; i3-style manual tiling only through the `hy3` plugin, which must match the exact Hyprland version. |
+| **Hyprland** | Minimal config | COPR `sdegler/hyprland` (D45) | Most eye candy; frequent breaking config changes; i3-style manual tiling only through the `hy3` plugin, which must match the exact Hyprland version. |
 | **Wayfire** | Minimal config | Official (0.10.1) | Effects-heavy (cube, wobbly); tiling through the `simple-tile` plugin that ships in the `wayfire` package. Basic auto-tiling only: an eye-candy reference more than a contender. |
 
 Considered and set aside: river (0.4 split window management into separate clients; that ecosystem is still thin),
@@ -84,7 +86,8 @@ of the i3 config. A runner-up can stay installed after the trial if its config s
 - **Install:** Python, but built with **meson**, not pip. Dependencies are packaged (`python3-dbus`, `python3-pyxdg`;
   optional `whiptail`, `inotify-tools`, `libnotify`). The `wayland-sessions/*.desktop` entries GDM reads must be in a
   system directory, so it is a sudo install to `/usr/local`, via a pinned tag+commit installer in the style of
-  `run_onchange_install-wl-clip-persist.sh.tmpl`. Not in Fedora's repos.
+  `run_onchange_install-wl-clip-persist.sh.tmpl`. Not in Fedora's repos. The Hyprland COPR ships an older uwsm (0.24.3
+  on 2026-10-17; upstream 0.27.1): do not install that one.
 - **Overlap:** with uwsm, do not use `sway-systemd` or start `niri.service` directly; one session model for all four.
 - **Shared helpers:** a hand-written `wayland-wm-session.target` (`BindsTo=graphical-session.target`, no `[Install]`).
   Every compositor's config starts it. Shared units (bar, notifications, idle, gamma, outputs, wallpaper, clipboard)
@@ -246,7 +249,9 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 ## Steps (order agreed by MH, 2026-10-17)
 
 0. **Safety first:** the [display-session recovery runbook](../runbooks/display-session-recovery.md) checks (console
-   login, etckeeper snapshot); udev symlinks for the GPUs.
+   login, etckeeper snapshot); udev symlinks for the GPUs. **Done 2026-10-17** (console login works; `/etc` was clean at
+   etckeeper `0f391be`; symlinks verified: `igpu` → i915, `dgpu` → nvidia). Found on the way: YubiKey prompts were
+   unusable on the console; fixed in `dot_zshrc.tmpl` (`GPG_TTY`, `updatestartuptty` on VTs; runbook card).
 1. **Packages and sessions:** install SwayFX (COPR), niri, Hyprland (COPR), Wayfire, uwsm (meson installer), portals,
    polkit agent. Each session appears in GDM; GNOME unaffected.
 2. **Session plumbing:** `wayland-wm-session.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
