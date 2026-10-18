@@ -43,7 +43,7 @@ i3:
     bg:
       name: i3wm.color3
       default: "#285577"
-  font: Iosevka-Nerd-Font-Complete-Mono 12
+  font: pango:Iosevka Nerd Font 12
   mouse:
     warping: none
     follow_with_focus: no
