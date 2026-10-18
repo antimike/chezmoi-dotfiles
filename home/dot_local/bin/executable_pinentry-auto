@@ -1,0 +1,23 @@
+#!/bin/sh
+# pinentry-auto — gpg-agent's pinentry-program (see ~/.gnupg/gpg-agent.conf).
+#
+# Requests from a Linux text console (Ctrl+Alt+F3) get pinentry-curses on that
+# console; everything else goes to Fedora's /usr/bin/pinentry wrapper as before.
+#
+# Why: gpg-agent is started from the graphical session, so its own environment
+# keeps WAYLAND_DISPLAY/DISPLAY. The Fedora wrapper sees them and picks
+# pinentry-gnome3, whose prompt then opens on the hidden graphical session and
+# the console hangs. The agent passes the requesting terminal as --ttyname
+# (GPG_TTY; for SSH, the startup tty set by `updatestartuptty`), which tells the
+# two cases apart.
+tty=
+prev=
+for arg in "$@"; do
+  [ "$prev" = --ttyname ] && tty=$arg
+  prev=$arg
+done
+
+case $tty in
+  /dev/tty[0-9]*) exec /usr/bin/pinentry-curses "$@" ;;
+esac
+exec /usr/bin/pinentry "$@"
