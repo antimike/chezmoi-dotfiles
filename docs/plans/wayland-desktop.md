@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: steps 0 and 1 done (2026-10-17); next step 2; uwsm adopted (D38)
+status: steps 0 and 1 done (2026-10-17); step 2 built, login test pending; uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -260,6 +260,12 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    entries. Not yet seen on the GDM screen. Do not log into them before step 2 (no config, no `WLR_DRM_DEVICES`).
 2. **Session plumbing:** `wayland-wm-session.target`; minimal SwayFX config that starts it under uwsm; clipboard stack
    joins it. Verify that logging into GNOME afterwards leaves no helper units running.
+   **Built 2026-10-17** (branch `wayland/2-session-plumbing`, applied): `wayland-wm-session.target` (`BindsTo=`/`After=`
+   `graphical-session.target`, `Wants=clipboard-stack.target`, no `[Install]`); `~/.config/uwsm/env` exports
+   `WLR_DRM_DEVICES`/`AQ_DRM_DEVICES=/dev/dri/igpu` when the symlink exists; `~/.config/sway/config` (minimal, swaybar
+   date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wayland-wm-session.target`.
+   Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
+   **Pending (MH at the desk):** log into `SwayFX (uwsm)`, then run the checks in "Step 2 login test" below.
 3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical.
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
@@ -280,6 +286,17 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
     (test each DM with `systemctl start` before enabling it).
 
 Theming ([theming.md](theming.md)) starts after step 7 at the earliest.
+
+## Step 2 login test
+
+Console fallback first: if the session does not come up, Ctrl+Alt+F3, log in, `journalctl --user -b -u 'wayland-wm@*'`
+(see the [recovery runbook](../runbooks/display-session-recovery.md)). In the SwayFX session (`$mod+Return` opens kitty):
+
+1. `systemctl --user is-active wayland-wm-session.target clipboard-stack.target cliphist@text.service wl-clip-persist.service`: all `active`.
+2. `systemctl --user show-environment | grep -E 'WAYLAND_DISPLAY|SWAYSOCK|WLR_DRM'`: all three set.
+3. `swaymsg -t get_outputs | grep -E '"name"|make'`: the panel is listed (rendering on Intel).
+4. Copy text in kitty, then `cliphist list | head -1`: the copy is there.
+5. `$mod+Shift+e` → "Yes, exit": back at GDM. Log into GNOME; the command in 1 prints `inactive` for all four.
 
 ## Open questions
 

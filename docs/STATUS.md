@@ -25,7 +25,10 @@ updated: 2026-10-17
 
 ## Next actions (in order; reprioritized by MH 2026-10-17)
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
-2. **Wayland desktop, step 2: session plumbing** ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Steps"). `wayland-wm-session.target`; uwsm environment with `WLR_DRM_DEVICES=/dev/dri/igpu`; minimal SwayFX config that starts the target under uwsm; clipboard stack joins it; check GNOME afterwards runs no helper units. First, MH confirms at a logout that GDM lists the uwsm entries. Fresh session recommended. Waiting on MH: the `DP-4..6` socket check (backlog). Notifications: dunst kept, with a rofi history browser (step 8).
+2. **Wayland desktop, step 2: login test (MH).** Plumbing is built and applied on branch `wayland/2-session-plumbing`
+   (not merged): helper target, uwsm env (`WLR_DRM_DEVICES`), minimal SwayFX config. MH logs into `SwayFX (uwsm)` at GDM
+   (this also confirms GDM lists the uwsm entries) and runs the 5 checks in [plans/wayland-desktop.md](plans/wayland-desktop.md),
+   "Step 2 login test". Pass → merge, then step 3 (shared fragment split). Waiting on MH: the `DP-4..6` socket check (backlog).
 3. **kitty: merge and debug pass.** Merge BOCO's `kitty.conf` (taken out of Phase 5; guard WSL-only lines) and fix what is broken, including the `notes` launcher pointing at a missing `~/.config/i3/bin/open-notes.bash` ([open-items.md](open-items.md)). Best done once SwayFX runs, since kitty is the terminal there.
 4. Atlassian/Jira review pass when MH schedules it.
 5. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
