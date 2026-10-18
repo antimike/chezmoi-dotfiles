@@ -2,17 +2,44 @@
 # run_onchange_install-packages.sh.tmpl — install the distro packages listed
 # in .chezmoidata/packages.yaml for this host's os-release ID.
 #
+# Lists: `packages.<distro>` everywhere; `packagesWayland.<distro>` too where
+# the `display_server` host key is "wayland". An entry is a name or
+# {name, copr}; a COPR (from the `coprs` block) is enabled only when one of
+# its packages is about to be installed.
+#
 # Only Fedora is handled. Needs root: if sudo can't run non-interactively the
-# script prints the command and exits 1, so the next `chezmoi apply` retries.
+# script prints the commands and exits 1, so the next `chezmoi apply` retries.
 {{- $distro := .chezmoi.osRelease.id }}
+{{- $wayland := and (eq .chezmoi.os "linux") (eq (dig "display_server" "x11" .) "wayland") }}
 {{- $wanted := dig "packages" $distro (list) . }}
-# hash: {{ $wanted | toJson | sha256sum }}
+{{- if $wayland }}
+{{-   $wanted = concat $wanted (dig "packagesWayland" $distro (list) .) }}
+{{- end }}
+{{- $coprs := dig "coprs" (dict) . }}
+# hash: {{ list $wanted $coprs | toJson | sha256sum }}
 set -euo pipefail
 
 DISTRO={{ $distro | quote }}
+# Parallel arrays: package name, and the COPR project it needs ("" = none).
 wanted=(
 {{- range $wanted }}
+{{-   if kindIs "string" . }}
   {{ . | quote }}
+{{-   else }}
+  {{ .name | quote }}
+{{-   end }}
+{{- end }}
+)
+wanted_copr=(
+{{- range $wanted }}
+{{-   if and (not (kindIs "string" .)) (hasKey . "copr") }}
+{{-     if not (hasKey $coprs .copr) }}
+{{-       fail (printf "packages.yaml: %s names copr %q, which is not in the coprs block" .name .copr) }}
+{{-     end }}
+  {{ (index $coprs .copr).project | quote }}
+{{-   else }}
+  ""
+{{-   end }}
 {{- end }}
 )
 
@@ -27,8 +54,15 @@ if [[ "$DISTRO" != "fedora" ]] || ! command -v dnf >/dev/null 2>&1; then
 fi
 
 to_install=()
-for p in "${wanted[@]}"; do
-  rpm -q --whatprovides "$p" >/dev/null 2>&1 || to_install+=("$p")
+needed_coprs=()
+for i in "${!wanted[@]}"; do
+  p=${wanted[$i]}
+  rpm -q --whatprovides "$p" >/dev/null 2>&1 && continue
+  to_install+=("$p")
+  c=${wanted_copr[$i]}
+  if [[ -n "$c" && " ${needed_coprs[*]} " != *" $c "* ]]; then
+    needed_coprs+=("$c")
+  fi
 done
 
 if [[ ${#to_install[@]} -eq 0 ]]; then
@@ -36,13 +70,31 @@ if [[ ${#to_install[@]} -eq 0 ]]; then
   exit 0
 fi
 
-cmd=(dnf install -y "${to_install[@]}")
+# COPRs not yet enabled; dnf5 names their repos copr:copr.fedorainfracloud.org:<owner>:<project>.
+enabled_repos=$(dnf repolist --enabled 2>/dev/null | awk 'NR > 1 { print $1 }')
+to_enable=()
+for c in "${needed_coprs[@]}"; do
+  grep -qxF "copr:copr.fedorainfracloud.org:${c%%/*}:${c#*/}" <<<"$enabled_repos" || to_enable+=("$c")
+done
+
+cmds=()
+for c in "${to_enable[@]}"; do
+  cmds+=("dnf copr enable -y $c")
+done
+cmds+=("dnf install -y ${to_install[*]}")
+
+sudo=()
 if [[ $EUID -ne 0 ]]; then
   if ! sudo -n true 2>/dev/null; then
-    echo "install-packages: need root. Run:  sudo ${cmd[*]}" >&2
+    echo "install-packages: need root. Run:" >&2
+    printf '  sudo %s\n' "${cmds[@]}" >&2
     exit 1
   fi
-  cmd=(sudo "${cmd[@]}")
+  sudo=(sudo)
 fi
+for c in "${to_enable[@]}"; do
+  echo "install-packages: enabling COPR $c" >&2
+  "${sudo[@]}" dnf copr enable -y "$c"
+done
 echo "install-packages: installing ${#to_install[@]} package(s): ${to_install[*]}" >&2
-"${cmd[@]}"
+"${sudo[@]}" dnf install -y "${to_install[@]}"

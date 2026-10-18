@@ -62,3 +62,55 @@ packages:
     - xz-devel
     # Misc
     - logrotate
+
+# Wayland desktop (docs/plans/wayland-desktop.md), keyed by os-release ID.
+# Installed only where the `display_server` host key is "wayland". An entry is
+# a package name, or {name, copr} for a package from a COPR listed in `coprs`
+# below; the installer enables a COPR only when a package that needs it is
+# about to be installed. Interim shape until the D32 package-map refactor.
+packagesWayland:
+  fedora:
+    # Compositors (SwayFX is the daily driver; the rest are trial candidates)
+    - name: swayfx         # conflicts with Fedora's `sway`: it ships /usr/bin/sway
+      copr: swayfx
+    - name: hyprland
+      copr: hyprland
+    - niri
+    - xwayland-satellite   # XWayland for niri
+    - wayfire
+    # Portals and polkit agent
+    - xdg-desktop-portal-wlr
+    - xdg-desktop-portal-gnome   # niri's portal backend
+    - name: xdg-desktop-portal-hyprland
+      copr: hyprland
+    - mate-polkit
+    # Lock, idle, wallpaper, bar
+    - swaylock
+    - swayidle
+    - swaybg
+    - waybar
+    # Screenshots and typing
+    - grim
+    - slurp
+    - wtype
+    # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
+    - meson
+    - scdoc
+    - python3-dbus
+    - python3-pyxdg
+    - newt                 # whiptail, for uwsm's selection menu
+    - inotify-tools
+
+# COPR repositories, referenced by `copr:` in the package lists. `project` is
+# the owner/name passed to `dnf copr enable`; that name is the pin. Checked
+# 2026-10-17: both build for fedora-44-x86_64.
+#   swayfx:   swayfx 0.5.2 (sway 1.11 based; needs wlroots0.19 from Fedora and
+#             scenefx-0.4.1 from the same COPR). Upstream SwayFX project.
+#   hyprland: hyprland 0.56.2; successor of solopasha/hyprland (now rawhide
+#             only). It also ships uwsm 0.24.3; do not install that one: the
+#             pinned upstream build goes to /usr/local.
+coprs:
+  swayfx:
+    project: swayfx/swayfx
+  hyprland:
+    project: sdegler/hyprland
