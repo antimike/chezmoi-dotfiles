@@ -14,8 +14,9 @@
 # host would need a rule generated from boot_vga.
 #
 # /etc is outside chezmoi's scope. The rule is staged under
-# ~/.local/state/chezmoi-system/ and installed with sudo; if sudo cannot run
-# non-interactively the script prints the commands and exits 1, so the next
+# ~/.local/state/chezmoi-system/ and installed with sudo: without cached
+# credentials, sudo asks for the password when `chezmoi apply` runs in a
+# terminal; otherwise the script prints the commands and exits 1, so the next
 # `chezmoi apply` retries. Snapshot /etc with etckeeper before and after
 # (docs/runbooks/display-session-recovery.md).
 #
@@ -57,6 +58,9 @@ install_rule() {
 if [ "$(id -u)" -eq 0 ]; then
   install_rule
 elif sudo -n true 2>/dev/null; then
+  install_rule sudo
+elif [ -t 0 ]; then
+  echo "udev-dri-symlinks: installing $TARGET with sudo" >&2
   install_rule sudo
 else
   echo "udev-dri-symlinks: need root. Run:" >&2

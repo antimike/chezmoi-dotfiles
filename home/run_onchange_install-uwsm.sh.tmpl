@@ -6,10 +6,12 @@
 # shallowly and refuses to build unless HEAD is exactly the pinned commit, then
 # builds with meson as the user into a staging tree under
 # ~/.local/state/chezmoi-system/uwsm/<version>/. Only the copy into /usr/local
-# needs root: a generated install-as-root.sh next to the staging tree (read it
-# before running it). files.txt lists every installed path, and uninstall.sh
-# removes them. If sudo cannot run non-interactively the script prints the
-# command and exits 1, so the next `chezmoi apply` retries.
+# needs root: a generated install-as-root.sh next to the staging tree.
+# files.txt lists every installed path, and uninstall.sh removes them; both
+# stay after the install, while the staging tree is deleted. Without cached
+# credentials, sudo asks for the password when `chezmoi apply` runs in a
+# terminal; otherwise the script prints the command and exits 1, so the next
+# `chezmoi apply` retries.
 #
 # The nvidia check is made at render time: after installing or removing the
 # proprietary driver, re-run `chezmoi apply` so the entries are rewritten.
@@ -72,6 +74,8 @@ if [ "$("$PREFIX/bin/uwsm" --version 2>/dev/null)" = "uwsm ${VERSION#v}" ]; then
   done
 fi
 if [ "$up_to_date" = 1 ]; then
+  # Staging tree left by a root step run by hand: no longer needed.
+  rm -rf "$STAGE"
   echo "uwsm installer: $VERSION and session entries already installed in $PREFIX" >&2
   exit 0
 fi
@@ -140,12 +144,15 @@ echo "uwsm installer: staged $(wc -l < "$STATE_DIR/files.txt") files in $STAGE" 
 # Install (root).
 if [ "$(id -u)" -eq 0 ]; then
   sh "$STATE_DIR/install-as-root.sh"
-elif sudo -n true 2>/dev/null; then
+elif sudo -n true 2>/dev/null || [ -t 0 ]; then
+  echo "uwsm installer: installing to $PREFIX with sudo ($STATE_DIR/install-as-root.sh)" >&2
   sudo sh "$STATE_DIR/install-as-root.sh"
 else
   echo "uwsm installer: need root. Read, then run:" >&2
   echo "  sudo sh $STATE_DIR/install-as-root.sh" >&2
+  echo "  (the next chezmoi apply then removes the staging tree)" >&2
   exit 1
 fi
+rm -rf "$STAGE"
 systemctl --user daemon-reload 2>/dev/null || true
 echo "uwsm installer: $VERSION installed to $PREFIX" >&2

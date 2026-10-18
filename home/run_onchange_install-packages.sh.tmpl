@@ -7,7 +7,8 @@
 # {name, copr}; a COPR (from the `coprs` block) is enabled only when one of
 # its packages is about to be installed.
 #
-# Only Fedora is handled. Needs root: if sudo can't run non-interactively the
+# Only Fedora is handled. Needs root: without cached credentials, sudo asks
+# for the password when `chezmoi apply` runs in a terminal; otherwise the
 # script prints the commands and exits 1, so the next `chezmoi apply` retries.
 {{- $distro := .chezmoi.osRelease.id }}
 {{- $wayland := and (eq .chezmoi.os "linux") (eq (dig "display_server" "x11" .) "wayland") }}
@@ -85,7 +86,7 @@ cmds+=("dnf install -y ${to_install[*]}")
 
 sudo=()
 if [[ $EUID -ne 0 ]]; then
-  if ! sudo -n true 2>/dev/null; then
+  if ! sudo -n true 2>/dev/null && [[ ! -t 0 ]]; then
     echo "install-packages: need root. Run:" >&2
     printf '  sudo %s\n' "${cmds[@]}" >&2
     exit 1
