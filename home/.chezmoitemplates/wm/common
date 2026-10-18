@@ -85,7 +85,7 @@ focus_follows_mouse {{.i3.mouse.follow_with_focus}}
 set $refresh_i3status killall -SIGUSR1 i3status
 set $change_volume_script ~/.config/i3/bin/set-pulseaudio-volume.bash
 set $audio_output @DEFAULT_SINK@
-set $audio_intput @DEFAULT_SOURCE@
+set $audio_input @DEFAULT_SOURCE@
 bindsym XF86AudioRaiseVolume exec --no-startup-id $change_volume_script $audio_output volume +1%
 bindsym XF86AudioLowerVolume exec --no-startup-id $change_volume_script $audio_output volume -1%
 bindsym XF86AudioMute        exec --no-startup-id $change_volume_script $audio_output mute toggle
@@ -93,7 +93,7 @@ bindsym XF86AudioMicMute     exec --no-startup-id $change_volume_script $audio_i
 {{- end }}
 bindsym XF86AudioPlay        exec --no-startup-id playerctl -p $mediaplayer play-pause && $refresh_i3status
 bindsym XF86AudioPause       exec --no-startup-id playerctl -p $mediaplayer pause && $refresh_i3status
-bindsym XF86AudioStop        exec --no-startup-id playerctl -p $mediaplayer stop && $refresh_i3status && refresh_i3status
+bindsym XF86AudioStop        exec --no-startup-id playerctl -p $mediaplayer stop && $refresh_i3status
 bindsym XF86AudioNext        exec --no-startup-id playerctl -p $mediaplayer next && $refresh_i3status
 bindsym XF86AudioPrev        exec --no-startup-id playerctl -p $mediaplayer previous && $refresh_i3status
 {{- if eq .wm "i3" }}
