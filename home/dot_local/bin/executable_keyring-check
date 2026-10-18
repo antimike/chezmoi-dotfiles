@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# keyring-check — is gnome-keyring the daemon GDM's PAM step unlocked at login?
+#
+#   keyring-check      run right after logging in, before opening Chromium
+#
+# Under SwayFX the PAM-started daemon must be taken over by
+# `gnome-keyring-daemon --start` in the sway config (D51); otherwise a fresh,
+# locked daemon is D-Bus-activated and apps raise an unlock prompt. Exit 1 if an
+# automatic check fails; the manual checks at the end need a human.
+set -uo pipefail
+
+fail=0
+pass() { printf '  PASS  %s\n' "$1"; }
+bad() { printf '  FAIL  %s\n' "$1"; fail=1; }
+info() { printf '        %s\n' "$1"; }
+
+echo "Automatic checks:"
+
+# 1. One daemon, and it is PAM's (started with --login). A D-Bus-activated
+#    replacement runs as `--start --foreground --components=secrets`.
+mapfile -t daemons < <(pgrep -a gnome-keyring-d)
+if [[ ${#daemons[@]} -eq 1 && ${daemons[0]} == *--login* ]]; then
+  pass "one gnome-keyring daemon, started by PAM (--login)"
+elif [[ ${#daemons[@]} -eq 0 ]]; then
+  bad "no gnome-keyring daemon running"
+else
+  bad "daemon is not PAM's (no --login) or more than one runs:"
+fi
+for d in "${daemons[@]}"; do info "$d"; done
+
+# 2. No sign of a fresh daemon failing to find PAM's in this session's journal.
+since=$(loginctl show-session "${XDG_SESSION_ID:-}" -p Timestamp --value 2>/dev/null)
+since=${since:+$(date -d "$since" '+%F %T' 2>/dev/null)}
+if journalctl --user -b ${since:+--since "$since"} --no-pager -q \
+    -g 'couldn.t access control socket' 2>/dev/null | grep -q .; then
+  bad "journal: a replacement daemon could not reach PAM's (control socket missing)"
+else
+  pass "journal: no 'couldn't access control socket' ${since:+since $since}"
+fi
+
+# 3. Login keyring unlocked without a prompt. Meaningful only if nothing has
+#    prompted yet (an unlock you typed by hand also reads false).
+locked=$(busctl --user get-property org.freedesktop.secrets \
+  /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection Locked 2>/dev/null)
+case $locked in
+  'b false') pass "login keyring unlocked" ;;
+  'b true') bad "login keyring locked" ;;
+  *) bad "could not read the login keyring's Locked property" ;;
+esac
+
+# 4. gpg-agent keeps pinentry out of the keyring.
+if gpgconf --list-options gpg-agent 2>/dev/null | grep -q '^no-allow-external-cache:.*:1$'; then
+  pass "gpg-agent: no-allow-external-cache is set"
+else
+  bad "gpg-agent: no-allow-external-cache is not set (chezmoi apply, then gpg-connect-agent reloadagent /bye)"
+fi
+
+cat <<'EOF'
+
+Manual checks:
+  1. Open Chromium: no "unlock keyring" prompt.
+  2. Unplug the YubiKey, run `gpg --card-status` and `ssh-add -l`: no keyring prompt
+     (gpg failing with "No such device" is expected).
+
+If check 1 fails: the PAM daemon died before the handoff. Fallback (D51):
+`systemctl --user enable --now gnome-keyring-daemon.socket`, accepting one unlock
+prompt per login. Details: docs/plans/wayland-desktop.md, "Functional daily driver".
+EOF
+exit "$fail"
