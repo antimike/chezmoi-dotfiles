@@ -278,6 +278,19 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
 - [ ] **kitty errors fixed** (the two known errors in [../open-items.md](../open-items.md); the full BOCO merge stays later).
 - [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
+- [ ] **Keyring unlock prompts** (D51; built 2026-10-18 on branch `wayland/keyring`, **login test pending**). Symptom:
+      Chromium, and GPG/SSH use without the YubiKey, asked to unlock the "system keyring"; GNOME never did. Cause
+      (journal, 2026-10-18 boot): GDM's PAM step started gnome-keyring and unlocked the login keyring
+      (`gkr-pam: ... unlocked keyring`), but the handoff (`gnome-keyring-daemon --start`) lives in GNOME-only XDG
+      autostart entries, skipped under SwayFX (`Skipped due to 'exec-condition'`). By the first Secret Service request
+      the PAM daemon was gone (`couldn't access control socket: /run/user/1000/keyring/control`), so D-Bus activated a
+      fresh, locked one. That the missing handoff is what kills the PAM daemon is a hypothesis; the login test checks
+      it. Fix: `exec gnome-keyring-daemon --start --components=secrets` in `sway/config.tmpl` (rendered only where the
+      daemon is installed, before `uwsm finalize`); `no-allow-external-cache` in `gpg-agent.conf`, because
+      pinentry-gnome3 looked up cached passphrases in the keyring. **Login test:** right after a SwayFX login,
+      `ls /run/user/1000/keyring/control` exists and `pgrep -a gnome-keyring` shows one daemon; Chromium opens without
+      a prompt; with the YubiKey unplugged, `ssh-add -l` and `gpg --card-status` raise no keyring prompt. If the
+      control socket is missing, use the D51 fallback (`gnome-keyring-daemon.socket`).
 - [ ] **External monitor**, if MH uses one (`DP-4..6` sockets: backlog).
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 

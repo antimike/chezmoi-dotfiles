@@ -8,6 +8,7 @@ updated: 2026-10-18
 
 ## Where we are
 - **Reprioritized 2026-10-18 (D50): functional daily driver first.** MH needs to start a job search soon. The main line is the functional SwayFX checklist ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"); the keybinding manifest (Lua redesign recorded in [plans/keybinding-manifest.md](plans/keybinding-manifest.md)), the package map refactor (D32), theming and niri/Hyprland/Wayfire configs are spare-time side quests ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
+- **Keyring unlock prompts under SwayFX fixed 2026-10-18 (D51), login test pending** (branch `wayland/keyring`): the sway config takes over GDM's PAM-unlocked gnome-keyring; `gpg-agent.conf` sets `no-allow-external-cache`. No `pass` bridge. Checks: [open-items.md](open-items.md).
 - Claude Code migration (BOCO/WSL2 → zbook, Fedora 44): **done** except the claude-mem evaluation. Log: [log/migration-steps.md](log/migration-steps.md).
 - Dev environment is functional: chezmoi applied, tools pinned, `bd`/`bd-track`, `claude-state` sync and restic backups running, GPG on the YubiKey.
 - `main` is trunk (**history rewritten and force-pushed 2026-10-17**; see below), in sync with origin. All merged `boco-merge/*` branches are deleted; `boco-merge/3-hooks` is open (below). Docs consolidated into this tree on 2026-10-15.
