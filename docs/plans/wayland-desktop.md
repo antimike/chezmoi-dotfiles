@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: steps 0 and 1 done (2026-10-17); step 2 built, login test pending; uwsm adopted (D38)
+status: steps 0 and 1 done (2026-10-17); step 2 login checks 1-4 passed, check 5 pending; uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -280,7 +280,9 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    `WLR_DRM_DEVICES`/`AQ_DRM_DEVICES=/dev/dri/igpu` when the symlink exists; `~/.config/sway/config` (minimal, swaybar
    date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
    Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
-   **Pending (MH at the desk):** log into `SwayFX (uwsm)`, then run the checks in "Step 2 login test" below.
+   **Login test 2026-10-17 (MH):** checks 1-4 passed (results under "Step 2 login test"); check 5 pending. Found and
+   fixed in the session: the picom package's XDG autostart entry ran under SwayFX (uwsm starts
+   `xdg-desktop-autostart.target`) and failed; masked by a managed `~/.config/autostart/picom.desktop` (`Hidden=true`).
 3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. i3 is kept (D49).
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
@@ -315,7 +317,12 @@ Console fallback first: if the session does not come up, Ctrl+Alt+F3, log in, `j
 4. Copy text in kitty, then `cliphist list | head -1`: the copy is there.
 5. `$mod+Shift+e` → "Yes, exit": back at GDM. Log into GNOME; the command in 1 prints `inactive` for all four.
 
+**Results 2026-10-17 (MH, first SwayFX login):** 1: all four `active`. 2: `WAYLAND_DISPLAY=wayland-1`, `SWAYSOCK` set,
+`WLR_DRM_DEVICES=/dev/dri/igpu`. 3: `eDP-1`, LG Display. 4: the copy was the newest `cliphist` entry. GDM listed the uwsm
+entries (MH logged in through `SwayFX (uwsm)`). 5: pending. After the next login also confirm that no picom error
+appears (fix above).
+
 ## Open questions
 
-1. Keep the i3/X11 units long-term, or retire them once the Wayland session is established? (They are inert; no urgency.)
+1. ~~Keep the i3/X11 units long-term, or retire them?~~ Keep, and keep them working (D48, D49).
 2. Which physical sockets are `DP-4..6` (the NVIDIA-wired ports)? In the backlog until MH is at the desk.
