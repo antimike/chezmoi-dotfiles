@@ -27,6 +27,14 @@ bar {
 	status_command while date +'%a %F %H:%M'; do sleep 30; done
 }
 
+{{ if lookPath "gnome-keyring-daemon" -}}
+# Take over the gnome-keyring daemon that GDM's PAM step started and unlocked with
+# the login password (GNOME does this through autostart entries that only run in
+# GNOME). Without it the Secret Service is D-Bus-activated later, locked, and
+# Chromium or pinentry trigger an unlock prompt.
+exec gnome-keyring-daemon --start --components=secrets
+{{- end }}
+
 # uwsm: export WAYLAND_DISPLAY/SWAYSOCK and signal readiness, then start the
 # shared helpers. Outside uwsm, finalize fails and the helpers stay down.
 exec sh -c 'uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target'
