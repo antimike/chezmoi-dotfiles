@@ -39,10 +39,10 @@ i3:
   colors:
     fg:
       name: i3wm.color7
-      default: #f0f0f0
+      default: "#f0f0f0"
     bg:
       name: i3wm.color3
-      default: #f0f0f0
+      default: "#285577"
   font: Iosevka-Nerd-Font-Complete-Mono 12
   mouse:
     warping: none
