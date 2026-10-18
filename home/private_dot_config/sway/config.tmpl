@@ -1,52 +1,22 @@
 {{ if eq (dig "display_server" "x11" .) "wayland" -}}
-# Minimal SwayFX config (Wayland plan step 2: session plumbing only).
-# Replaced by the shared i3/SwayFX fragment in step 3. No locker yet (step 4).
+# SwayFX. Body shared with i3: .chezmoitemplates/wm/common; Sway-only lines here.
 # Start it from GDM's "SwayFX (uwsm)" entry, not the plain "Sway" one.
+# No locker yet (Wayland plan step 4); volume/brightness keys come in step 5.
 
-set $mod Mod4
-set $up k
-set $down j
-set $left h
-set $right l
-set $term kitty
+# Xresources (i3's set_from_resource) is X11-only: use the fallbacks until the
+# theming cache exists.
+set $fg {{ .i3.colors.fg.default }}
+set $bg {{ .i3.colors.bg.default }}
+# No status bar signal yet (waybar, step 7).
+set $refresh_i3status true
 
-font pango:Iosevka Nerd Font 12
-floating_modifier $mod normal
-workspace_layout tabbed
-focus_wrapping no
+{{ includeTemplate "wm/common" (merge (dict "wm" "sway") .) }}
+# SwayFX effects
+corner_radius {{ .i3.gaps.corner_radius }}
 
-bindsym $mod+Return exec $term
-bindsym $mod+o exec rofi -modi drun -show drun
-bindsym $mod+Shift+q kill
-bindsym $mod+f fullscreen toggle
-bindsym $mod+w layout tabbed
-bindsym $mod+e layout toggle split
-bindsym $mod+Shift+space floating toggle
-bindsym $mod+Shift+c reload
+# Exit (under uwsm, `uwsm stop` ends the session cleanly)
 bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit SwayFX?' -B 'Yes, exit' 'uwsm stop'
-bindsym $mod+backslash exec dunstctl close
-bindsym $mod+bracketright exec dunstctl history-pop
-
-bindsym $mod+$left focus left
-bindsym $mod+$down focus down
-bindsym $mod+$up focus up
-bindsym $mod+$right focus right
-bindsym $mod+Shift+$left move left
-bindsym $mod+Shift+$down move down
-bindsym $mod+Shift+$up move up
-bindsym $mod+Shift+$right move right
-
-bindsym $mod+1 workspace number 1
-bindsym $mod+2 workspace number 2
-bindsym $mod+3 workspace number 3
-bindsym $mod+4 workspace number 4
-bindsym $mod+5 workspace number 5
-bindsym $mod+Shift+1 move container to workspace number 1
-bindsym $mod+Shift+2 move container to workspace number 2
-bindsym $mod+Shift+3 move container to workspace number 3
-bindsym $mod+Shift+4 move container to workspace number 4
-bindsym $mod+Shift+5 move container to workspace number 5
-bindsym $mod+Tab workspace back_and_forth
+bindsym $mod+Shift+Ctrl+e exec uwsm stop
 
 # Placeholder until waybar (step 7).
 bar {
@@ -57,4 +27,6 @@ bar {
 # uwsm: export WAYLAND_DISPLAY/SWAYSOCK and signal readiness, then start the
 # shared helpers. Outside uwsm, finalize fails and the helpers stay down.
 exec sh -c 'uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target'
+
+# vim:ft=conf
 {{- end }}
