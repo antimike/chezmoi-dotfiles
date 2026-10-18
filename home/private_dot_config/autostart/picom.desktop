@@ -1,0 +1,8 @@
+[Desktop Entry]
+# Masks the picom package's /etc/xdg/autostart entry. Without this, uwsm's
+# xdg-desktop-autostart.target starts picom in Wayland sessions (and GNOME),
+# where it fails with "Another composite manager is already running".
+# X11 sessions start picom through picom.service (wm-helpers-x11.target).
+Type=Application
+Name=picom
+Hidden=true
