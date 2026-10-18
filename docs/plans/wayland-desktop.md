@@ -265,7 +265,7 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 ## Functional daily driver (D50, 2026-10-18)
 
 MH needs a working desktop for a job search soon, so this checklist comes before the numbered steps below. Only what
-makes SwayFX usable every day; anything not done by the deadline (set by MH) moves to the backlog. Each item takes the
+makes SwayFX usable every day; anything not done by the deadline, **Tuesday 2026-10-20** (MH), moves to the backlog. Each item takes the
 functional part of its step, not the whole step; scripts from `i3-config-mbp` are ported only when an item needs them.
 
 - [ ] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a

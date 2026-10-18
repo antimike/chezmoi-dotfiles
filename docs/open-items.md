@@ -11,7 +11,7 @@ updated: 2026-10-18
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| **Functional SwayFX daily driver (D50, 2026-10-18), deadline set by MH:** checklist in [plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver" (screen sharing, lock/idle/power, volume/brightness keys, screenshots, minimal bar, kitty errors, cheat sheet, external monitor, i3 off zbook) | Claude + MH | [plans/wayland-desktop.md](plans/wayland-desktop.md) |
+| **Functional SwayFX daily driver (D50, 2026-10-18), deadline Tuesday 2026-10-20:** checklist in [plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver" (screen sharing, lock/idle/power, volume/brightness keys, screenshots, minimal bar, kitty errors, cheat sheet, external monitor, i3 off zbook) | Claude + MH | [plans/wayland-desktop.md](plans/wayland-desktop.md) |
 | The kitty errors are on the D50 checklist; the full kitty merge-and-debug pass comes later (known so far: `fonts.conf:65` `symbol_map 0xEA60-0xEBC3` needs `U+` form; `kitty.conf:896` includes `~/.cache/wal/colors-kitty.conf` twice; both show an error screen in every new window, seen 2026-10-17); BOCO Phases 5-6 after; Phase 4 (mail) last (MH, 2026-10-17) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
 | Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks). **Parked by D50**: designed in spare time; meanwhile install by hand and add to `packages.yaml` afterwards | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
