@@ -278,6 +278,35 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
 - [ ] **kitty errors fixed** (the two known errors in [../open-items.md](../open-items.md); the full BOCO merge stays later).
 - [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
+- [ ] **Keyring unlock prompts** (D51; built 2026-10-18 on branch `wayland/keyring`, **login test pending**). Symptom:
+      Chromium, and GPG/SSH use without the YubiKey, asked to unlock the "system keyring"; GNOME never did. Cause
+      (journal, 2026-10-18 boot): GDM's PAM step started gnome-keyring and unlocked the login keyring
+      (`gkr-pam: ... unlocked keyring`), but the handoff (`gnome-keyring-daemon --start`) lives in GNOME-only XDG
+      autostart entries, skipped under SwayFX (`Skipped due to 'exec-condition'`). By the first Secret Service request
+      the PAM daemon was gone (`couldn't access control socket: /run/user/1000/keyring/control`), so D-Bus activated a
+      fresh, locked one. That the missing handoff is what kills the PAM daemon is a hypothesis; the login test checks
+      it. Fix: `exec gnome-keyring-daemon --start --components=secrets` in `sway/config.tmpl` (rendered only where the
+      daemon is installed, before `uwsm finalize`); `no-allow-external-cache` in `gpg-agent.conf`, because
+      pinentry-gnome3 looked up cached passphrases in the keyring. **GPG half passed 2026-10-18** (MH: `ssh-add -l`
+      without the YubiKey, no prompt). **Login test:** right after a SwayFX login, before opening Chromium, run
+      `keyring-check` (managed in `~/.local/bin`): exactly one daemon, PAM's unlock (`gkr-pam: unlocked login keyring`)
+      in this login's system journal, no `couldn't access control socket` in the session's journal, login keyring
+      unlocked, gpg-agent option set; it then lists the manual checks (Chromium, YubiKey unplugged). Two login paths
+      exist, because lingering keeps the user manager (and a daemon in it) alive across logouts: (a) **fresh boot**,
+      no daemon at login: PAM starts one (`--login` in its command line) and the sway `exec` must take it over;
+      (b) **re-login**, a daemon survives from an earlier session: PAM's open-session step unlocks it (journal:
+      `unable to locate daemon control file`, `stashed password`, then `unlocked login keyring`). **Path (b) passed
+      the automatic checks 2026-10-18** (16:11 login; daemon from 14:57, D-Bus-activated, no prompt). The first
+      `keyring-check` required `--login` and failed that path wrongly; fixed in `f81a443`. **Path (a), the one the
+      sway `exec` exists for, is untested: run `keyring-check` after the next reboot.** If it fails there, use the D51
+      fallback (`gnome-keyring-daemon.socket`).
+      **Text consoles:** nothing unlocks the keyring there. `/etc/pam.d/login` (and the `system-auth`/`postlogin`
+      stacks it includes) has no `pam_gnome_keyring`; a console session shares the user's systemd manager and bus, so
+      it uses a graphical session's unlocked daemon if one runs, and otherwise a request activates a locked daemon whose
+      unlock prompt (gcr-prompter) needs a display, so the request fails. Left as is (Claude's recommendation, 2026-10-18; not yet confirmed by MH): the console is for
+      recovery, and with `no-allow-external-cache` GPG/SSH there do not touch the keyring. Adding `pam_gnome_keyring`
+      to `login` would not help reliably anyway: `login` also accepts YubiKey auth (`yubikey-sufficient`), which gives
+      it no password to unlock with.
 - [ ] **External monitor**, if MH uses one (`DP-4..6` sockets: backlog).
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 

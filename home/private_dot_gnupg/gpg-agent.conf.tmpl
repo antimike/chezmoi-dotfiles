@@ -5,3 +5,7 @@ pinentry-program {{ joinPath .chezmoi.homeDir ".local" "bin" "pinentry-auto" }}
 default-cache-ttl 28800
 # Absolute cap regardless of use; gpg-agent default is 7200.
 max-cache-ttl 28800
+# Keep pinentry away from the Secret Service (gnome-keyring): no "save in password
+# manager", and no keyring unlock prompt when the YubiKey is absent. The card PIN
+# should never be stored there anyway.
+no-allow-external-cache

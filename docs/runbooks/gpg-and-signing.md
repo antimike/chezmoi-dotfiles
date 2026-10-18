@@ -1,7 +1,7 @@
 ---
 summary: Which GPG key is used for what, how git signing is configured, the expired old key, and how to verify
 status: current
-updated: 2026-10-15
+updated: 2026-10-18
 ---
 
 # GPG and signing
@@ -16,7 +16,7 @@ updated: 2026-10-15
 ## Configuration (as of 2026-10-15)
 
 - `git config --global user.signingkey 9F049F34…` (in `~/.gitconfig`, which is **not yet chezmoi-managed**; merging it with the employer-era repo's `dot_gitconfig.tmpl` is part of Phase 0 of [../plans/boco-merge.md](../plans/boco-merge.md)).
-- `~/.gnupg/gpg.conf` has `default-key 9F049F34…` (unmanaged). `gpg-agent.conf` has `enable-ssh-support`; SSH to GitHub uses the YubiKey through the agent socket.
+- `~/.gnupg/gpg.conf` has `default-key 9F049F34…` (unmanaged). `gpg-agent.conf` has `enable-ssh-support`; SSH to GitHub uses the YubiKey through the agent socket. Since 2026-10-18 it also sets `no-allow-external-cache` (D51): pinentry never reads or stores passphrases in gnome-keyring.
 - `tag.gpgsign = true`, `commit.gpgsign = false`. So annotated tags need the YubiKey; ordinary commits do not.
 - `.chezmoi.yml.tmpl` carries the key as `gpg.keys.signing` (not yet consumed by any template).
 - The `pass` store (`~/.password-store/.gpg-id`) is encrypted to the same key.
@@ -35,3 +35,7 @@ Same symptoms with the key plugged in (`lsusb` shows it) mean pcscd owns the rea
 Chromium keep the card open, so an exclusive connect fails with `sharing violation`). Found 2026-10-17, after a reboot
 in which pcscd was socket-activated. Restart scdaemon after changing it: `gpgconf --kill scdaemon`. Debug with
 `gpg-connect-agent 'SCD GETINFO reader_list' /bye` (empty = no reader) and a `debug-level guru` + `log-file` run.
+
+A "system keyring" unlock prompt on GPG/SSH use is gnome-keyring, not GPG: see D51 and the keyring item in
+[../plans/wayland-desktop.md](../plans/wayland-desktop.md), "Functional daily driver"; diagnose with `keyring-check`. After a `gpg-agent.conf`
+change: `gpg-connect-agent reloadagent /bye`; check with `gpgconf --list-options gpg-agent | grep external-cache`.
