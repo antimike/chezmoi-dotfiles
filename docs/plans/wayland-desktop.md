@@ -1,6 +1,6 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: steps 0 and 1 done (2026-10-17); step 2 login checks 1-4 passed, check 5 pending; uwsm adopted (D38)
+status: steps 0 and 1 done (2026-10-17); step 2 login checks 1-5 and picom re-check passed; uwsm adopted (D38)
 updated: 2026-10-17
 ---
 
@@ -280,7 +280,7 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    `WLR_DRM_DEVICES`/`AQ_DRM_DEVICES=/dev/dri/igpu` when the symlink exists; `~/.config/sway/config` (minimal, swaybar
    date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
    Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
-   **Login test 2026-10-17 (MH):** checks 1-4 passed (results under "Step 2 login test"); check 5 pending. Found and
+   **Login test 2026-10-17 (MH):** checks 1-5 and the picom re-check passed (results under "Step 2 login test"). Found and
    fixed in the session: the picom package's XDG autostart entry ran under SwayFX (uwsm starts
    `xdg-desktop-autostart.target`) and failed; masked by a managed `~/.config/autostart/picom.desktop` (`Hidden=true`).
 3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. i3 is kept (D49).
@@ -322,8 +322,8 @@ Console fallback first: if the session does not come up, Ctrl+Alt+F3, log in, `j
 entries (MH logged in through `SwayFX (uwsm)`). 5 (GNOME, 2026-10-17): all four `inactive`, passed.
 picom still failed on the next SwayFX login (23:13): lingering keeps the user manager alive across logins, and
 the XDG autostart generator only re-runs on `daemon-reload`. Its unit dated from before the mask was deployed (a
-targeted apply does not run `run_after_reload-systemd-user.sh`). `systemctl --user daemon-reload` removed it. Still to do:
-confirm no picom error on the next SwayFX login.
+targeted apply does not run `run_after_reload-systemd-user.sh`). `systemctl --user daemon-reload` removed it.
+Re-check (MH, 2026-10-17): the next SwayFX login showed no picom error and `journalctl --user -b | grep picom` had nothing after 23:13, passed.
 
 ## Open questions
 
