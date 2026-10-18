@@ -295,6 +295,13 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       lists the manual checks (Chromium, YubiKey unplugged). Negative control: in the 2026-10-18 session, started
       before the fix, it fails the three keyring checks. If the daemon check fails, use the D51 fallback
       (`gnome-keyring-daemon.socket`).
+      **Text consoles:** nothing unlocks the keyring there. `/etc/pam.d/login` (and the `system-auth`/`postlogin`
+      stacks it includes) has no `pam_gnome_keyring`; a console session shares the user's systemd manager and bus, so
+      it uses a graphical session's unlocked daemon if one runs, and otherwise a request activates a locked daemon whose
+      unlock prompt (gcr-prompter) needs a display, so the request fails. Left as is (Claude's recommendation, 2026-10-18; not yet confirmed by MH): the console is for
+      recovery, and with `no-allow-external-cache` GPG/SSH there do not touch the keyring. Adding `pam_gnome_keyring`
+      to `login` would not help reliably anyway: `login` also accepts YubiKey auth (`yubikey-sufficient`), which gives
+      it no password to unlock with.
 - [ ] **External monitor**, if MH uses one (`DP-4..6` sockets: backlog).
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 
