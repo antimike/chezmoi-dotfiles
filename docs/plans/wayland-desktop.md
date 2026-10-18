@@ -15,9 +15,10 @@ project: [theming.md](theming.md). Loose items: [ricing-backlog.md](ricing-backl
 ## Current state of zbook (checked 2026-10-17)
 
 - Fedora 44, GNOME on Wayland. **GDM** is the active display manager; `lightdm` is installed but unused.
-- i3 and polybar are installed but unused. The polybar config and the i3 helper scripts the i3 config calls
-  (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`, kitty's `open-notes.bash`) are
-  not in chezmoi or on this machine; they are in MH's **`antimike/i3-config-mbp`** repo (below).
+- i3 and polybar are installed but unused. The i3 config is deployed (`~/.config/i3/config`) but **broken**: the helper
+  scripts it calls (`~/.config/i3/bin/set-pulseaudio-volume.bash`, `adjust-brightness.bash`, `xss-lock`, kitty's
+  `open-notes.bash`) and the polybar config are not in chezmoi or on this machine; they are in MH's
+  **`antimike/i3-config-mbp`** repo (below). Under D48 i3 is either fixed or removed (see "Keeping i3 working" below).
 - Already in chezmoi for Wayland: the clipboard stack (`clipboard-stack-wayland.target` running `cliphist@text`,
   `cliphist@image` and `wl-clip-persist`; the clipse installer), started explicitly by a Wayland session, never by GNOME.
 - Already installed: `dunst`, `rofi` 2.0 (Wayland-native), `kitty` 0.47, `cliphist`, `wl-clipboard`, `brightnessctl`,
@@ -130,6 +131,16 @@ versions checked 2026-10-08 and 2026-10-17.
 **One source of truth for i3 and SwayFX.** Split `config.tmpl` into a shared fragment (`home/.chezmoitemplates/wm/common`)
 plus thin `i3/config.tmpl` and `sway/config.tmpl` wrappers that add WM-specific lines (SwayFX effects go in the sway
 wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and after the split).
+
+**Keeping i3 working (D48).** The repo must not ship a broken i3 config, so the port fixes i3 along the way, unless MH
+decides to drop i3 (open item). Rules:
+- Helper scripts both WMs need (volume, brightness, keyboard backlight, OSD, notes launcher, screenshot) are ported
+  **once** to `~/.local/bin` and work in X11 and Wayland sessions, like `clip` (check `$WAYLAND_DISPLAY` only where the
+  tools differ; `wpctl`, `brightnessctl` and `dunstctl` do not). The shared fragment calls them, so i3 and SwayFX use the
+  same paths; nothing new goes into `~/.config/i3/bin/`.
+- i3-only helpers found in the mining pass (step 6) are ported for i3 or dropped together with their bindings; none stay
+  referenced but missing.
+- i3's done check is an **i3 login test** on zbook (none yet), run once the steps above have touched its config.
 
 | i3 config item | Change for Sway |
 |---|---|
@@ -269,14 +280,17 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
    Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
    **Pending (MH at the desk):** log into `SwayFX (uwsm)`, then run the checks in "Step 2 login test" below.
-3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical.
+3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. Blocked on MH's keep-or-drop decision for i3
+   (D48): if i3 goes, the SwayFX config takes over the i3 config directly and there is no fragment to split.
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
    stack and media control, kanshi profiles, Bluetooth, removable drives, Wi-Fi); `input` blocks;
-   volume/brightness/keyboard-backlight keys with OSD; gammastep.
+   volume/brightness/keyboard-backlight keys with OSD; gammastep. The key scripts go to `~/.local/bin` and work in
+   both session types; the i3 bindings switch to them too ("Keeping i3 working").
 6. **Mining pass** over i3-config-mbp, i3wm-configuration and arcolinux-i3wm (scripts worth porting), then the
    **X-specific config items:** `app_id` rules, screenshot rewrite, `i3-input` wrapper, exit/nag, dropdown terminal,
-   opacity keys.
+   opacity keys. Each script found is ported (to `~/.local/bin`, both session types), ported i3-only, or dropped with
+   its bindings. Then the **i3 login test**, if i3 is kept.
 7. **waybar** with tray (the polybar replacement).
 8. **Pickers:** password picker (with the sensitive-clipboard check), clipboard picker, **notification history browser**
    (`dunstctl history` JSON → `jq` → rofi; Enter = `history-pop <ID>`, a custom key = `history-rm <ID>`; raise
