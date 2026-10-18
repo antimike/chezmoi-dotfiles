@@ -132,12 +132,13 @@ versions checked 2026-10-08 and 2026-10-17.
 plus thin `i3/config.tmpl` and `sway/config.tmpl` wrappers that add WM-specific lines (SwayFX effects go in the sway
 wrapper). Keep the i3 output byte-identical (compare `chezmoi cat` before and after the split).
 
-**Keeping i3 working (D48).** The repo must not ship a broken i3 config, so the port fixes i3 along the way, unless MH
-decides to drop i3 (open item). Rules:
+**Keeping i3 working (D48, D49).** The repo must not ship a broken i3 config, so the port fixes i3 along the way. i3
+stays for MH's old MacBook Pro (a possible future X11 host); zbook is the test bed until then. Rules:
 - Helper scripts both WMs need (volume, brightness, keyboard backlight, OSD, notes launcher, screenshot) are ported
   **once** to `~/.local/bin` and work in X11 and Wayland sessions, like `clip` (check `$WAYLAND_DISPLAY` only where the
   tools differ; `wpctl`, `brightnessctl` and `dunstctl` do not). The shared fragment calls them, so i3 and SwayFX use the
-  same paths; nothing new goes into `~/.config/i3/bin/`.
+  same paths; nothing new goes into `~/.config/i3/bin/`. They must not assume zbook's hardware: backlight and
+  keyboard-backlight device names (Apple's differ) come from host data or detection.
 - i3-only helpers found in the mining pass (step 6) are ported for i3 or dropped together with their bindings; none stay
   referenced but missing.
 - i3's done check is an **i3 login test** on zbook (none yet), run once the steps above have touched its config.
@@ -280,8 +281,7 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    date placeholder) ends with `uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target`.
    Checked: `sway -C` and `systemd-analyze --user verify` clean; in GNOME all helper units stay inactive.
    **Pending (MH at the desk):** log into `SwayFX (uwsm)`, then run the checks in "Step 2 login test" below.
-3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. Blocked on MH's keep-or-drop decision for i3
-   (D48): if i3 goes, the SwayFX config takes over the i3 config directly and there is no fragment to split.
+3. **Shared fragment split** (i3 + SwayFX), i3 output byte-identical. i3 is kept (D49).
 4. **Lock, idle, power** (swaylock, swayidle, logind), before any daily use.
 5. **Devices, audio, keys:** design review then build, per [devices-and-audio.md](devices-and-audio.md) (audio
    stack and media control, kanshi profiles, Bluetooth, removable drives, Wi-Fi); `input` blocks;
