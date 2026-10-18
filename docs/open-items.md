@@ -1,7 +1,7 @@
 ---
 summary: Every open item across the migration, BOCO merge, Sway and housekeeping, with source and who acts
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 
 # Open items
@@ -11,16 +11,17 @@ updated: 2026-10-17
 ## Next up
 | Item | Who | Where |
 |---|---|---|
-| Sway and ricing first, then the kitty merge-and-debug pass (known so far: `fonts.conf:65` `symbol_map 0xEA60-0xEBC3` needs `U+` form; `kitty.conf:896` includes `~/.cache/wal/colors-kitty.conf` twice; both show an error screen in every new window, seen 2026-10-17); BOCO Phases 5-6 after; Phase 4 (mail) last (MH, 2026-10-17) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
+| **Functional SwayFX daily driver (D50, 2026-10-18), deadline set by MH:** checklist in [plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver" (screen sharing, lock/idle/power, volume/brightness keys, screenshots, minimal bar, kitty errors, cheat sheet, external monitor, i3 off zbook) | Claude + MH | [plans/wayland-desktop.md](plans/wayland-desktop.md) |
+| The kitty errors are on the D50 checklist; the full kitty merge-and-debug pass comes later (known so far: `fonts.conf:65` `symbol_map 0xEA60-0xEBC3` needs `U+` form; `kitty.conf:896` includes `~/.cache/wal/colors-kitty.conf` twice; both show an error screen in every new window, seen 2026-10-17); BOCO Phases 5-6 after; Phase 4 (mail) last (MH, 2026-10-17) | Claude | [plans/boco-merge.md](plans/boco-merge.md) |
 | Push the private findings doc to `chezmoi-boco` (committed locally) | MH approval | `~/Source/chezmoi-boco/docs/zbook-migration/` |
-| Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks) | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
-| zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
+| Distro-agnostic package map (logical names, per-manager overrides, non-native fallbacks). **Parked by D50**: designed in spare time; meanwhile install by hand and add to `packages.yaml` afterwards | MH + Claude | [Detail below](#detail-package-map-refactor); proposed as D32 |
+| zsh switch-over (Step 4 of Phase 0), then the keybinding manifest (D33 draft; **parked by D50**, see [plans/keybinding-manifest.md](plans/keybinding-manifest.md)) and zsh simplification (two-layer plugin templating, exports machinery) | Claude | [plans/boco-merge.md](plans/boco-merge.md), [log/zsh-step4-inventory.md](log/zsh-step4-inventory.md) |
 | Atlassian/Jira review and redaction pass | MH + Claude | [plans/boco-merge.md](plans/boco-merge.md), "Held items" |
 
 ## Plans waiting on a start
 | Item | Who | Where |
 |---|---|---|
-| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial under uwsm; order of work agreed 2026-10-17; steps 0 and 1 **done 2026-10-17** (merged); step 2 (session plumbing) **built 2026-10-17** on branch `wayland/2-session-plumbing` (`wm-helpers-wayland.target`, D47 naming; uwsm env with `WLR_DRM_DEVICES=/dev/dri/igpu`; minimal SwayFX config); login checks 1-5 and the picom re-check **passed 2026-10-17** (plan "Step 2 login test"); **merged 2026-10-17** (`565b002`); step 3 (shared fragment split) **done and merged 2026-10-17** (i3 byte-identical, then i3 fixes and distinct inactive tab colors; SwayFX runs the shared body; MH key check passed); **next: keybinding manifest (own branch) and step 4** (lock, idle, power). Waiting on MH: `DP-4..6` sockets (backlog); notifications decided (dunst + history browser) | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) |
+| Wayland desktop: SwayFX daily driver (full i3 port) plus niri/Hyprland/Wayfire trial under uwsm; order of work agreed 2026-10-17; steps 0 and 1 **done 2026-10-17** (merged); step 2 (session plumbing) **built 2026-10-17** on branch `wayland/2-session-plumbing` (`wm-helpers-wayland.target`, D47 naming; uwsm env with `WLR_DRM_DEVICES=/dev/dri/igpu`; minimal SwayFX config); login checks 1-5 and the picom re-check **passed 2026-10-17** (plan "Step 2 login test"); **merged 2026-10-17** (`565b002`); step 3 (shared fragment split) **done and merged 2026-10-17** (i3 byte-identical, then i3 fixes and distinct inactive tab colors; SwayFX runs the shared body; MH key check passed); **next: the D50 functional checklist** (step 4 lock/idle/power is part of it); the keybinding manifest is parked ([plans/keybinding-manifest.md](plans/keybinding-manifest.md)). Waiting on MH: `DP-4..6` sockets (backlog); notifications decided (dunst + history browser) | Claude | [plans/wayland-desktop.md](plans/wayland-desktop.md), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) |
 | Devices and audio review (step 5): PipeWire/WirePlumber, playerctl (not installed), kanshi, Bluetooth, udiskie, Wi-Fi | Claude | [plans/devices-and-audio.md](plans/devices-and-audio.md) |
 | Mining pass over `i3-config-mbp`, `i3wm-configuration`, `arcolinux-i3wm` (cloned to `~/Source/antimike/`) | Claude | step 6 of [plans/wayland-desktop.md](plans/wayland-desktop.md) |
 | Theming system (theme bundles, wallpaper fetcher and palette-aware selection, fonts, pickers); after the SwayFX daily driver | Claude | [plans/theming.md](plans/theming.md) |
@@ -103,7 +104,7 @@ updated: 2026-10-17
 4. Decide, then migrate data. Clean its DB (drop `observer-sessions` and client rows, `VACUUM`) only if it stays. Evidence so far: 9,211 hook firings vs one `mem-search` invocation. Held items in chezmoi: `claude-mem-audit` skill/command, `claude-mem-cleanup` script and timer, `.claude-mem/` settings.
 
 ## Detail: package map refactor
-Status: proposed, not started ([D32](decisions.md) is a draft). Goal: make package installation distro-agnostic without scattering distro conditionals through templates.
+Status: proposed, not started ([D32](decisions.md) is a draft); **parked by D50 (2026-10-18)**, designed in spare time. Interim: install by hand, add to `packages.yaml` afterwards; an optional script comparing `dnf repoquery --userinstalled` with `packages.yaml` catches what was forgotten. Goal: make package installation distro-agnostic without scattering distro conditionals through templates.
 
 **Today.** `home/.chezmoidata/packages.yaml` is `packages: fedora: [...]` and `run_onchange_install-packages.sh.tmpl` exits unless the distro is Fedora with `dnf`. Some other data files use `- dnf: <pkg>` / `- pipx: <pkg>` entries (`systemd.yaml`, `rofi.yaml`). Tools with pinned releases have their own `.chezmoidata/<tool>.yaml` plus `run_onchange_install-<tool>.sh.tmpl`.
 

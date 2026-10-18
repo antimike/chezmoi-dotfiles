@@ -1,7 +1,7 @@
 ---
 summary: Backlog of non-essential zbook improvements (ricing, security, resume) with done/open state
 status: living checklist
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 
 # Backlog (aesthetic and quality-of-life work)
@@ -9,6 +9,12 @@ updated: 2026-10-17
 Merged from MH's scratch notes; "[x]" = done as part of the Claude Code migration ([../log/migration-steps.md](../log/migration-steps.md)).
 Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositors, SwayFX daily driver; first) and
 [theming.md](theming.md) (themes, wallpapers, fonts, pickers; later).
+
+## Side quests (parked by D50, 2026-10-18)
+- [ ] Keybinding manifest in Lua, lazy.nvim-style units: [keybinding-manifest.md](keybinding-manifest.md)
+- [ ] Try [`swindings`](https://github.com/sondalex/swindings) (maybe fork); the cheat sheet stays the main lookup tool
+- [ ] Package map refactor (D32): [../open-items.md](../open-items.md#detail-package-map-refactor)
+- [ ] Minimal niri, Hyprland, Wayfire configs (try the generated defaults first)
 
 ## Claude tooling
 - [x] Editor preferences (vi mode), skills, home-rolled tooling (`bd-track`), beads install (dolt, uv, bun, bd)

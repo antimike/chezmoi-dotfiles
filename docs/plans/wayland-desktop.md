@@ -1,7 +1,7 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
-status: steps 0 and 1 done (2026-10-17); step 2 done and merged (2026-10-17); uwsm adopted (D38)
-updated: 2026-10-17
+status: steps 0-3 done and merged (2026-10-17); functional daily-driver checklist first (D50, 2026-10-18); uwsm adopted (D38)
+updated: 2026-10-18
 ---
 
 # Wayland desktop plan
@@ -194,7 +194,8 @@ stays for MH's old MacBook Pro (a possible future X11 host); zbook is the test b
   popup with nested submenus, each entry running a command; YAML config with font, color, border and corner-radius
   theming. Needs layer-shell (all four compositors; verify on niri and Hyprland). Install with
   `cargo install --locked`, pinned.
-- **Keybinding manifest (generate, never parse; MH wants no drift).** **One `keybindings` data tree for every app**
+- **Keybinding manifest (generate, never parse; MH wants no drift).** *Parked by D50 (2026-10-18); a Lua redesign is
+  discussed in [keybinding-manifest.md](keybinding-manifest.md).* **One `keybindings` data tree for every app**
   (MH, 2026-10-17): compositors, wlr-which-key, zsh (folding in the D33 draft), kitty, nvim, with a section per app.
   It can be split into several files under `home/.chezmoidata/` (check that chezmoi deep-merges nested keys across
   data files; otherwise one file). Per section, a mode:
@@ -261,7 +262,28 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 - Guards: Wayland-only files key off the `display_server` host data (as the clipboard stack does) and installed tools
   (`lookPath`); no WSL guard needed.
 
+## Functional daily driver (D50, 2026-10-18)
+
+MH needs a working desktop for a job search soon, so this checklist comes before the numbered steps below. Only what
+makes SwayFX usable every day; anything not done by the deadline (set by MH) moves to the backlog. Each item takes the
+functional part of its step, not the whole step; scripts from `i3-config-mbp` are ported only when an item needs them.
+
+- [ ] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a
+      test call. First, because it is the item most likely to fail at the worst moment.
+- [ ] **Lock, idle, power** (step 4): swaylock, swayidle, logind lid handling, lock before suspend; suspend and resume
+      tested on this hybrid Intel/NVIDIA machine.
+- [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
+- [ ] **Screenshots** (functional part of step 6).
+- [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
+- [ ] **kitty errors fixed** (the two known errors in [../open-items.md](../open-items.md); the full BOCO merge stays later).
+- [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
+      ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
+- [ ] **External monitor**, if MH uses one (`DP-4..6` sockets: backlog).
+- [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
+
 ## Steps (order agreed by MH, 2026-10-17)
+
+After steps 0-3, the functional checklist above comes first (D50); the rest of each step is spare-time work.
 
 0. **Safety first:** the [display-session recovery runbook](../runbooks/display-session-recovery.md) checks (console
    login, etckeeper snapshot); udev symlinks for the GPUs. **Done 2026-10-17** (console login works; `/etc` was clean at
@@ -317,8 +339,9 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
    `history_length`; optional dunst rule script appending to a log file so history survives restarts; check the
    timestamp format, which is probably time since boot). Note: actions on re-shown notifications only work while the sending app runs.
 9. **Keybinding manifest** (start it in step 3, when the shared fragment is split), then which-key leader menus and the
-   cheat sheet rendered from it.
+   cheat sheet rendered from it. **Parked side quest (D50)**: [keybinding-manifest.md](keybinding-manifest.md).
 10. **Minimal configs** for niri, Hyprland, Wayfire, reusing the helper target; trial period; pick the main compositor.
+    **Parked (D50):** no repo work; MH tries them with their generated default configs.
 11. **Greeter**, following the [display-session recovery runbook](../runbooks/display-session-recovery.md)
     (test each DM with `systemctl start` before enabling it).
 
