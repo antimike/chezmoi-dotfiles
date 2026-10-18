@@ -287,10 +287,14 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       fresh, locked one. That the missing handoff is what kills the PAM daemon is a hypothesis; the login test checks
       it. Fix: `exec gnome-keyring-daemon --start --components=secrets` in `sway/config.tmpl` (rendered only where the
       daemon is installed, before `uwsm finalize`); `no-allow-external-cache` in `gpg-agent.conf`, because
-      pinentry-gnome3 looked up cached passphrases in the keyring. **Login test:** right after a SwayFX login,
-      `ls /run/user/1000/keyring/control` exists and `pgrep -a gnome-keyring` shows one daemon; Chromium opens without
-      a prompt; with the YubiKey unplugged, `ssh-add -l` and `gpg --card-status` raise no keyring prompt. If the
-      control socket is missing, use the D51 fallback (`gnome-keyring-daemon.socket`).
+      pinentry-gnome3 looked up cached passphrases in the keyring. **GPG half passed 2026-10-18** (MH: `ssh-add -l`
+      without the YubiKey, no prompt). **Login test:** right after a SwayFX login, before opening Chromium, run
+      `keyring-check` (managed in `~/.local/bin`): one daemon started by PAM (`--login` in its command line; the
+      socket `/run/user/1000/keyring/control` alone proves nothing, since a D-Bus-activated daemon creates it too), no
+      `couldn't access control socket` in the session's journal, login keyring unlocked, gpg-agent option set; it then
+      lists the manual checks (Chromium, YubiKey unplugged). Negative control: in the 2026-10-18 session, started
+      before the fix, it fails the three keyring checks. If the daemon check fails, use the D51 fallback
+      (`gnome-keyring-daemon.socket`).
 - [ ] **External monitor**, if MH uses one (`DP-4..6` sockets: backlog).
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 

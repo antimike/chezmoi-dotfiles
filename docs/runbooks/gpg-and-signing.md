@@ -37,5 +37,5 @@ in which pcscd was socket-activated. Restart scdaemon after changing it: `gpgcon
 `gpg-connect-agent 'SCD GETINFO reader_list' /bye` (empty = no reader) and a `debug-level guru` + `log-file` run.
 
 A "system keyring" unlock prompt on GPG/SSH use is gnome-keyring, not GPG: see D51 and the keyring item in
-[../plans/wayland-desktop.md](../plans/wayland-desktop.md), "Functional daily driver". After a `gpg-agent.conf`
+[../plans/wayland-desktop.md](../plans/wayland-desktop.md), "Functional daily driver"; diagnose with `keyring-check`. After a `gpg-agent.conf`
 change: `gpg-connect-agent reloadagent /bye`; check with `gpgconf --list-options gpg-agent | grep external-cache`.
