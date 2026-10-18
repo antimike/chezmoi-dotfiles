@@ -14,23 +14,36 @@ pass() { printf '  PASS  %s\n' "$1"; }
 bad() { printf '  FAIL  %s\n' "$1"; fail=1; }
 info() { printf '        %s\n' "$1"; }
 
+since=$(loginctl show-session "${XDG_SESSION_ID:-}" -p Timestamp --value 2>/dev/null)
+since=${since:+$(date -d "$since" '+%F %T' 2>/dev/null)}
+
 echo "Automatic checks:"
 
-# 1. One daemon, and it is PAM's (started with --login). A D-Bus-activated
-#    replacement runs as `--start --foreground --components=secrets`.
+# 1. Exactly one daemon. Two paths are fine: no daemon at login, so PAM starts
+#    one (`--login`); or one survived an earlier session (lingering keeps the
+#    user manager alive), and PAM's open-session step unlocks it (check 2).
 mapfile -t daemons < <(pgrep -a gnome-keyring-d)
 if [[ ${#daemons[@]} -eq 1 && ${daemons[0]} == *--login* ]]; then
-  pass "one gnome-keyring daemon, started by PAM (--login)"
+  pass "one gnome-keyring daemon, started by PAM at this login (--login)"
+elif [[ ${#daemons[@]} -eq 1 ]]; then
+  pass "one gnome-keyring daemon, from before this login (PAM must unlock it: check 2)"
 elif [[ ${#daemons[@]} -eq 0 ]]; then
   bad "no gnome-keyring daemon running"
 else
-  bad "daemon is not PAM's (no --login) or more than one runs:"
+  bad "more than one gnome-keyring daemon runs:"
 fi
 for d in "${daemons[@]}"; do info "$d"; done
 
-# 2. No sign of a fresh daemon failing to find PAM's in this session's journal.
-since=$(loginctl show-session "${XDG_SESSION_ID:-}" -p Timestamp --value 2>/dev/null)
-since=${since:+$(date -d "$since" '+%F %T' 2>/dev/null)}
+# 2. GDM's PAM step unlocked the login keyring at this login (system journal;
+#    needs read access, e.g. wheel).
+if journalctl -b ${since:+--since "$since"} --no-pager -q \
+    -g 'gkr-pam: unlocked login keyring' 2>/dev/null | grep -q .; then
+  pass "journal: PAM unlocked the login keyring${since:+ at $since}"
+else
+  bad "journal: no 'gkr-pam: unlocked login keyring'${since:+ since $since} (GDM login? journal readable?)"
+fi
+
+# 3. No sign of a fresh daemon failing to find PAM's in this session's journal.
 if journalctl --user -b ${since:+--since "$since"} --no-pager -q \
     -g 'couldn.t access control socket' 2>/dev/null | grep -q .; then
   bad "journal: a replacement daemon could not reach PAM's (control socket missing)"
@@ -38,7 +51,7 @@ else
   pass "journal: no 'couldn't access control socket' ${since:+since $since}"
 fi
 
-# 3. Login keyring unlocked without a prompt. Meaningful only if nothing has
+# 4. Login keyring unlocked without a prompt. Meaningful only if nothing has
 #    prompted yet (an unlock you typed by hand also reads false).
 locked=$(busctl --user get-property org.freedesktop.secrets \
   /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection Locked 2>/dev/null)
@@ -48,7 +61,7 @@ case $locked in
   *) bad "could not read the login keyring's Locked property" ;;
 esac
 
-# 4. gpg-agent keeps pinentry out of the keyring.
+# 5. gpg-agent keeps pinentry out of the keyring.
 if gpgconf --list-options gpg-agent 2>/dev/null | grep -q '^no-allow-external-cache:.*:1$'; then
   pass "gpg-agent: no-allow-external-cache is set"
 else
