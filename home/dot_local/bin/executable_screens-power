@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# screens-power — turn all outputs off or on in the running Wayland compositor.
+#
+#   screens-power off|on
+#
+# swayidle runs this after the lock timeout and on resume. The compositor comes
+# from XDG_CURRENT_DESKTOP (set by uwsm); an unknown one is a no-op, not an error,
+# so the idle chain keeps working there.
+set -euo pipefail
+
+case ${1:-} in
+  on | off) state=$1 ;;
+  *) echo "usage: screens-power off|on" >&2; exit 2 ;;
+esac
+
+case ${XDG_CURRENT_DESKTOP:-} in
+  *sway*) swaymsg -q "output * power $state" ;;
+  *Hyprland*) hyprctl -q dispatch dpms "$state" ;;
+  *niri*) [[ $state == off ]] && niri msg action power-off-monitors ;;  # niri wakes them on input
+  *) echo "screens-power: no method for '${XDG_CURRENT_DESKTOP:-}'; skipping" >&2 ;;
+esac

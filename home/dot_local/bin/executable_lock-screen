@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# lock-screen — lock the Wayland session with swaylock; returns once it is locked.
+#
+#   lock-screen        what swayidle runs on logind's lock event and before sleep
+#
+# Lock through `loginctl lock-session` (bound to $mod+Escape) rather than calling
+# this directly, so every lock goes through one path. swaylock -f forks only after
+# the lock surface is up, so `swayidle -w` holds suspend until the screen is locked.
+# Settings: ~/.config/swaylock/config.
+set -euo pipefail
+
+# A second locker would fail anyway (one ext-session-lock per session); skip it.
+if pgrep -u "$UID" -x swaylock >/dev/null; then
+  exit 0
+fi
+exec swaylock -f
