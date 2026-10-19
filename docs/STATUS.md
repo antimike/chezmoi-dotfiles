@@ -30,10 +30,11 @@ updated: 2026-10-18
 
 ## Next actions (in order; reprioritized by MH 2026-10-18, D50)
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
-2. **Keyring (D51):** after the next **reboot** (MH, evening of 2026-10-18), run `keyring-check` for the fresh-boot path; if it fails, apply the D51 fallback.
-3. **Functional SwayFX checklist, deadline Tuesday 2026-10-20** (MH; ideally sooner) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order: screen sharing/camera/mic in the browser; lock, idle, power (step 4); volume and brightness keys; screenshots; minimal bar; kitty errors; keybinding cheat sheet; external monitor (waiting on MH: `DP-4..6` sockets); i3 off zbook.
-4. Atlassian/Jira review pass when MH schedules it.
-5. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
+2. **External monitor (D52), branch `wayland/nvidia-outputs`:** log in to SwayFX with the monitor connected; check both outputs, flicker/cursor/stutter, then the screen sharing test with both outputs; if good, merge. If SwayFX fails, GNOME at GDM.
+3. **Keyring (D51):** after the next **reboot** (MH, evening of 2026-10-18), run `keyring-check` for the fresh-boot path; if it fails, apply the D51 fallback.
+4. **Functional SwayFX checklist, deadline Tuesday 2026-10-20** (MH; ideally sooner) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order: screen sharing/camera/mic in the browser; lock, idle, power (step 4); volume and brightness keys; screenshots; minimal bar; kitty errors; keybinding cheat sheet; external monitor (waiting on MH: `DP-4..6` sockets); i3 off zbook.
+5. Atlassian/Jira review pass when MH schedules it.
+6. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
 
 Side quests (spare time, D50): keybinding manifest, package map refactor, `swindings`, theming, other compositors' configs ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-state` and of one `dstask` repo (all in [open-items.md](open-items.md)).
