@@ -1,0 +1,76 @@
+#!/bin/sh
+# run_onchange_install-logind-power.sh.tmpl — install a logind drop-in for the
+# lid and power key (MH, 2026-10-19; docs/plans/wayland-desktop.md, step 4).
+#
+#   lid closed, no external monitor  → suspend (on battery and on AC)
+#   lid closed, external monitor     → keep running ("docked"; SwayFX turns the
+#                                      panel off through bindswitch)
+#   power key                        → suspend; long press → power off
+#
+# swayidle locks before every sleep (GNOME locks by itself). This applies to GNOME
+# sessions too: GNOME blocks logind's lid handling only while an external monitor
+# is connected, so on the panel alone a GNOME lid close now suspends. The drop-in
+# overrides the old `HandleLidSwitch=ignore` in /etc/systemd/logind.conf (from the
+# 2023 install), which is left in place.
+#
+# /etc is outside chezmoi's scope. Same pattern as
+# run_onchange_install-udev-dri-symlinks.sh: staged under
+# ~/.local/state/chezmoi-system/, installed with sudo (asks for the password in a
+# terminal; otherwise prints the commands and exits 1 so the next apply retries),
+# then logind reloads its config (no session restart). Snapshot /etc with
+# etckeeper before and after (docs/runbooks/display-session-recovery.md).
+#
+# Only runs on Linux, non-WSL hosts whose `display_server` host key is "wayland".
+{{- $ds := dig "display_server" "x11" . -}}
+{{- $run := and (eq .chezmoi.os "linux") (eq $ds "wayland") (ne (includeTemplate "is-wsl" .) "true") }}
+set -eu
+
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+CONF_NAME=50-chezmoi-power.conf
+TARGET_DIR=/etc/systemd/logind.conf.d
+TARGET=$TARGET_DIR/$CONF_NAME
+STAGE_DIR={{ joinPath .chezmoi.homeDir ".local" "state" "chezmoi-system" | quote }}
+STAGED=$STAGE_DIR/$CONF_NAME
+
+if [ "$ENABLED" != 1 ]; then
+  echo "logind-power: needs non-WSL Linux with display_server=wayland (this host: {{ .chezmoi.os }}, {{ $ds }}); skipping" >&2
+  exit 0
+fi
+
+mkdir -p "$STAGE_DIR"
+cat > "$STAGED" <<'EOF'
+# Installed by chezmoi (run_onchange_install-logind-power.sh.tmpl).
+[Login]
+HandleLidSwitch=suspend
+HandleLidSwitchExternalPower=suspend
+HandleLidSwitchDocked=ignore
+HandlePowerKey=suspend
+HandlePowerKeyLongPress=poweroff
+EOF
+
+if cmp -s "$STAGED" "$TARGET"; then
+  echo "logind-power: $TARGET is up to date" >&2
+  exit 0
+fi
+
+install_conf() {
+  "$@" install -d -m 0755 "$TARGET_DIR"
+  "$@" install -m 0644 "$STAGED" "$TARGET"
+  "$@" systemctl reload systemd-logind.service
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  install_conf
+elif sudo -n true 2>/dev/null; then
+  install_conf sudo
+elif [ -t 0 ]; then
+  echo "logind-power: installing $TARGET with sudo" >&2
+  install_conf sudo
+else
+  echo "logind-power: need root. Run:" >&2
+  echo "  sudo install -d -m 0755 $TARGET_DIR" >&2
+  echo "  sudo install -m 0644 '$STAGED' $TARGET" >&2
+  echo "  sudo systemctl reload systemd-logind.service" >&2
+  exit 1
+fi
+echo "logind-power: installed $TARGET" >&2
