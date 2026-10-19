@@ -316,10 +316,14 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
 - [ ] **External monitor** (D52; branch `wayland/nvidia-outputs`, **login test pending**). MH needs one (planned two);
       it is also the interview setup. Found 2026-10-18: HDMI, an mDP adapter and a USB-C hub all failed under SwayFX
       (only `eDP-1`); with the hub, `/sys/class/drm/card0-DP-6/status` was `connected` on the NVIDIA card (4K mode).
-      So every external output is NVIDIA-wired. Fix: `~/.config/uwsm/env` lists `dgpu:igpu` at login when an NVIDIA
-      connector is connected (`--unsupported-gpu` was already in the session entry). **Test:** log in with the monitor
-      connected; `swaymsg -t get_outputs` shows both; watch for flicker, cursor glitches, stutter on the panel (the
-      copied output); then the screen sharing test above with both outputs. First knob if the cursor misbehaves:
+      So every external output is NVIDIA-wired. Fix: `~/.config/uwsm/env` (NVIDIA block on zbook only) adds the NVIDIA
+      card at login when one of its connectors is connected; `prefer_nvidia_for_external` (in `.chezmoi.yml.tmpl`,
+      **`false` for now**) picks Intel-first (`igpu:dgpu`, frames copied to NVIDIA) or NVIDIA-first (`dgpu:igpu`, the
+      panel gets the copy). `--unsupported-gpu` was already in the session entry. Try the other value with
+      `chezmoi apply --override-data '{"prefer_nvidia_for_external":true}' ~/.config/uwsm/env`, then re-login.
+      **Test, Intel-first then NVIDIA-first:** log in with the monitor connected; `swaymsg -t get_outputs` shows both;
+      watch for flicker, cursor glitches, stutter on the copied output (the external monitor with Intel-first, the
+      panel with NVIDIA-first); then the screen sharing test above with both outputs. First knob if the cursor misbehaves:
       `WLR_NO_HARDWARE_CURSORS=1`. If SwayFX fails to start, pick GNOME at GDM.
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 

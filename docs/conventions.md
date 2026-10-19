@@ -27,7 +27,7 @@ updated: 2026-10-17
 - `$PC` = this repo (chezmoi source root `~/.local/share/chezmoi/home` since Phase 0a; docs and `CLAUDE.md` stay at the repo root). Never `chezmoi init/apply` against the reference clone `~/Source/chezmoi-boco`.
 - Propagate source edits with `chezmoi apply --force <target>`; never `cp`. Apply named targets, then check `chezmoi status`. `chezmoi apply` takes literal paths, not globs.
 - Chezmoi ignores source mode bits: scripts invoked by path need an `executable_` prefix.
-- Template guards: tool present = `lookPath`; WSL = shared `is-wsl` helper; employer-only = `work_tooling` (D25).
+- Template guards: tool present = `lookPath`; WSL = shared `is-wsl` helper; employer-only = `work_tooling` (D25). Host-specific experiments: a hostname guard plus a data key in `.chezmoi.yml.tmpl`, read with `dig` and a default (e.g. `prefer_nvidia_for_external`, D52).
 - Render-time commands go through `.chezmoitemplates/safe-output.sh`.
 - No broken code or configs (D48): what chezmoi deploys must work where it renders. If it cannot be fixed yet, guard it
   out or remove it, and keep an open item until it is fixed.
