@@ -281,7 +281,17 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
 - [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
 - [ ] **Screenshots** (functional part of step 6).
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
-- [ ] **kitty errors fixed** (the two known errors in [../open-items.md](../open-items.md); the full BOCO merge stays later).
+- [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
+      (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);
+      pywal colors through one `globinclude ../../.cache/wal/colors-kitty.conf` (relative: `globinclude` rejects
+      absolute patterns; no error while the file is absent); Source Code Pro (Fedora package) instead of the
+      never-installed Nerd Fonts v2 "SauceCodePro ... Complete" names; `Ctrl+Alt+3..6` go to tabs 3-6 (all were on
+      `Ctrl+Alt+2`); `Ctrl+Alt+s` is the stack layout only (its shadowed `paste_from_selection` map dropped;
+      `Shift+Insert` pastes the selection). The `kitty_grab` (`Alt+Shift+c`) and `kitty_search` (`Ctrl+Shift+/`)
+      kittens failed on `kitty.typing` (renamed `kitty.typing_compat` in newer kitty): their unmanaged checkouts in
+      `~/.config/kitty/` were fast-forwarded to upstream (`e115f36`, `992c1f3`); open item to manage them. Checked with
+      kitty's config parser (no bad lines; the wal include read when present, skipped when absent) and the kittens'
+      imports; **MH to confirm in a new window**: no error screen, `Alt+Shift+c`, `kitten choose-fonts`.
 - [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
 - [ ] **Keyring unlock prompts** (D51; merged 2026-10-18, **fresh-boot test pending**). Symptom:
