@@ -276,8 +276,23 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       Screenshot to it, slurp installed for the output picker); PipeWire sees the camera (V4L2 and libcamera) and both
       mics. Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
       InputCapture via the deprecated `UseIn` key); harmless for screen sharing.
-- [ ] **Lock, idle, power** (step 4): swaylock, swayidle, logind lid handling, lock before suspend; suspend and resume
-      tested on this hybrid Intel/NVIDIA machine.
+- [ ] **Lock, idle, power** (step 4; built 2026-10-19 on branch `wayland/4-lock-idle-power`, **tests pending**).
+      MH's choices (2026-10-19): dim 5 min, lock 6, screens off 7, suspend 20 **on battery only**; lid suspends unless
+      an external monitor is connected (then clamshell: SwayFX turns `eDP-1` off); power key suspends, long press
+      powers off; plain swaylock (looks later, with theming). Pieces: `~/.config/swayidle/config` run by
+      `swayidle.service` (`swayidle -w`, under `wm-helpers-wayland.target`); `~/.local/bin/lock-screen` (`swaylock -f`,
+      returns once locked, so suspend waits for the lock), `screens-power` (per compositor), `idle-toggle`
+      (`$mod+Shift+Escape`: swaps in `swayidle-locking.service`, which keeps only the lock handlers, so a paused chain
+      still locks before sleep); `~/.config/swaylock/config`; sway `bindswitch` for the lid and `inhibit_idle
+      fullscreen` for all windows; logind drop-in `/etc/systemd/logind.conf.d/50-chezmoi-power.conf` from
+      `run_onchange_install-logind-power.sh` (overrides the 2023 `HandleLidSwitch=ignore` in `logind.conf`; applies
+      to GNOME too, except while an external monitor is connected). `$mod+Escape` (`loginctl lock-session`) now
+      locks. Checked so far: shellcheck, `sway -C`, swayidle running with the config, `idle-toggle` swaps the units
+      both ways. Suspend: deep (S3) is the default; `nvidia-suspend`/`-resume` services enabled; driver params
+      untouched. **Tests (MH):** lock and unlock; wrong password; idle chain at 5/6/7 min; suspend on lid close
+      (panel only) and resume to the lock screen; lid close with the monitor connected (keeps running, panel off,
+      reopen restores it); power key; suspend/resume **with the external monitor connected** (NVIDIA in use: the
+      riskiest case); `$mod+Shift+Escape` during a call; whether Chromium holds idle off by itself in a Meet call.
 - [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
 - [ ] **Screenshots** (functional part of step 6).
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
