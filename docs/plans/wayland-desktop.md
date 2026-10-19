@@ -276,7 +276,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       Screenshot to it, slurp installed for the output picker); PipeWire sees the camera (V4L2 and libcamera) and both
       mics. Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
       InputCapture via the deprecated `UseIn` key); harmless for screen sharing.
-- [ ] **Lock, idle, power** (step 4; built 2026-10-19 on branch `wayland/4-lock-idle-power`, **tests pending**).
+- [x] **Lock, idle, power** (step 4; built 2026-10-19, **all MH tests passed 2026-10-19**, including lid close with the
+      external monitor connected; merged `23e03b2`).
       MH's choices (2026-10-19): dim 5 min, lock 6, screens off 7, suspend 20 **on battery only**; lid suspends unless
       an external monitor is connected (then clamshell: SwayFX turns `eDP-1` off); power key suspends, long press
       powers off; plain swaylock (looks later, with theming). Pieces: `~/.config/swayidle/config` run by
@@ -355,6 +356,12 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       only at **30 Hz** (2560x1440 at 60): an HDMI 1.4 limit of the hub/monitor HDMI input, not the GPU. 30 Hz feels
       like stutter, so judge Intel-first vs NVIDIA-first at 60 Hz (the monitor's DisplayPort input via USB-C→DP or
       mDP→DP) or at 2560x1440@60.
+      **2026-10-19, DisplayPort (mDP→DP cable, and a USB-C adapter; the port shows up as DP-5 or DP-6):** the monitor
+      now offers 4K at 60 Hz, and sway selects it, but the screen stays black (the monitor's own menu does not even
+      draw); **4K@30 and 2560x1440@60 work**. GNOME is black at 4K@60 too, on both paths. No kernel messages. Both
+      compositors render on Intel and copy to NVIDIA, so the NVIDIA-first test (D52 flag `true`) is next. Other
+      suspects: the monitor's DisplayPort setting (DP 1.1 vs 1.2 stream), or a link that cannot sustain HBR2 (4K@60
+      needs DP 1.2 speeds on all four lanes).
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 
 ## Steps (order agreed by MH, 2026-10-17)
