@@ -325,6 +325,11 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       watch for flicker, cursor glitches, stutter on the copied output (the external monitor with Intel-first, the
       panel with NVIDIA-first); then the screen sharing test above with both outputs. First knob if the cursor misbehaves:
       `WLR_NO_HARDWARE_CURSORS=1`. If SwayFX fails to start, pick GNOME at GDM.
+      **2026-10-18, Intel-first login:** both outputs up (`eDP-1`, `DP-5`). Layout and scale in `sway/config.tmpl`,
+      matched by make/model/serial (panel left, monitor at scale 1.5 = 2560x1440 logical). The monitor link offers 4K
+      only at **30 Hz** (2560x1440 at 60): an HDMI 1.4 limit of the hub/monitor HDMI input, not the GPU. 30 Hz feels
+      like stutter, so judge Intel-first vs NVIDIA-first at 60 Hz (the monitor's DisplayPort input via USB-C→DP or
+      mDP→DP) or at 2560x1440@60.
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 
 ## Steps (order agreed by MH, 2026-10-17)
