@@ -1,0 +1,15 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Idle timeouts paused: lock handlers only (swayidle)
+Documentation=man:swayidle(1) file://%h/.config/swayidle/locking
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+Conflicts=swayidle.service
+
+[Service]
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/swayidle -w -C %h/.config/swayidle/locking
+Restart=on-failure
+RestartSec=2
+{{- end }}

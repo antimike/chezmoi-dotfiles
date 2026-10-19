@@ -1,0 +1,6 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# swayidle with the timeouts paused (idle-toggle): lock handlers only, so
+# $mod+Escape and the lock before sleep still work. Keep in sync with ./config.
+lock 'lock-screen'
+before-sleep 'lock-screen'
+{{- end }}

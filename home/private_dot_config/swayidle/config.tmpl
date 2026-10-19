@@ -1,0 +1,19 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# swayidle: the idle chain for the uwsm-managed Wayland compositors (MH's timings,
+# 2026-10-19). Run by swayidle.service with -w, so before-sleep waits for the lock.
+# swayidle-locking.service (idle-toggle) uses ./locking: the last two lines only.
+# Video players and calls that hold a Wayland idle inhibitor pause the timeouts.
+
+# 5 min: dim the laptop panel (the external monitor has no backlight control)
+timeout 300 'brightnessctl -q -s set 10%' resume 'brightnessctl -q -r'
+# 6 min: lock (through logind, so it runs the `lock` handler below)
+timeout 360 'loginctl lock-session'
+# 7 min: all screens off
+timeout 420 'screens-power off' resume 'screens-power on'
+# 20 min: suspend, on battery only (builds and downloads run on AC)
+timeout 1200 'systemd-ac-power || systemctl suspend'
+after-resume 'screens-power on'
+
+lock 'lock-screen'
+before-sleep 'lock-screen'
+{{- end }}
