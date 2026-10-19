@@ -29,6 +29,18 @@ bindsym $mod+Shift+Ctrl+e exec uwsm stop
 output "LG Display 0x059E Unknown" pos 0 360
 output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" scale 1.5 pos 1920 0
 
+# Lid: logind suspends on close unless an external monitor is connected
+# (run_onchange_install-logind-power.sh). When it keeps running (clamshell), turn
+# the panel off; --reload applies the lid state after a config reload or at login.
+bindswitch --reload --locked lid:on output eDP-1 disable
+bindswitch --reload --locked lid:off output eDP-1 enable
+
+# Idle chain: swayidle.service (~/.config/swayidle/config). Fullscreen windows
+# (video, a presented screen) hold it off; $mod+Shift+Escape pauses the timeouts
+# for calls ($mod+Escape locks: shared body).
+for_window [all] inhibit_idle fullscreen
+bindsym $mod+Shift+Escape exec ~/.local/bin/idle-toggle
+
 # Placeholder until waybar (step 7).
 bar {
 	position top

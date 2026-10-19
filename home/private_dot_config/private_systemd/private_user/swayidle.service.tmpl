@@ -1,0 +1,17 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Idle chain: dim, lock, screens off, suspend (swayidle)
+Documentation=man:swayidle(1) file://%h/.local/share/chezmoi/docs/plans/wayland-desktop.md
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# idle-toggle swaps this for swayidle-locking.service (lock handlers only).
+Conflicts=swayidle-locking.service
+
+[Service]
+# The commands in ~/.config/swayidle/config call helpers in ~/.local/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/swayidle -w -C %h/.config/swayidle/config
+Restart=on-failure
+RestartSec=2
+{{- end }}

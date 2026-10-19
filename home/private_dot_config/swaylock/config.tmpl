@@ -1,0 +1,11 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# swaylock (run by ~/.local/bin/lock-screen). Plain for now; looks come with
+# theming (docs/plans/theming.md). Colors are the i3 fallbacks, without '#'.
+color={{ .i3.colors.unfocused_bg.default | trimPrefix "#" }}
+inside-color={{ .i3.colors.inactive_bg.default | trimPrefix "#" }}
+ring-color={{ .i3.colors.bg.default | trimPrefix "#" }}
+key-hl-color={{ .i3.colors.fg.default | trimPrefix "#" }}
+show-failed-attempts
+ignore-empty-password
+indicator-caps-lock
+{{- end }}
