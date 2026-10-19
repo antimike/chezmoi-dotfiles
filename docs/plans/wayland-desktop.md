@@ -313,7 +313,14 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       recovery, and with `no-allow-external-cache` GPG/SSH there do not touch the keyring. Adding `pam_gnome_keyring`
       to `login` would not help reliably anyway: `login` also accepts YubiKey auth (`yubikey-sufficient`), which gives
       it no password to unlock with.
-- [ ] **External monitor**, if MH uses one (`DP-4..6` sockets: backlog).
+- [ ] **External monitor** (D52; branch `wayland/nvidia-outputs`, **login test pending**). MH needs one (planned two);
+      it is also the interview setup. Found 2026-10-18: HDMI, an mDP adapter and a USB-C hub all failed under SwayFX
+      (only `eDP-1`); with the hub, `/sys/class/drm/card0-DP-6/status` was `connected` on the NVIDIA card (4K mode).
+      So every external output is NVIDIA-wired. Fix: `~/.config/uwsm/env` lists `dgpu:igpu` at login when an NVIDIA
+      connector is connected (`--unsupported-gpu` was already in the session entry). **Test:** log in with the monitor
+      connected; `swaymsg -t get_outputs` shows both; watch for flicker, cursor glitches, stutter on the panel (the
+      copied output); then the screen sharing test above with both outputs. First knob if the cursor misbehaves:
+      `WLR_NO_HARDWARE_CURSORS=1`. If SwayFX fails to start, pick GNOME at GDM.
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
 
 ## Steps (order agreed by MH, 2026-10-17)
