@@ -291,7 +291,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       kittens failed on `kitty.typing` (renamed `kitty.typing_compat` in newer kitty): their unmanaged checkouts in
       `~/.config/kitty/` were fast-forwarded to upstream (`e115f36`, `992c1f3`); open item to manage them. Checked with
       kitty's config parser (no bad lines; the wal include read when present, skipped when absent) and the kittens'
-      imports; **MH to confirm in a new window**: no error screen, `Alt+Shift+c`, `kitten choose-fonts`.
+      imports; **MH confirmed 2026-10-19** in a new window: no error screen, `Alt+Shift+c`, `kitten choose-fonts`.
 - [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
 - [ ] **Keyring unlock prompts** (D51; merged 2026-10-18, **fresh-boot test pending**). Symptom:
