@@ -82,32 +82,32 @@ focus_follows_mouse {{.i3.mouse.follow_with_focus}}
 {{ includeTemplate . | fromYaml | includeTemplate "i3/exec" }}
 {{- end }}
 
-# Audio
-# TODO: Implement script to choose which controls keys should bind to (i.e., basic "mixer")
+# Audio: ~/.local/bin/volume (wpctl, notification with a progress bar), shared by
+# i3 and SwayFX. 5% steps; Shift for 1%. The default output and input follow
+# WirePlumber's priorities (~/.config/wireplumber/wireplumber.conf.d/).
 {{- if eq .wm "i3" }}
 set $refresh_i3status killall -SIGUSR1 i3status
-set $change_volume_script ~/.config/i3/bin/set-pulseaudio-volume.bash
-set $audio_output @DEFAULT_SINK@
-set $audio_input @DEFAULT_SOURCE@
-bindsym XF86AudioRaiseVolume exec --no-startup-id $change_volume_script $audio_output volume +1%
-bindsym XF86AudioLowerVolume exec --no-startup-id $change_volume_script $audio_output volume -1%
-bindsym XF86AudioMute        exec --no-startup-id $change_volume_script $audio_output mute toggle
-bindsym XF86AudioMicMute     exec --no-startup-id $change_volume_script $audio_input mute toggle
 {{- end }}
+bindsym XF86AudioRaiseVolume       exec --no-startup-id ~/.local/bin/volume up
+bindsym XF86AudioLowerVolume       exec --no-startup-id ~/.local/bin/volume down
+bindsym Shift+XF86AudioRaiseVolume exec --no-startup-id ~/.local/bin/volume up 1
+bindsym Shift+XF86AudioLowerVolume exec --no-startup-id ~/.local/bin/volume down 1
+bindsym XF86AudioMute              exec --no-startup-id ~/.local/bin/volume mute
+bindsym XF86AudioMicMute           exec --no-startup-id ~/.local/bin/volume mic-mute
 bindsym XF86AudioPlay        exec --no-startup-id playerctl -p $mediaplayer play-pause && $refresh_i3status
 bindsym XF86AudioPause       exec --no-startup-id playerctl -p $mediaplayer pause && $refresh_i3status
 bindsym XF86AudioStop        exec --no-startup-id playerctl -p $mediaplayer stop && $refresh_i3status
 bindsym XF86AudioNext        exec --no-startup-id playerctl -p $mediaplayer next && $refresh_i3status
 bindsym XF86AudioPrev        exec --no-startup-id playerctl -p $mediaplayer previous && $refresh_i3status
-{{- if eq .wm "i3" }}
 
-# Brightness
-set $adjust_brightness_script ~/.config/i3/bin/adjust-brightness.bash
-bindsym XF86MonBrightnessUp exec --no-startup-id $adjust_brightness_script +1%
-bindsym XF86MonBrightnessDown exec --no-startup-id $adjust_brightness_script 1%-
-bindsym XF86KbdBrightnessUp exec --no-startup-id $adjust_brightness_script -d "*kbd*" +1%
-bindsym XF86KbdBrightnessDown exec --no-startup-id $adjust_brightness_script -d "*kbd*" 1%-
-{{- end }}
+# Brightness: ~/.local/bin/brightness (brightnessctl), shared by i3 and SwayFX.
+# Laptop panel only (external monitors have no backlight). 5% steps; Shift for 1%.
+bindsym XF86MonBrightnessUp         exec --no-startup-id ~/.local/bin/brightness up
+bindsym XF86MonBrightnessDown       exec --no-startup-id ~/.local/bin/brightness down
+bindsym Shift+XF86MonBrightnessUp   exec --no-startup-id ~/.local/bin/brightness up 1
+bindsym Shift+XF86MonBrightnessDown exec --no-startup-id ~/.local/bin/brightness down 1
+bindsym XF86KbdBrightnessUp         exec --no-startup-id ~/.local/bin/brightness kbd-up
+bindsym XF86KbdBrightnessDown       exec --no-startup-id ~/.local/bin/brightness kbd-down
 
 # Dunst (notifications)
 bindsym $mod+backslash exec dunstctl close

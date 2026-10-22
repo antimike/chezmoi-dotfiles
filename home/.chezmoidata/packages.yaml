@@ -40,7 +40,9 @@ packages:
     - kitty
     - libnotify
     - passmenu
+    - pavucontrol          # graphical mixer (per-app volume)
     - rofi
+    - wiremix              # terminal mixer for PipeWire
     - wl-clipboard
     - xclip
     - xdotool

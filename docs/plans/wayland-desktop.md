@@ -294,7 +294,30 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       (panel only) and resume to the lock screen; lid close with the monitor connected (keeps running, panel off,
       reopen restores it); power key; suspend/resume **with the external monitor connected** (NVIDIA in use: the
       riskiest case); `$mod+Shift+Escape` during a call; whether Chromium holds idle off by itself in a Meet call.
-- [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
+- [x] **Volume and brightness keys** with OSD (done and merged 2026-10-21; Keychron mic-key remap left to MH); quick output switching and a Bluetooth headset (functional part of step 5).
+      **Keys built 2026-10-21** (branch `wayland/5-volume-brightness`; MH key tests passed; merged): `~/.local/bin/volume`
+      (wpctl: up/down capped at 100%, mute, mic-mute) and `~/.local/bin/brightness` (brightnessctl: panel, floor 1%
+      of max; keyboard backlight, a no-op here since zbook has none), bound in the shared fragment for i3 and SwayFX
+      (5% steps, Shift for 1%). OSD: dunst progress-bar notifications with a stack tag (works under X11 and Wayland,
+      nothing new to install), instead of wob (Wayland-only, not installed). Pitfalls: `brightnessctl -n 1%` prints
+      device info (optional value must be attached) and `--min-value` takes a raw value, not a percentage.
+      MH tests 2026-10-21: all keys work except mic mute (the keyboard's mic-icon key sends nothing sway binds;
+      keycode not yet identified). Compared with the i3-config-mbp scripts (`set-pulseaudio-volume.bash`,
+      `misc/set-player-volume.bash`, `misc/set-volume.alsa.bash`, `adjust-brightness.bash`): gaps are the
+      feedback sound (`canberra-gtk-play -i audio-volume-change`), per-player (MPRIS) volume, and arbitrary
+      pactl/brightnessctl arguments; the ALSA script is obsolete under PipeWire; the old icon names
+      (`notification-audio-volume-*`, `display-brightness-*-symbolic`) are not in the installed themes.
+      **Pitfall found the same day:** with no sway `output` lines, `swaymsg reload` reset the ASUS to its preferred
+      4K@60 (black); fixed with `exec_always kanshictl reload`. After the replug only the left half of the ASUS
+      drew; a monitor power cycle fixed it. **ASUS 4K@60 solved 2026-10-21:** MH set the monitor's menu to
+      "DisplayPort Stream: DisplayPort 1.2"; kanshi now uses 3840x2160@60Hz, scale 1.5. Feedback sound added
+      (`canberra-gtk-play -i audio-volume-change`). Keys (`libinput debug-events`, `~/keys.txt`): the laptop's
+      mic key sends `KEY_MICMUTE` (works); the Keychron Q3 Pro's mic key sends a Super+C macro, its screenshot key
+      `KEY_SYSRQ` (Print, bound to the not-yet-written screenshot script). Plan: remap the Keychron mic key to F20
+      in the Keychron Launcher (xkb maps F20 to XF86AudioMicMute); udev rule `70-keychron-hidraw.rules`
+      (`run_onchange_install-udev-keychron.sh`, uaccess for vendor 3434) lets Chromium's WebHID open it. Mixers:
+      `pavucontrol` and `wiremix` in `packages.yaml` (`pulsemixer` is not in Fedora); an fzf/rofi per-app volume
+      picker over `pactl` sink-inputs is later work.
       **Defaults built 2026-10-21** (`~/.config/wireplumber/wireplumber.conf.d/51-device-priorities.conf`): Bluetooth
       outputs priority 3000 (above everything); C270 webcam mic 2500 and camera 1500 (verified: both default). The
       headphone jack (aux speakers) already replaces the built-in speakers by itself (separate sinks on this card).
