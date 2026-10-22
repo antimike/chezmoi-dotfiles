@@ -352,7 +352,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       imports; **MH confirmed 2026-10-19** in a new window: no error screen, `Alt+Shift+c`, `kitten choose-fonts`.
 - [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
-- [ ] **Keyring unlock prompts** (D51; merged 2026-10-18, **fresh-boot test pending**). Symptom:
+- [x] **Keyring unlock prompts** (D51; merged 2026-10-18; **both login paths verified**: the fresh-daemon path on
+      2026-10-21 21:33, see below). Symptom:
       Chromium, and GPG/SSH use without the YubiKey, asked to unlock the "system keyring"; GNOME never did. Cause
       (journal, 2026-10-18 boot): GDM's PAM step started gnome-keyring and unlocked the login keyring
       (`gkr-pam: ... unlocked keyring`), but the handoff (`gnome-keyring-daemon --start`) lives in GNOME-only XDG
@@ -371,8 +372,9 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       (b) **re-login**, a daemon survives from an earlier session: PAM's open-session step unlocks it (journal:
       `unable to locate daemon control file`, `stashed password`, then `unlocked login keyring`). **Path (b) passed
       2026-10-18** (automatic checks, then MH's manual checks: Chromium, YubiKey unplugged) (16:11 login; daemon from 14:57, D-Bus-activated, no prompt). The first
-      `keyring-check` required `--login` and failed that path wrongly; fixed in `f81a443`. **Path (a), the one the
-      sway `exec` exists for, is untested: run `keyring-check` after the next reboot.** If it fails there, use the D51
+      `keyring-check` required `--login` and failed that path wrongly; fixed in `f81a443`. **Path (a) passed 2026-10-21** (login at 21:33 with no daemon left:
+      `gkr-pam: gnome-keyring-daemon started properly and unlocked keyring`, then the sway `exec` found it,
+      `discover_other_daemon: 1`; `keyring-check` learned that message in `c80134c`). No reboot was needed. If it fails there, use the D51
       fallback (`gnome-keyring-daemon.socket`).
       **Text consoles:** nothing unlocks the keyring there. `/etc/pam.d/login` (and the `system-auth`/`postlogin`
       stacks it includes) has no `pam_gnome_keyring`; a console session shares the user's systemd manager and bus, so
