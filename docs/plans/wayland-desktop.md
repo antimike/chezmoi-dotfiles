@@ -304,7 +304,9 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       PipeWire (only `bluez_midi`); a disconnect and reconnect then failed ("No matching connection"). Every
       A2DP start then failed: `Acquire ... returned error: org.bluez.Error.NotAuthorized` (AAC, and the SBC switch
       failed too); re-pairing did not help. **Fixed by restarting the whole audio stack together**
-      (`systemctl --user restart pipewire pipewire-pulse wireplumber`), then reconnecting: A2DP AAC plays. Likely
+      (`systemctl --user restart pipewire pipewire-pulse wireplumber`), then reconnecting: A2DP AAC plays. After a logout/login the headphones were disconnected and a connect first failed with
+      "Host is down" (headphones asleep or busy with other devices); a later `bluetoothctl connect` worked and
+      playback was fine. bluez does not connect devices at login; the headphones reconnect when switched on. Likely
       cause: Claude restarted WirePlumber alone to load the priority rules, leaving PipeWire with stale Bluetooth
       state. **Pitfall: after a WirePlumber config change, restart all three units, not WirePlumber alone.** The
       priority rule matches every `bluez_output.*`, so no MAC is needed in the config. MX Master 3S and MX Keys S
@@ -355,8 +357,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       recovery, and with `no-allow-external-cache` GPG/SSH there do not touch the keyring. Adding `pam_gnome_keyring`
       to `login` would not help reliably anyway: `login` also accepts YubiKey auth (`yubikey-sufficient`), which gives
       it no password to unlock with.
-- [ ] **External monitors** (D52, D53; **2026-10-21: kanshi profiles built on branch `wayland/kanshi-audio`, login
-      test pending**). Monitors: ASUS PB287Q (28" 4K; 4K@60 black over DisplayPort, so **4K@30 at scale 1.5**;
+- [ ] **External monitors** (D52, D53; **2026-10-21: kanshi profiles built and all MH tests passed**: layout, hotplug of
+      each monitor, lid closed with hotplug; merged from `wayland/kanshi-audio`). Monitors: ASUS PB287Q (28" 4K; 4K@60 black over DisplayPort, so **4K@30 at scale 1.5**;
       alternative 2560x1440@60 scale 1) and Dell U2717D (27" 2560x1440@60, scale 1). Layout left to right: panel,
       ASUS, Dell; profiles for all three, each monitor alone with the panel, any other monitor, and the panel alone;
       clamshell via sway `bindswitch` plus `lid-panel-sync` (kanshi `exec`; the panel's slot stays empty). The NVIDIA
