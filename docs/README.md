@@ -1,7 +1,7 @@
 ---
 summary: Index of docs/ for Claude and humans: what each file is and when to read it
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 ---
 
 # docs/ index

@@ -1,7 +1,7 @@
 ---
 summary: Where the work stands and what to do next; the repo's standing session-start prompt
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 ---
 
 # Status

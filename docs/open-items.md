@@ -1,7 +1,7 @@
 ---
 summary: Every open item across the migration, BOCO merge, Sway and housekeeping, with source and who acts
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 ---
 
 # Open items

@@ -1,7 +1,7 @@
 ---
 summary: Decision log (D1–D53) for the Claude Code migration, chezmoi merge, desktop and docs; one line per decision
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 ---
 
 # Decisions

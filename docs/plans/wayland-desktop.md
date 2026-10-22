@@ -1,7 +1,7 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
 status: steps 0-3 done and merged (2026-10-17); functional daily-driver checklist first (D50, 2026-10-18); uwsm adopted (D38)
-updated: 2026-10-18
+updated: 2026-10-22
 ---
 
 # Wayland desktop plan
