@@ -274,7 +274,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       monitor item forward. Fallback MH accepts: a GNOME session for meetings and interviews. State 2026-10-18: the
       portal stack is in place (`xdg-desktop-portal-wlr` running, Fedora's `sway-portals.conf` routes ScreenCast and
       Screenshot to it, slurp installed for the output picker); PipeWire sees the camera (V4L2 and libcamera) and both
-      mics. Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
+      mics. Test page (no account needed): https://webrtc.github.io/samples/src/content/getusermedia/getdisplaymedia/.
+      Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
       InputCapture via the deprecated `UseIn` key); harmless for screen sharing.
 - [x] **Lock, idle, power** (step 4; built 2026-10-19, **all MH tests passed 2026-10-19**, including lid close with the
       external monitor connected; merged `23e03b2`).
@@ -341,11 +342,16 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       `~/.local/bin/screenshot` for both session types (D48): `window` (click a window, boxes from `swaymsg`, or drag
       a region) copies the PNG to the clipboard; `window NAME` / `window --ask` (rofi prompt) also save to
       `~/Pictures/screenshots` (`$SCREENSHOT_DIR`); `desktop` captures every output and saves with a timestamp name.
-      Keys moved from the i3-only block to the shared body: Print (also the Keychron's key), `$mod+Print` (`--ask`),
-      `$mod+Shift+Print` (`desktop`). Tested under SwayFX: `desktop` (3 outputs, 7680x2160), `window` with a stubbed
+      Keys moved from the i3-only block to the shared body: Print (also the Keychron's key), `$mod+Print` (`window
+      --ask`), `$mod+Shift+Print` (`desktop --ask`). **MH's key check passed 2026-10-22**; follow-up the same day:
+      the `--ask` prompt is fuzzel (`--prompt-only`, prefilled with the timestamp name, on the output holding the
+      selection; rofi `-filter` on X11), Escape skips saving. The first version's empty rofi box read as a no-op,
+      sometimes opened on the other (focused) monitor, was hard to read with the `fancy` theme, and dunst cut off the
+      saved file name. Prompt tested with `wtype` (default, custom name, Escape) and `--output` placement on both
+      monitors. Tested under SwayFX: `desktop` (3 outputs, 7680x2160), `window` with a stubbed
       `slurp` (clipboard only, NAME with `/`, name clash, Escape leaves the clipboard alone), usage errors; X11 branch
       through Xwayland (`maim`, `xclip` offers `image/png`). `sway -C`, `i3 -C` and a live reload clean.
-      **Left for MH:** press Print, `$mod+Print`, `$mod+Shift+Print` with a real selection.
+      **Left for MH:** retry `$mod+Print` and `$mod+Shift+Print` with the fuzzel prompt.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
       (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);

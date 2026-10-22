@@ -32,7 +32,7 @@ updated: 2026-10-22
 ## Next actions (in order; reprioritized by MH 2026-10-18, D50)
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
 2. **Functional SwayFX checklist** (the 2026-10-20 deadline passed; still first priority) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order:
-   1. **Screenshots: done 2026-10-22** (rewrite as `~/.local/bin/screenshot`, keys shared by i3 and SwayFX; branch `wayland/screenshots`). Left for MH: press Print / `$mod+Print` / `$mod+Shift+Print` with a real selection, then merge.
+   1. **Screenshots: done 2026-10-22** (rewrite as `~/.local/bin/screenshot`, keys shared by i3 and SwayFX; branch `wayland/screenshots`). Key check passed; follow-up fuzzel name prompt for `--ask` (both modes). Left for MH: retry `$mod+Print` / `$mod+Shift+Print`, then merge.
    2. **Screen sharing test with both monitors**, the C270 webcam and Birdbox (basic sharing, camera and mic passed 2026-10-18 on the panel; Meet camera/mic passed 2026-10-21).
    3. Minimal bar (waybar or swaybar; maybe a blueman tray agent: no Bluetooth agent runs under SwayFX).
    4. Keybinding cheat sheet.
