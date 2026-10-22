@@ -42,3 +42,10 @@ fi
 notify-send -a volume -u low -t 1500 -i "$icon" \
   -h string:x-dunst-stack-tag:volume -h "int:value:$percent" \
   "$summary" "${name:-}"
+
+# Feedback sound on the output itself, at the new level (the freedesktop sound
+# theme's event for this; GNOME plays the same one). Not for the mic, and not when
+# muted. In the background, so key repeat is not held up.
+if [[ $label == Volume && -z ${muted:-} ]] && command -v canberra-gtk-play >/dev/null; then
+  canberra-gtk-play -i audio-volume-change -d volume >/dev/null 2>&1 &
+fi
