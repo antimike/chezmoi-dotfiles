@@ -294,8 +294,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       (panel only) and resume to the lock screen; lid close with the monitor connected (keeps running, panel off,
       reopen restores it); power key; suspend/resume **with the external monitor connected** (NVIDIA in use: the
       riskiest case); `$mod+Shift+Escape` during a call; whether Chromium holds idle off by itself in a Meet call.
-- [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
-      **Keys built 2026-10-21** (branch `wayland/5-volume-brightness`, **MH key test pending**): `~/.local/bin/volume`
+- [x] **Volume and brightness keys** with OSD (done and merged 2026-10-21; Keychron mic-key remap left to MH); quick output switching and a Bluetooth headset (functional part of step 5).
+      **Keys built 2026-10-21** (branch `wayland/5-volume-brightness`; MH key tests passed; merged): `~/.local/bin/volume`
       (wpctl: up/down capped at 100%, mute, mic-mute) and `~/.local/bin/brightness` (brightnessctl: panel, floor 1%
       of max; keyboard backlight, a no-op here since zbook has none), bound in the shared fragment for i3 and SwayFX
       (5% steps, Shift for 1%). OSD: dunst progress-bar notifications with a stack tag (works under X11 and Wayland,
