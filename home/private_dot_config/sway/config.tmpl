@@ -23,6 +23,9 @@ bindsym $mod+Shift+Ctrl+e exec uwsm stop
 
 # Outputs: layouts, modes and scales come from kanshi profiles
 # (~/.config/kanshi/config, kanshi.service), per set of connected screens.
+# A sway reload resets every output to its preferred mode (the ASUS's is 4K@60,
+# which stays black), and kanshi only reacts to hotplug: reapply after reloads.
+exec_always kanshictl reload
 
 # Lid: logind suspends on close unless an external monitor is connected
 # (run_onchange_install-logind-power.sh). When it keeps running (clamshell), turn
