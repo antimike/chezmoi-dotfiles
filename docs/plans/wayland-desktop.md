@@ -309,7 +309,15 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       (`notification-audio-volume-*`, `display-brightness-*-symbolic`) are not in the installed themes.
       **Pitfall found the same day:** with no sway `output` lines, `swaymsg reload` reset the ASUS to its preferred
       4K@60 (black); fixed with `exec_always kanshictl reload`. After the replug only the left half of the ASUS
-      drew (open).
+      drew; a monitor power cycle fixed it. **ASUS 4K@60 solved 2026-10-21:** MH set the monitor's menu to
+      "DisplayPort Stream: DisplayPort 1.2"; kanshi now uses 3840x2160@60Hz, scale 1.5. Feedback sound added
+      (`canberra-gtk-play -i audio-volume-change`). Keys (`libinput debug-events`, `~/keys.txt`): the laptop's
+      mic key sends `KEY_MICMUTE` (works); the Keychron Q3 Pro's mic key sends a Super+C macro, its screenshot key
+      `KEY_SYSRQ` (Print, bound to the not-yet-written screenshot script). Plan: remap the Keychron mic key to F20
+      in the Keychron Launcher (xkb maps F20 to XF86AudioMicMute); udev rule `70-keychron-hidraw.rules`
+      (`run_onchange_install-udev-keychron.sh`, uaccess for vendor 3434) lets Chromium's WebHID open it. Mixers:
+      `pavucontrol` and `wiremix` in `packages.yaml` (`pulsemixer` is not in Fedora); an fzf/rofi per-app volume
+      picker over `pactl` sink-inputs is later work.
       **Defaults built 2026-10-21** (`~/.config/wireplumber/wireplumber.conf.d/51-device-priorities.conf`): Bluetooth
       outputs priority 3000 (above everything); C270 webcam mic 2500 and camera 1500 (verified: both default). The
       headphone jack (aux speakers) already replaces the built-in speakers by itself (separate sinks on this card).
