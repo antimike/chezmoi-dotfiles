@@ -32,10 +32,11 @@ updated: 2026-10-18
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
 2. **External monitor (D52), merged and pushed 2026-10-19** (`eac38ff`): both outputs work Intel-first; layout and scale 1.5 in the sway config. The monitor's HDMI input caps 4K at 30 Hz; MH gets a DisplayPort cable on 2026-10-19, then: 4K/60, stutter check Intel-first vs NVIDIA-first, and the screen sharing test with both outputs, the external USB webcam and the Bluetooth headset (basic sharing, camera and mic passed on the laptop panel 2026-10-18).
 3. **Lock, idle, power (step 4): done, merged and pushed 2026-10-19** (`23e03b2`); all MH tests passed. **External monitor over DisplayPort:** 4K@60 is offered but black (GNOME too); 4K@30 and 1440p@60 work. Next: NVIDIA-first login test (D52 flag), then the monitor's DisplayPort setting.
-4. **Keyring (D51):** after the next **reboot** (MH, evening of 2026-10-18), run `keyring-check` for the fresh-boot path; if it fails, apply the D51 fallback.
-5. **Functional SwayFX checklist, deadline Tuesday 2026-10-20** (MH; ideally sooner) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order: screen sharing/camera/mic in the browser; volume and brightness keys; screenshots; minimal bar; keybinding cheat sheet; i3 off zbook. Done: kitty errors (2026-10-19, MH confirmed).
-6. Atlassian/Jira review pass when MH schedules it.
-7. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
+4. **Monitors and audio, branch `wayland/kanshi-audio` (D53):** MH runs `chezmoi apply` (installs kanshi; sudo prompt), logs out and in, then tests the kanshi profiles (both monitors, each alone, lid closed, hotplug), the Bose connection and Chromium's camera default; merge when they pass. Open: the ASUS was not detected on the USB-C adapter (2026-10-21).
+5. **Keyring (D51):** after the next **reboot** (MH, evening of 2026-10-18), run `keyring-check` for the fresh-boot path; if it fails, apply the D51 fallback.
+6. **Functional SwayFX checklist, deadline Tuesday 2026-10-20** (MH; ideally sooner) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order: screen sharing/camera/mic in the browser; volume and brightness keys; screenshots; minimal bar; keybinding cheat sheet; i3 off zbook. Done: kitty errors (2026-10-19, MH confirmed).
+7. Atlassian/Jira review pass when MH schedules it.
+8. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
 
 Side quests (spare time, D50): keybinding manifest, package map refactor, `swindings`, theming, other compositors' configs ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-state` and of one `dstask` repo (all in [open-items.md](open-items.md)).

@@ -295,6 +295,12 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reopen restores it); power key; suspend/resume **with the external monitor connected** (NVIDIA in use: the
       riskiest case); `$mod+Shift+Escape` during a call; whether Chromium holds idle off by itself in a Meet call.
 - [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
+      **Defaults built 2026-10-21** (`~/.config/wireplumber/wireplumber.conf.d/51-device-priorities.conf`): Bluetooth
+      outputs priority 3000 (above everything); C270 webcam mic 2500 and camera 1500 (verified: both default). The
+      headphone jack (aux speakers) already replaces the built-in speakers by itself (separate sinks on this card).
+      A hand-set default (`wpctl set-default`) wins while present; `wpctl clear-default` returns to priorities.
+      Chromium reads cameras directly: its default is chosen in `chrome://settings/content/camera`. Bose QC35:
+      paired, bonded and trusted; connect failed with "Host is down" (headphones off or busy with another device).
 - [ ] **Screenshots** (functional part of step 6).
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
@@ -339,7 +345,15 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       recovery, and with `no-allow-external-cache` GPG/SSH there do not touch the keyring. Adding `pam_gnome_keyring`
       to `login` would not help reliably anyway: `login` also accepts YubiKey auth (`yubikey-sufficient`), which gives
       it no password to unlock with.
-- [ ] **External monitor** (D52; branch `wayland/nvidia-outputs`, **login test pending**). MH needs one (planned two);
+- [ ] **External monitors** (D52, D53; **2026-10-21: kanshi profiles built on branch `wayland/kanshi-audio`, login
+      test pending**). Monitors: ASUS PB287Q (28" 4K; 4K@60 black over DisplayPort, so **4K@30 at scale 1.5**;
+      alternative 2560x1440@60 scale 1) and Dell U2717D (27" 2560x1440@60, scale 1). Layout left to right: panel,
+      ASUS, Dell; profiles for all three, each monitor alone with the panel, any other monitor, and the panel alone;
+      clamshell via sway `bindswitch` plus `lid-panel-sync` (kanshi `exec`; the panel's slot stays empty). The NVIDIA
+      card is now always opened, Intel-first (D53), so hotplug works mid-session. NVIDIA-first left the panel black
+      under SwayFX (2026-10-21). Open: the ASUS on the USB-C adapter was not detected at all on 2026-10-21 (only the
+      Dell, on mini-DP, showed as connected). History follows.
+      MH needs one (planned two);
       it is also the interview setup. Found 2026-10-18: HDMI, an mDP adapter and a USB-C hub all failed under SwayFX
       (only `eDP-1`); with the hub, `/sys/class/drm/card0-DP-6/status` was `connected` on the NVIDIA card (4K mode).
       So every external output is NVIDIA-wired. Fix: `~/.config/uwsm/env` (NVIDIA block on zbook only) adds the NVIDIA
