@@ -4,16 +4,19 @@
 #
 #   screenshot window          click a window or drag a region; clipboard only
 #   screenshot window NAME     same, and save it as NAME.png in the screenshot folder
-#   screenshot window --ask    same, and ask for the name (rofi; empty = timestamp)
+#   screenshot window --ask    same, and ask for the name, prefilled with a timestamp
 #   screenshot desktop         every output; clipboard, and saved with a timestamp name
+#   screenshot desktop --ask   same, but ask for the name, prefilled with the timestamp
 #
+# The name prompt is fuzzel on Wayland (on the output where the capture was made) and
+# rofi on X11. Enter accepts the name, Escape skips saving (the clipboard copy stays).
 # The screenshot folder is $SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots".
 # Wayland is picked when $WAYLAND_DISPLAY is set. Window boxes for the click come from
 # swaymsg (SwayFX/sway only; other compositors get a plain region drag). Escape cancels
 # the selection: nothing is copied or saved, and the exit status is 1.
 set -euo pipefail
 
-usage() { echo "usage: screenshot window [NAME | --ask] | desktop" >&2; exit 2; }
+usage() { echo "usage: screenshot window [NAME | --ask] | desktop [--ask]" >&2; exit 2; }
 
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "screenshot: '$1' not found" >&2; exit 127; }
@@ -25,31 +28,41 @@ mode=${1:-}
 name=${2:-}
 case $mode in
   window) [[ $# -le 2 ]] || usage ;;
-  desktop) [[ $# -eq 1 ]] || usage ;;
+  desktop) [[ $# -eq 1 || ($# -eq 2 && $name == --ask) ]] || usage ;;
   *) usage ;;
 esac
+ask=0
+[[ $name == --ask ]] && { ask=1; name=''; }
 
 if [[ -n ${WAYLAND_DISPLAY:-} ]]; then
   session=wayland
   need grim; need wl-copy
   [[ $mode == window ]] && need slurp
+  ((ask)) && need fuzzel
 elif [[ -n ${DISPLAY:-} ]]; then
   session=x11
   need maim; need xclip
+  ((ask)) && need rofi
 else
   echo "screenshot: no graphical session (neither WAYLAND_DISPLAY nor DISPLAY is set)" >&2
   exit 1
 fi
 
+sway=0
+[[ $session == wayland && -n ${SWAYSOCK:-} ]] && command -v swaymsg >/dev/null \
+  && command -v jq >/dev/null && sway=1
+
 tmp=$(mktemp --tmpdir screenshot.XXXXXX.png)
 trap 'rm -f "$tmp"' EXIT
+
+geometry=''   # "x,y wxh" of a Wayland window/region capture
 
 # Capture into $tmp. A cancelled selection returns non-zero.
 capture_window() {
   if [[ $session == wayland ]]; then
-    local geometry boxes=''
+    local boxes=''
     # Visible windows as "x,y wxh" boxes, so a click selects a whole window.
-    if [[ -n ${SWAYSOCK:-} ]] && command -v swaymsg >/dev/null && command -v jq >/dev/null; then
+    if ((sway)); then
       boxes=$(swaymsg -t get_tree | jq -r '.. | select(.pid? and .visible?)
         | .rect | "\(.x),\(.y) \(.width)x\(.height)"') || boxes=''
     fi
@@ -76,22 +89,44 @@ copy_image() {
   fi
 }
 
+# The output to show the prompt on: the one holding the selection's top-left corner,
+# else the compositor's choice (the focused output).
+prompt_output() {
+  ((sway)) && [[ -n $geometry ]] || return 0
+  local x=${geometry%%,*} y=${geometry#*,}
+  y=${y%% *}
+  swaymsg -t get_outputs | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+    | select(.active and .rect.x <= $x and $x < .rect.x + .rect.width
+             and .rect.y <= $y and $y < .rect.y + .rect.height) | .name) // empty' || true
+}
+
+# Ask for a file name, prefilled with $1. Prints nothing if the prompt is cancelled.
+ask_name() {
+  if [[ $session == wayland ]]; then
+    local output args=(--dmenu --prompt-only 'Save screenshot as: ' --search "$1" --width 45)
+    output=$(prompt_output)
+    [[ -n $output ]] && args+=(--output "$output")
+    fuzzel "${args[@]}" </dev/null || true
+  else
+    rofi -dmenu -p 'Save screenshot as' -l 0 -filter "$1" </dev/null || true
+  fi
+}
+
 case $mode in
   window) capture_window || exit 1 ;;
   desktop) capture_desktop ;;
 esac
 copy_image
 
-if [[ $mode == window && $name == --ask ]]; then
-  need rofi
-  name=$(rofi -dmenu -p 'Save screenshot as' -l 0 </dev/null) || name=''
-  name=${name:-$(date +%Y-%m-%dT%H-%M-%S)}
+stamp=$(date +%Y-%m-%dT%H-%M-%S)
+if ((ask)); then
+  name=$(ask_name "$stamp")
 elif [[ $mode == desktop ]]; then
-  name=$(date +%Y-%m-%dT%H-%M-%S)
+  name=$stamp
 fi
 
 if [[ -z $name ]]; then
-  notify camera-photo "Screenshot" "Copied to the clipboard"
+  notify camera-photo "Screenshot copied" "In the clipboard (not saved)"
   exit 0
 fi
 
@@ -104,4 +139,4 @@ if [[ -e $target ]]; then
   target=$dir/${name%.png}-$(date +%H-%M-%S).png
 fi
 cp "$tmp" "$target"
-notify "$target" "Screenshot" "Copied to the clipboard and saved as ${target##*/}"
+notify "$target" "Screenshot saved and copied" "${target##*/}"
