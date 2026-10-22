@@ -21,13 +21,8 @@ corner_radius {{ .i3.gaps.corner_radius }}
 bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit SwayFX?' -B 'Yes, exit' 'uwsm stop'
 bindsym $mod+Shift+Ctrl+e exec uwsm stop
 
-# Outputs, matched by make/model/serial (connector names change with the port:
-# the same monitor came up as DP-5 and DP-6). Sway applies these whenever the
-# output appears. Laptop panel on the left, bottom edges aligned; the 28" 4K
-# monitor at 1.5 is 2560x1440 logical, so the panel sits 360 lower. Static
-# positions suit one external monitor; kanshi profiles when there are more.
-output "LG Display 0x059E Unknown" pos 0 360
-output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" scale 1.5 pos 1920 0
+# Outputs: layouts, modes and scales come from kanshi profiles
+# (~/.config/kanshi/config, kanshi.service), per set of connected screens.
 
 # Lid: logind suspends on close unless an external monitor is connected
 # (run_onchange_install-logind-power.sh). When it keeps running (clamshell), turn

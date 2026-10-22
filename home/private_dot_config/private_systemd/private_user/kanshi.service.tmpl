@@ -1,0 +1,18 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+# Shadows Fedora's /usr/lib/systemd/user/kanshi.service, to tie it to the
+# compositor-started helper target instead of graphical-session.target (GNOME).
+Description=Output profiles per set of connected screens (kanshi)
+Documentation=man:kanshi(1) man:kanshi(5)
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+# Profiles `exec` helpers in ~/.local/bin (lid-panel-sync).
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/kanshi
+ExecReload=/usr/bin/kanshictl reload
+Restart=on-failure
+RestartSec=2
+{{- end }}

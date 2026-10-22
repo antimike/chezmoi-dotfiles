@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# lid-panel-sync — turn the laptop panel off if the lid is closed.
+#
+#   lid-panel-sync        run by kanshi after it applies a profile
+#
+# sway's bindswitch turns the panel off when the lid closes, but a kanshi profile
+# applied later (a monitor plugged in or out) enables it again. This undoes that.
+# SwayFX only; a no-op elsewhere or on a machine without a lid.
+set -euo pipefail
+
+panel=${1:-eDP-1}
+
+[[ ${XDG_CURRENT_DESKTOP:-} == *sway* ]] || exit 0
+shopt -s nullglob
+for state in /proc/acpi/button/lid/*/state; do
+  if grep -q closed "$state"; then
+    swaymsg -q output "$panel" disable
+  fi
+done
