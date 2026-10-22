@@ -10,20 +10,21 @@
 # bindswitch turns the panel off and lid-panel-sync keeps it off after a hotplug;
 # its slot stays empty (the cursor cannot enter it).
 #
-# ASUS PB287Q: 4K@60 is offered over DisplayPort but stays black (2026-10-19), so
-# 4K@30 at scale 1.5 (2560x1440 logical, sharp text, 30 Hz motion). Smooth
-# alternative: mode 2560x1440@59.951Hz scale 1 (soft: non-native on a 4K panel).
+# ASUS PB287Q: 4K@60 at scale 1.5 (2560x1440 logical). Needs the monitor's own
+# menu set to "DisplayPort Stream: DisplayPort 1.2" (MH, 2026-10-21); with 1.1 the
+# 60 Hz mode is still offered but stays black. Fallbacks if it goes black after a
+# monitor reset: 3840x2160@30Hz (sharp, choppy) or 2560x1440@59.951Hz scale 1 (soft).
 
 profile panel-asus-dell {
 	output "LG Display 0x059E Unknown" enable position 0,360
-	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@30Hz scale 1.5 position 1920,0
+	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@60Hz scale 1.5 position 1920,0
 	output "Dell Inc. DELL U2717D 67YGV84PAUZS" enable mode 2560x1440@59.951Hz scale 1 position 4480,0
 	exec lid-panel-sync
 }
 
 profile panel-asus {
 	output "LG Display 0x059E Unknown" enable position 0,360
-	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@30Hz scale 1.5 position 1920,0
+	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@60Hz scale 1.5 position 1920,0
 	exec lid-panel-sync
 }
 
