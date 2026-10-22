@@ -35,12 +35,15 @@ fi
 for d in "${daemons[@]}"; do info "$d"; done
 
 # 2. GDM's PAM step unlocked the login keyring at this login (system journal;
-#    needs read access, e.g. wheel).
+#    needs read access, e.g. wheel). The message depends on the path: a surviving
+#    daemon is "unlocked login keyring", a fresh one "gnome-keyring-daemon started
+#    properly and unlocked keyring".
 if journalctl -b ${since:+--since "$since"} --no-pager -q \
-    -g 'gkr-pam: unlocked login keyring' 2>/dev/null | grep -q .; then
+    -g 'gkr-pam: (unlocked login keyring|gnome-keyring-daemon started properly and unlocked keyring)' \
+    2>/dev/null | grep -q .; then
   pass "journal: PAM unlocked the login keyring${since:+ at $since}"
 else
-  bad "journal: no 'gkr-pam: unlocked login keyring'${since:+ since $since} (GDM login? journal readable?)"
+  bad "journal: no gkr-pam unlock message${since:+ since $since} (GDM login? journal readable?)"
 fi
 
 # 3. No sign of a fresh daemon failing to find PAM's in this session's journal.
