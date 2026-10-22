@@ -89,6 +89,8 @@ packagesWayland:
     - swayidle
     - swaybg
     - waybar
+    # Output profiles (monitor layouts per set of connected screens)
+    - kanshi
     # Screenshots and typing
     - grim
     - slurp

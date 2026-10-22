@@ -1,0 +1,46 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# kanshi: output layouts per set of connected screens (MH, 2026-10-21), applied
+# at login and on every hotplug. Run by kanshi.service. The first profile whose
+# outputs match exactly the connected set wins, so specific profiles come first.
+# Outputs are matched by make/model/serial: connector names change with the port.
+# Profiles naming the zbook panel are inert on other hosts.
+#
+# Left to right: laptop panel, ASUS 4K, Dell 1440p. The panel sits 360 px lower
+# (bottom edges aligned: 1080 vs 1440 logical). With the lid closed, sway's
+# bindswitch turns the panel off and lid-panel-sync keeps it off after a hotplug;
+# its slot stays empty (the cursor cannot enter it).
+#
+# ASUS PB287Q: 4K@60 is offered over DisplayPort but stays black (2026-10-19), so
+# 4K@30 at scale 1.5 (2560x1440 logical, sharp text, 30 Hz motion). Smooth
+# alternative: mode 2560x1440@59.951Hz scale 1 (soft: non-native on a 4K panel).
+
+profile panel-asus-dell {
+	output "LG Display 0x059E Unknown" enable position 0,360
+	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@30Hz scale 1.5 position 1920,0
+	output "Dell Inc. DELL U2717D 67YGV84PAUZS" enable mode 2560x1440@59.951Hz scale 1 position 4480,0
+	exec lid-panel-sync
+}
+
+profile panel-asus {
+	output "LG Display 0x059E Unknown" enable position 0,360
+	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@30Hz scale 1.5 position 1920,0
+	exec lid-panel-sync
+}
+
+profile panel-dell {
+	output "LG Display 0x059E Unknown" enable position 0,360
+	output "Dell Inc. DELL U2717D 67YGV84PAUZS" enable mode 2560x1440@59.951Hz scale 1 position 1920,0
+	exec lid-panel-sync
+}
+
+# Any other single monitor: right of the panel, at its preferred mode.
+profile panel-other {
+	output "LG Display 0x059E Unknown" enable position 0,0
+	output * enable position 1920,0
+	exec lid-panel-sync
+}
+
+profile panel {
+	output "LG Display 0x059E Unknown" enable position 0,0
+}
+{{- end }}
