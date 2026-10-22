@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# brightness — change the screen or keyboard backlight and show it as a notification.
+#
+#   brightness up|down [STEP]       laptop panel, STEP in percent (default 5), never below 1%
+#   brightness kbd-up|kbd-down      keyboard backlight, if the machine has one (can reach 0)
+#
+# Bound to the brightness keys in i3 and SwayFX (Shift+key: 1% steps). Uses
+# brightnessctl, which works under X11 and Wayland (through logind, no root).
+# External monitors have no backlight device; they are not changed.
+set -euo pipefail
+
+usage() { echo "usage: brightness up|down|kbd-up|kbd-down [STEP]" >&2; exit 2; }
+
+step=${2:-5}
+[[ $step =~ ^[0-9]+$ ]] || usage
+
+case ${1:-} in
+  up | down) device=$(brightnessctl -l -m -c backlight | head -1 | cut -d, -f1); label=Brightness; icon=display-brightness ;;
+  kbd-up | kbd-down) device=$(brightnessctl -l -m -c leds | cut -d, -f1 | grep -m1 'kbd_backlight' || true); label=Keyboard; icon=keyboard-brightness ;;
+  *) usage ;;
+esac
+[[ -n $device ]] || exit 0 # no such backlight on this machine
+
+case $1 in
+  up | kbd-up) change="${step}%+" ;;
+  *) change="${step}%-" ;;
+esac
+
+# Never turn the panel fully off: a floor of 1% of the maximum. --min-value takes a
+# raw value, not a percentage, and -n takes its value only when attached (`-n 1%`
+# makes brightnessctl print device info instead of setting anything).
+floor=()
+if [[ $label == Brightness ]]; then
+  floor=("--min-value=$(($(brightnessctl -d "$device" max) / 100))")
+fi
+brightnessctl -q -d "$device" "${floor[@]}" set "$change"
+
+# brightnessctl -m: device,class,current,percent,max
+percent=$(brightnessctl -d "$device" -m | cut -d, -f4 | tr -d %)
+notify-send -a brightness -u low -t 1500 -i "$icon" \
+  -h string:x-dunst-stack-tag:brightness -h "int:value:$percent" \
+  "$label $percent%"

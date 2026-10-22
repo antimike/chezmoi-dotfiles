@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# volume — change the default output or input volume and show it as a notification.
+#
+#   volume up|down [STEP]   output volume, STEP in percent (default 5), capped at 100%
+#   volume mute             toggle output mute
+#   volume mic-mute         toggle input (microphone) mute
+#
+# Bound to the volume keys in i3 and SwayFX (Shift+key: 1% steps). Uses wpctl, so it
+# works under X11 and Wayland alike with PipeWire. The notification replaces the
+# previous one (dunst stack tag) and draws a progress bar.
+set -euo pipefail
+
+usage() { echo "usage: volume up|down [STEP] | mute | mic-mute" >&2; exit 2; }
+
+sink=@DEFAULT_AUDIO_SINK@
+source=@DEFAULT_AUDIO_SOURCE@
+step=${2:-5}
+[[ $step =~ ^[0-9]+$ ]] || usage
+
+case ${1:-} in
+  up) wpctl set-mute "$sink" 0; wpctl set-volume -l 1.0 "$sink" "${step}%+"; node=$sink; label=Volume ;;
+  down) wpctl set-volume "$sink" "${step}%-"; node=$sink; label=Volume ;;
+  mute) wpctl set-mute "$sink" toggle; node=$sink; label=Volume ;;
+  mic-mute) wpctl set-mute "$source" toggle; node=$source; label=Microphone ;;
+  *) usage ;;
+esac
+
+# `wpctl get-volume` prints "Volume: 0.45" or "Volume: 0.45 [MUTED]".
+read -r _ level muted < <(wpctl get-volume "$node")
+percent=$(awk -v v="$level" 'BEGIN { printf "%d", v * 100 + 0.5 }')
+name=$(wpctl inspect "$node" | sed -n 's/.*node.description = "\(.*\)"/\1/p' | head -1)
+
+if [[ -n ${muted:-} ]]; then
+  icon=$([[ $label == Microphone ]] && echo microphone-sensitivity-muted || echo audio-volume-muted)
+  summary="$label muted"
+else
+  if ((percent < 34)); then tier=low; elif ((percent < 67)); then tier=medium; else tier=high; fi
+  icon=$([[ $label == Microphone ]] && echo "microphone-sensitivity-$tier" || echo "audio-volume-$tier")
+  summary="$label $percent%"
+fi
+
+notify-send -a volume -u low -t 1500 -i "$icon" \
+  -h string:x-dunst-stack-tag:volume -h "int:value:$percent" \
+  "$summary" "${name:-}"
