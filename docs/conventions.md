@@ -1,7 +1,7 @@
 ---
 summary: Working rules for sessions in this repo: commits, branches, public-repo scans, push/auth, chezmoi, shell quirks
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 ---
 
 # Conventions

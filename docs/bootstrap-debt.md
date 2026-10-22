@@ -1,7 +1,7 @@
 ---
 summary: Hand-installed tools and known gaps that chezmoi should eventually own
 status: living checklist
-updated: 2026-10-16
+updated: 2026-10-22
 ---
 
 # Bootstrap debt
