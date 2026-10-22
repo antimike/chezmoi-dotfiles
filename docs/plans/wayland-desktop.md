@@ -301,8 +301,16 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       A hand-set default (`wpctl set-default`) wins while present; `wpctl clear-default` returns to priorities.
       Chromium reads cameras directly: its default is chosen in `chrome://settings/content/camera`. Headphones: "Birdbox" (a Bose QC35,
       renamed; `BC:87:FA:48:B9:4C`); paired, bonded, trusted, connected 2026-10-21, but no A2DP sink appeared in
-      PipeWire (only `bluez_midi`); a disconnect and reconnect then failed ("No matching connection"). The priority
-      rule matches every `bluez_output.*`, so no MAC is needed in the config.
+      PipeWire (only `bluez_midi`); a disconnect and reconnect then failed ("No matching connection"). Every
+      A2DP start then failed: `Acquire ... returned error: org.bluez.Error.NotAuthorized` (AAC, and the SBC switch
+      failed too); re-pairing did not help. **Fixed by restarting the whole audio stack together**
+      (`systemctl --user restart pipewire pipewire-pulse wireplumber`), then reconnecting: A2DP AAC plays. Likely
+      cause: Claude restarted WirePlumber alone to load the priority rules, leaving PipeWire with stale Bluetooth
+      state. **Pitfall: after a WirePlumber config change, restart all three units, not WirePlumber alone.** The
+      priority rule matches every `bluez_output.*`, so no MAC is needed in the config. MX Master 3S and MX Keys S
+      connect over LE and the Keychron Q3 Pro over classic Bluetooth, so `ControllerMode = bredr` is ruled out.
+      Under SwayFX no Bluetooth agent runs (GNOME has one): pairing an untrusted device asks `bluetoothctl` to
+      authorize A2DP (`Authorize service 0000110d`); a tray agent (blueman) could come with the bar.
 - [ ] **Screenshots** (functional part of step 6).
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
