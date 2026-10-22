@@ -1,0 +1,64 @@
+#!/bin/sh
+# run_onchange_install-udev-keychron.sh.tmpl — install a udev rule that lets the
+# logged-in user open Keychron keyboards' raw HID devices (USB vendor 0x3434).
+#
+# Why: the Keychron Launcher (launcher.keychron.com, and VIA) remaps keys from
+# Chromium through WebHID, which needs read/write access to /dev/hidrawN; by
+# default only root has it. `uaccess` grants it to the user at the seat while
+# logged in, like a webcam. USB only: the Launcher remaps over the cable.
+#
+# /etc is outside chezmoi's scope. The rule is staged under
+# ~/.local/state/chezmoi-system/ and installed with sudo: without cached
+# credentials, sudo asks for the password when `chezmoi apply` runs in a
+# terminal; otherwise the script prints the commands and exits 1, so the next
+# `chezmoi apply` retries. Snapshot /etc with etckeeper before and after
+# (docs/runbooks/display-session-recovery.md).
+#
+# Only runs on Linux, non-WSL hosts (X11 or Wayland: the rule is about the keyboard).
+{{- $run := and (eq .chezmoi.os "linux") (ne (includeTemplate "is-wsl" .) "true") }}
+set -eu
+
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+RULE_NAME=70-keychron-hidraw.rules
+TARGET=/etc/udev/rules.d/$RULE_NAME
+STAGE_DIR={{ joinPath .chezmoi.homeDir ".local" "state" "chezmoi-system" | quote }}
+STAGED=$STAGE_DIR/$RULE_NAME
+
+if [ "$ENABLED" != 1 ]; then
+  echo "udev-keychron: needs non-WSL Linux (this host: {{ .chezmoi.os }}); skipping" >&2
+  exit 0
+fi
+
+mkdir -p "$STAGE_DIR"
+cat > "$STAGED" <<'EOF'
+# Installed by chezmoi (run_onchange_install-udev-keychron.sh.tmpl).
+# Keychron Launcher / VIA: raw HID access for the logged-in user (uaccess).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", MODE="0660", TAG+="uaccess"
+EOF
+
+if cmp -s "$STAGED" "$TARGET"; then
+  echo "udev-keychron: $TARGET is up to date" >&2
+  exit 0
+fi
+
+install_rule() {
+  "$@" install -m 0644 "$STAGED" "$TARGET"
+  "$@" udevadm control --reload
+  "$@" udevadm trigger --subsystem-match=hidraw --action=change
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  install_rule
+elif sudo -n true 2>/dev/null; then
+  install_rule sudo
+elif [ -t 0 ]; then
+  echo "udev-keychron: installing $TARGET with sudo" >&2
+  install_rule sudo
+else
+  echo "udev-keychron: need root. Run:" >&2
+  echo "  sudo install -m 0644 '$STAGED' $TARGET" >&2
+  echo "  sudo udevadm control --reload" >&2
+  echo "  sudo udevadm trigger --subsystem-match=hidraw --action=change" >&2
+  exit 1
+fi
+echo "udev-keychron: installed $TARGET" >&2
