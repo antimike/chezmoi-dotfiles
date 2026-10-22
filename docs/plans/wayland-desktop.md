@@ -301,6 +301,15 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       (5% steps, Shift for 1%). OSD: dunst progress-bar notifications with a stack tag (works under X11 and Wayland,
       nothing new to install), instead of wob (Wayland-only, not installed). Pitfalls: `brightnessctl -n 1%` prints
       device info (optional value must be attached) and `--min-value` takes a raw value, not a percentage.
+      MH tests 2026-10-21: all keys work except mic mute (the keyboard's mic-icon key sends nothing sway binds;
+      keycode not yet identified). Compared with the i3-config-mbp scripts (`set-pulseaudio-volume.bash`,
+      `misc/set-player-volume.bash`, `misc/set-volume.alsa.bash`, `adjust-brightness.bash`): gaps are the
+      feedback sound (`canberra-gtk-play -i audio-volume-change`), per-player (MPRIS) volume, and arbitrary
+      pactl/brightnessctl arguments; the ALSA script is obsolete under PipeWire; the old icon names
+      (`notification-audio-volume-*`, `display-brightness-*-symbolic`) are not in the installed themes.
+      **Pitfall found the same day:** with no sway `output` lines, `swaymsg reload` reset the ASUS to its preferred
+      4K@60 (black); fixed with `exec_always kanshictl reload`. After the replug only the left half of the ASUS
+      drew (open).
       **Defaults built 2026-10-21** (`~/.config/wireplumber/wireplumber.conf.d/51-device-priorities.conf`): Bluetooth
       outputs priority 3000 (above everything); C270 webcam mic 2500 and camera 1500 (verified: both default). The
       headphone jack (aux speakers) already replaces the built-in speakers by itself (separate sinks on this card).
