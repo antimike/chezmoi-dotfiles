@@ -299,8 +299,10 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       outputs priority 3000 (above everything); C270 webcam mic 2500 and camera 1500 (verified: both default). The
       headphone jack (aux speakers) already replaces the built-in speakers by itself (separate sinks on this card).
       A hand-set default (`wpctl set-default`) wins while present; `wpctl clear-default` returns to priorities.
-      Chromium reads cameras directly: its default is chosen in `chrome://settings/content/camera`. Bose QC35:
-      paired, bonded and trusted; connect failed with "Host is down" (headphones off or busy with another device).
+      Chromium reads cameras directly: its default is chosen in `chrome://settings/content/camera`. Headphones: "Birdbox" (a Bose QC35,
+      renamed; `BC:87:FA:48:B9:4C`); paired, bonded, trusted, connected 2026-10-21, but no A2DP sink appeared in
+      PipeWire (only `bluez_midi`); a disconnect and reconnect then failed ("No matching connection"). The priority
+      rule matches every `bluez_output.*`, so no MAC is needed in the config.
 - [ ] **Screenshots** (functional part of step 6).
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
