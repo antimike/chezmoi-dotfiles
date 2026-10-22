@@ -278,7 +278,7 @@ bindsym $mod+Escape exec "loginctl lock-session"
 # Screenshots (~/.local/bin/screenshot; Print is also the Keychron's screenshot key)
 bindsym Print exec --no-startup-id exec ~/.local/bin/screenshot window
 bindsym $mod+Print exec --no-startup-id exec ~/.local/bin/screenshot window --ask
-bindsym $mod+Shift+Print exec --no-startup-id exec ~/.local/bin/screenshot desktop
+bindsym $mod+Shift+Print exec --no-startup-id exec ~/.local/bin/screenshot desktop --ask
 {{- if eq .wm "i3" }}
 
 # exit i3 (logs you out of your X session)
