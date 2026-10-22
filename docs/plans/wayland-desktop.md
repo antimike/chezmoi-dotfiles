@@ -295,6 +295,12 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reopen restores it); power key; suspend/resume **with the external monitor connected** (NVIDIA in use: the
       riskiest case); `$mod+Shift+Escape` during a call; whether Chromium holds idle off by itself in a Meet call.
 - [ ] **Volume and brightness keys** with OSD; quick output switching and a Bluetooth headset (functional part of step 5).
+      **Keys built 2026-10-21** (branch `wayland/5-volume-brightness`, **MH key test pending**): `~/.local/bin/volume`
+      (wpctl: up/down capped at 100%, mute, mic-mute) and `~/.local/bin/brightness` (brightnessctl: panel, floor 1%
+      of max; keyboard backlight, a no-op here since zbook has none), bound in the shared fragment for i3 and SwayFX
+      (5% steps, Shift for 1%). OSD: dunst progress-bar notifications with a stack tag (works under X11 and Wayland,
+      nothing new to install), instead of wob (Wayland-only, not installed). Pitfalls: `brightnessctl -n 1%` prints
+      device info (optional value must be attached) and `--min-value` takes a raw value, not a percentage.
       **Defaults built 2026-10-21** (`~/.config/wireplumber/wireplumber.conf.d/51-device-priorities.conf`): Bluetooth
       outputs priority 3000 (above everything); C270 webcam mic 2500 and camera 1500 (verified: both default). The
       headphone jack (aux speakers) already replaces the built-in speakers by itself (separate sinks on this card).
