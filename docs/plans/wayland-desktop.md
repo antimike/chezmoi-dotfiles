@@ -314,7 +314,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       (`canberra-gtk-play -i audio-volume-change`). Keys (`libinput debug-events`, `~/keys.txt`): the laptop's
       mic key sends `KEY_MICMUTE` (works); the Keychron Q3 Pro's mic key sends a Super+C macro, its screenshot key
       `KEY_SYSRQ` (Print, bound to the not-yet-written screenshot script). Plan: remap the Keychron mic key to F20
-      in the Keychron Launcher (xkb maps F20 to XF86AudioMicMute); udev rule `70-keychron-hidraw.rules`
+      in the Keychron Launcher (xkb maps F20 to XF86AudioMicMute; steps in
+      [../runbooks/keychron-launcher.md](../runbooks/keychron-launcher.md)); udev rule `70-keychron-hidraw.rules`
       (`run_onchange_install-udev-keychron.sh`, uaccess for vendor 3434) lets Chromium's WebHID open it. Mixers:
       `pavucontrol` and `wiremix` in `packages.yaml` (`pulsemixer` is not in Fedora); an fzf/rofi per-app volume
       picker over `pactl` sink-inputs is later work.

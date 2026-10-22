@@ -28,6 +28,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [runbooks/memory-and-backups.md](runbooks/memory-and-backups.md) | claude-state + restic: how, restore, failure modes | anything about transcripts, memory, timers |
 | [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) | Failsafe for DM, greeter, compositor and GPU changes: prep, safe test, symptom table, rollback card | **before** any display manager, greeter, compositor or GPU change |
 | [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md) | GPG keys, git signing config, verification | signing, `pass`, YubiKey problems |
+| [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md) | Remapping the Keychron Q3 Pro (Launcher/WebHID), the udev rule, layout backup; open mic-key → F20 task | Keychron keys, VIA/Launcher access |
 | [log/migration-steps.md](log/migration-steps.md) | Completed Claude Code migration work log | history or provenance questions |
 | [../tools/README.md](../tools/README.md) | Dev scripts: `compare-trees.py` (tree survey) and `zsh-probe/` (scratch-home zsh harness) | re-running the BOCO survey; testing zsh changes without touching `$HOME` |
 
