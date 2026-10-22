@@ -151,7 +151,7 @@ stays for MH's old MacBook Pro (a possible future X11 host); zbook is the test b
 | `i3-nagbar` (exit confirm), `i3-msg exit` | `swaynag`, `swaymsg exit` (under uwsm: `uwsm stop`). |
 | `exec_always ... xss-lock`, `loginctl lock-session` | swayidle + swaylock; `loginctl lock-session` keeps working once swayidle handles the `lock` event. |
 | `$refresh_i3status` on media keys | waybar signal (`pkill -SIGRTMIN+N waybar`), or drop if the module polls. |
-| `~/bin/screenshot` (`maim` + `xclip`) | Rewrite with `grim` + `slurp` + `wl-copy`; same arguments (`desktop`, `window [name]`). |
+| `~/bin/screenshot` (`maim` + `xclip`) | **Done 2026-10-22:** rewritten as `~/.local/bin/screenshot` (`grim` + `slurp` + `wl-copy`, `maim` + `xclip` on X11); `window [NAME \| --ask]`, `desktop`. `--ask` (rofi) replaced the screenshot `i3-input` prompt. |
 | Volume keys (`set-pulseaudio-volume.bash`) and brightness / keyboard backlight keys (`adjust-brightness.bash`) | Scripts are in i3-config-mbp; port or replace with `wpctl`/`pactl` and `brightnessctl` (`-d '*kbd_backlight*'` for the keyboard), feeding the OSD. Also fixes an existing bug: line 80 defines `$audio_intput`, but the mic-mute binding uses `$audio_input`. |
 | `dunstctl` bindings, `notify-send` | Unchanged. |
 | `rofi` launchers, `kitty`, `playerctl`, `cmus` | Unchanged. |
@@ -337,7 +337,15 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       connect over LE and the Keychron Q3 Pro over classic Bluetooth, so `ControllerMode = bredr` is ruled out.
       Under SwayFX no Bluetooth agent runs (GNOME has one): pairing an untrusted device asks `bluetoothctl` to
       authorize A2DP (`Authorize service 0000110d`); a tray agent (blueman) could come with the bar.
-- [ ] **Screenshots** (functional part of step 6).
+- [x] **Screenshots** (2026-10-22, branch `wayland/screenshots`). Rewrite of i3-config-mbp's `screenshot.bash` as
+      `~/.local/bin/screenshot` for both session types (D48): `window` (click a window, boxes from `swaymsg`, or drag
+      a region) copies the PNG to the clipboard; `window NAME` / `window --ask` (rofi prompt) also save to
+      `~/Pictures/screenshots` (`$SCREENSHOT_DIR`); `desktop` captures every output and saves with a timestamp name.
+      Keys moved from the i3-only block to the shared body: Print (also the Keychron's key), `$mod+Print` (`--ask`),
+      `$mod+Shift+Print` (`desktop`). Tested under SwayFX: `desktop` (3 outputs, 7680x2160), `window` with a stubbed
+      `slurp` (clipboard only, NAME with `/`, name clash, Escape leaves the clipboard alone), usage errors; X11 branch
+      through Xwayland (`maim`, `xclip` offers `image/png`). `sway -C`, `i3 -C` and a live reload clean.
+      **Left for MH:** press Print, `$mod+Print`, `$mod+Shift+Print` with a real selection.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
       (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);
@@ -449,7 +457,7 @@ After steps 0-3, the functional checklist above comes first (D50); the rest of e
    `$refresh_i3status`, `corner_radius`, swaynag/`uwsm stop` exit keys, the placeholder bar and the uwsm exec.
    Checked: `sway -C` clean (negative control fails as expected), live `swaymsg reload` clean.
    **i3-only blocks** (SwayFX gets them when their step ports them): volume and brightness keys (scripts missing; step
-   5); screenshot keys and the 7 `i3-input` prompts (step 6); the `nop` bindings `new-workspace`, `container-info`,
+   5); screenshot keys (shared since 2026-10-22) and the 7 `i3-input` prompts (6 left; step 6); the `nop` bindings `new-workspace`, `container-info`,
    `workspace-info`, `kitty_media`, `kitty_notepad` (consumer is `i3-companion` in `i3wm-configuration`, not deployed;
    step 6); startup `i3altlayout`, `~/.xsession`, `xss-lock`, `guake`, kitty launchers (step 6; `xss-lock` → step 4);
    `$mod+Shift+w` (`wallpaper.service` does not exist); `restart` (no Sway equivalent).
