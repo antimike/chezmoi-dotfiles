@@ -274,6 +274,8 @@ bindsym $mod+Shift+r restart
 {{- end }}
 
 bindsym $mod+Escape exec "loginctl lock-session"
+# Suspend, docked or not (~/.local/bin/dock-awake: the one suspend path)
+bindsym $mod+Ctrl+Escape exec --no-startup-id exec ~/.local/bin/dock-awake suspend
 
 # Screenshots (~/.local/bin/screenshot; Print is also the Keychron's screenshot key)
 bindsym Print exec --no-startup-id exec ~/.local/bin/screenshot window
