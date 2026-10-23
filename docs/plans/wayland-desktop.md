@@ -367,6 +367,13 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
+      **Network picker** (MH, 2026-10-22: the current swaybar is not interactive): `nm-applet --indicator` in the tray
+      (installed; Wi-Fi list, passwords, VPN; no own code), the network module's click opens it or
+      `nm-connection-editor`. A rofi/fuzzel picker (port of i3-config-mbp's `rofi-wifi`) is a later option.
+- [x] **Wi-Fi band notification** (2026-10-22, branch `wifi/band-notify`): `wifi-band-watch` (user service, wanted by
+      both `wm-helpers-*` targets) notifies on any association below 5 GHz, roaming included (`iw event`). Tested:
+      `--check` silent on 5 GHz, notifies with `WIFI_BAND_MIN_MHZ=6000` (one replaced popup, dunst stack tag), event
+      path with a stubbed `iw`, service active. Not tested: a real 2.4 GHz association (the band is locked).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
       (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);
       pywal colors through one `globinclude ../../.cache/wal/colors-kitty.conf` (relative: `globinclude` rejects
