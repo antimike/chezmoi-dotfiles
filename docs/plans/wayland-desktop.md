@@ -361,7 +361,11 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       pytest (20 cases, mutation check), `wtype` runs of the prompt (subfolder with spaces, absolute, `.jpg` and
       `/usr/share` refused, overwrite no → rename, yes → replaced), `$mod+Ctrl+s` starts slurp, a non-MX keyboard's
       `Super+Shift+S` does not.
-      **Left for MH:** the MX key and the save prompt by hand.
+      MX key check passed; MH found `$mod+`/`$mod+Shift+` variants useless with one Super key, so: `$mod+Ctrl+Shift+s`
+      (`window --ask`) and `$mod+Ctrl+Alt+s` (`desktop --ask`) on every keyboard; on the MX Keys, Ctrl+screenshot key
+      arrives as the former and Alt+screenshot key (`$mod+Shift+Alt+s`, MX-only) runs `desktop --ask`. Fn never
+      reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
+      **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
       (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);
