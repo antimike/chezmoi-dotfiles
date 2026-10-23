@@ -1,0 +1,42 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# kanshi profiles for sessions where NVIDIA renders (D59): an external monitor was
+# connected at login, so ~/.config/uwsm/env put /dev/dri/dgpu first, and
+# kanshi.service starts kanshi with this file instead of ./config.
+#
+# The laptop panel cannot be lit while NVIDIA renders (SwayFX/wlroots fail its mode
+# set; WLR_DRM_NO_MODIFIERS=1 blacked out every output, 2026-10-23), and a profile
+# that enables it fails as a whole. So every profile lists it as disabled and leaves
+# no slot for it. Same monitor modes as ./config; left to right: ASUS 4K, Dell 1440p.
+#
+# Undocked mid-session, only the "panel" profile matches and it cannot work: no
+# screen until a monitor is plugged back in or the session restarts (log out blind
+# with $mod+Shift+e, or Ctrl+Alt+F3 and `loginctl terminate-user $USER`); logging in
+# undocked renders on Intel with ./config, panel included.
+
+profile docked-asus-dell {
+	output "LG Display 0x059E Unknown" disable
+	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@60Hz scale 1.5 position 0,0
+	output "Dell Inc. DELL U2717D 67YGV84PAUZS" enable mode 2560x1440@59.951Hz scale 1 position 2560,0
+}
+
+profile docked-asus {
+	output "LG Display 0x059E Unknown" disable
+	output "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" enable mode 3840x2160@60Hz scale 1.5 position 0,0
+}
+
+profile docked-dell {
+	output "LG Display 0x059E Unknown" disable
+	output "Dell Inc. DELL U2717D 67YGV84PAUZS" enable mode 2560x1440@59.951Hz scale 1 position 0,0
+}
+
+# Any other single monitor, at its preferred mode.
+profile docked-other {
+	output "LG Display 0x059E Unknown" disable
+	output * enable position 0,0
+}
+
+# Undocked mid-session: tries the panel anyway (expected to fail; see above).
+profile panel {
+	output "LG Display 0x059E Unknown" enable position 0,0
+}
+{{- end }}

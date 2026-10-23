@@ -11,7 +11,8 @@ ConditionEnvironment=WAYLAND_DISPLAY
 [Service]
 # Profiles `exec` helpers in ~/.local/bin (lid-panel-sync).
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
-ExecStart=/usr/bin/kanshi
+# NVIDIA renders (docked login, D59): profiles without the panel (~/.config/kanshi/config-nvidia).
+ExecStart=/bin/sh -c 'case "$${WLR_DRM_DEVICES:-}" in /dev/dri/dgpu*) exec /usr/bin/kanshi -c %h/.config/kanshi/config-nvidia ;; *) exec /usr/bin/kanshi ;; esac'
 ExecReload=/usr/bin/kanshictl reload
 Restart=on-failure
 RestartSec=2

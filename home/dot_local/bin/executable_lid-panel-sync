@@ -1,16 +1,36 @@
 #!/usr/bin/env bash
-# lid-panel-sync — turn the laptop panel off if the lid is closed.
+# lid-panel-sync — keep the laptop panel's state in line with the lid.
 #
-#   lid-panel-sync        run by kanshi after it applies a profile
+#   lid-panel-sync            run by kanshi after it applies a profile: panel off if the lid is closed
+#   lid-panel-sync --opened   run by sway's bindswitch when the lid opens: panel on
 #
 # sway's bindswitch turns the panel off when the lid closes, but a kanshi profile
 # applied later (a monitor plugged in or out) enables it again. This undoes that.
+# When NVIDIA renders (docked login, D59) the panel cannot be lit, so opening the
+# lid shows a notification instead of a mode set that fails.
 # SwayFX only; a no-op elsewhere or on a machine without a lid.
 set -euo pipefail
 
-panel=${1:-eDP-1}
+panel=eDP-1
+
+case ${1:-} in
+  --opened) opened=1 ;;
+  '') opened=0 ;;
+  *) echo "usage: lid-panel-sync [--opened]" >&2; exit 2 ;;
+esac
 
 [[ ${XDG_CURRENT_DESKTOP:-} == *sway* ]] || exit 0
+
+if ((opened)); then
+  if [[ ${WLR_DRM_DEVICES:-} == /dev/dri/dgpu* ]]; then
+    notify-send -a lid-panel-sync -i video-display "Laptop panel unavailable" \
+      "NVIDIA renders this docked session (D59). Log in undocked to use the panel." || true
+  else
+    swaymsg -q output "$panel" enable
+  fi
+  exit 0
+fi
+
 shopt -s nullglob
 for state in /proc/acpi/button/lid/*/state; do
   if grep -q closed "$state"; then
