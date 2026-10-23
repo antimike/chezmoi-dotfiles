@@ -1,7 +1,7 @@
 ---
 summary: Wayland desktop plan for zbook: multi-compositor trial (SwayFX full port; niri, Hyprland, Wayfire minimal) under uwsm, shared helper units, daily-driver features, greeter
 status: steps 0-3 done and merged (2026-10-17); functional daily-driver checklist first (D50, 2026-10-18); uwsm adopted (D38)
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Wayland desktop plan
@@ -367,9 +367,11 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
-      **Network picker** (MH, 2026-10-22: the current swaybar is not interactive): `nm-applet --indicator` in the tray
-      (installed; Wi-Fi list, passwords, VPN; no own code), the network module's click opens it or
-      `nm-connection-editor`. A rofi/fuzzel picker (port of i3-config-mbp's `rofi-wifi`) is a later option.
+      **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **Depends on the nm-applet test**
+      (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
+      SwayFX lag). If nm-applet is cleared: `nm-applet --indicator` in the tray (Wi-Fi list, passwords, VPN; no own
+      code). If not: no nm-applet; the network module's click opens `networkmanager_dmenu` (config already in
+      chezmoi; fuzzel/rofi) or `nmtui` in kitty. A port of i3-config-mbp's `rofi-wifi` is a later option.
 - [x] **Wi-Fi band notification** (2026-10-22, merged `e0ab1c1`): `wifi-band-watch` (user service, wanted by
       both `wm-helpers-*` targets) notifies on any association below 5 GHz, roaming included (`iw event`). Tested:
       `--check` silent on 5 GHz, notifies with `WIFI_BAND_MIN_MHZ=6000` (one replaced popup, dunst stack tag), event

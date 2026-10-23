@@ -1,7 +1,7 @@
 ---
 summary: Where the work stands and what to do next; the repo's standing session-start prompt
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Status
@@ -27,20 +27,22 @@ updated: 2026-10-22
 - **Wayland desktop steps 0 and 1 done, merged to `main` and pushed 2026-10-17** (branch `wayland/0-1-sessions`). Recovery checks done (console login works; `/etc` clean at etckeeper `0f391be`); driver-matched udev rule for `/dev/dri/igpu`/`dgpu`; `packagesWayland` with lazily enabled COPRs (`swayfx/swayfx`, `sdegler/hyprland`; D45; SwayFX **replaces** Fedora's `sway`); uwsm 0.27.0 in `/usr/local` with GDM entries SwayFX/niri/Wayfire (uwsm). Root-needing installers now prompt for sudo in a terminal (D46). Side fix: YubiKey PIN prompts on a text console (`pinentry-auto` + `PINENTRY_USER_DATA`; run `sshstart` back in the GUI). Details: [plans/wayland-desktop.md](plans/wayland-desktop.md) steps 0-1, [open-items.md](open-items.md).
 - **Wayland desktop planning done 2026-10-17** (merged branch `docs-wayland-plan`). MH's untracked `ricing.md` is folded into the plans (item-by-item map in [plans/ricing-backlog.md](plans/ricing-backlog.md)) but **kept unmodified at the repo root for MH's review**; MH deletes it, and it is never committed. Plans: [plans/wayland-desktop.md](plans/wayland-desktop.md) (compositor trial: SwayFX full i3 port, niri/Hyprland/Wayfire minimal; uwsm D38; Intel-only rendering D41; own password picker D40; one keybinding tree, draft D42; greeter last), [plans/devices-and-audio.md](plans/devices-and-audio.md) (D43 notify-then-mount), [plans/theming.md](plans/theming.md) (after the daily driver; draft D39), [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md). Source repos `i3-config-mbp`, `i3wm-configuration`, `arcolinux-i3wm` cloned to `~/Source/antimike/`.
 - **Functional SwayFX work 2026-10-19..22, all merged and pushed** (last merge `d20a401`): external monitors (D52, D53: NVIDIA card always opened, Intel renders; kanshi profiles for panel | ASUS PB287Q 4K@60 scale 1.5 | Dell U2717D 1440p, hotplug and clamshell; ASUS 4K@60 needs its menu's "DisplayPort Stream: 1.2"); lock, idle, power (step 4: swayidle, swaylock, logind drop-in, `idle-toggle`); kitty errors; WirePlumber priorities (Bluetooth first, C270 webcam mic and camera; Chromium's camera/mic set by MH); `volume`/`brightness` keys shared by i3 and SwayFX (dunst OSD, feedback sound); Keychron udev rule. Detail: [plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver".
-- **Wi-Fi forced to 5 GHz by MH 2026-10-22** (`802-11-wireless.band a` on "Bug House"): the 2.4 GHz link starved the AX200's Bluetooth (MX Keys lag and repeats; much better with the video paused). 5 GHz here is weak (-81 dBm, ~78 Mbit/s down measured); the lock means no Wi-Fi where only 2.4 GHz reaches. Open item. `wifi-band-watch` (merged and pushed, `e0ab1c1`) notifies on any join below 5 GHz.
+- **Home network reworked 2026-10-22/23** (MH's router session; [runbooks/home-network.md](runbooks/home-network.md), D55-D57): slow Chromium and MX Keys lag had one cause, 2.4 GHz Wi-Fi time-sharing the AX200 with Bluetooth audio. zbook is now **wired through a GL-AR750S repeater** (5 GHz upstream, GL 4.3.25) as the default route, Wi-Fi (5 GHz-locked) as fallback; `wifi-band-watch` (merged `e0ab1c1`) notifies on any join below 5 GHz. Side finding: SwayFX lag during wired reconnects, nm-applet's tray animation suspected (test pending; it decides the bar's network picker).
 - A private doc (keys, findings, client terms) is committed in `~/Source/chezmoi-boco` but **not pushed** (waiting for MH's OK).
 
 ## Next actions (in order; reprioritized by MH 2026-10-18, D50)
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
 2. **Functional SwayFX checklist** (the 2026-10-20 deadline passed; still first priority) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order:
    1. **Screenshots: done, merged and pushed 2026-10-22** (`3a38c79`): `~/.local/bin/screenshot` + shared `pick-path` (D54); keys for Print, the MX Keys and keyboards without Print, all checked by MH.
-   2. **Screen sharing test with both monitors**, the C270 webcam and Birdbox (basic sharing, camera and mic passed 2026-10-18 on the panel; Meet camera/mic passed 2026-10-21).
-   3. Minimal bar (waybar or swaybar; maybe a blueman tray agent: no Bluetooth agent runs under SwayFX).
-   4. Keybinding cheat sheet.
-   5. i3 off zbook (D50 amends D49).
-3. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
-4. Atlassian/Jira review pass when MH schedules it.
-5. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
+   2. **nm-applet lag test** (open item; quick, and it decides the bar's network picker; needs a deliberate wired reconnect).
+   3. **Screen sharing test with both monitors**, the C270 webcam and Birdbox (basic sharing, camera and mic passed 2026-10-18 on the panel; Meet camera/mic passed 2026-10-21).
+   4. Minimal bar (waybar or swaybar; maybe a blueman tray agent: no Bluetooth agent runs under SwayFX).
+   5. Keybinding cheat sheet.
+   6. i3 off zbook (D50 amends D49).
+3. **Home network follow-ups** (open items): DNS pinning, Wi-Fi profile cleanup, router move + re-measure, router hardening/backup; MH's router projects.
+4. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
+5. Atlassian/Jira review pass when MH schedules it.
+6. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
 
 Side quests (spare time, D50): keybinding manifest, package map refactor, `swindings`, theming, other compositors' configs ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-state` and of one `dstask` repo (all in [open-items.md](open-items.md)).

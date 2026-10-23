@@ -1,7 +1,7 @@
 ---
 summary: Design and review pass for audio (PipeWire/WirePlumber, media control) and device hotplug (monitors, audio outputs, Bluetooth, removable drives, Wi-Fi) on the Wayland desktop
 status: planned; design review first, no config changed
-updated: 2026-10-17
+updated: 2026-10-23
 ---
 
 # Devices and audio plan
@@ -78,7 +78,8 @@ machine and settled on playerctl; the ecosystem has moved since, so this starts 
 
 - `networkmanager-dmenu` (config already in chezmoi) supports rofi and fuzzel: connect, VPN, toggles. Check it is
   installed; compare with MH's `rofi-wifi` script.
-- `nm-applet --indicator` for the waybar tray.
+- `nm-applet --indicator` for the waybar tray, **only if the nm-applet lag test clears it** (open item; see
+  [../runbooks/home-network.md](../runbooks/home-network.md) and the bar item in [wayland-desktop.md](wayland-desktop.md)).
 
 ## Steps (not scheduled)
 
