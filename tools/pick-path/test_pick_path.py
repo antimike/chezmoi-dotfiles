@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from importlib.machinery import SourceFileLoader
 from importlib.util import module_from_spec, spec_from_loader
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[2] / "home/dot_local/bin/executable_pick-path"
+sys.dont_write_bytecode = True  # the script lives in the chezmoi source tree
 loader = SourceFileLoader("pick_path", str(SCRIPT))
 pick_path = module_from_spec(spec_from_loader("pick_path", loader))
 loader.exec_module(pick_path)
