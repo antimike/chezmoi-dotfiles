@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""Ask for a file path to write to, check it, and print the final absolute path.
+
+The prompt is fuzzel on Wayland and rofi on X11: one text field, prefilled with
+--default. What you type is read as:
+
+  name          BASE/name
+  sub/name      BASE/sub/name (missing directories are created)
+  sub/          BASE/sub/DEFAULT (a trailing slash, or an existing directory, means
+                "put the default name in here")
+  ~/x, /abs/x   that path, outside BASE
+
+With --ext png, a name without an extension gets .png; .png (any case) is kept; any
+other extension is refused, so a file never claims a format it does not have. A
+"suffix" that is not an extension (v1.2 notes) does not count as one.
+
+If the file exists, a second prompt asks whether to overwrite it; "no" goes back to
+the name prompt. A path you cannot write to (it would need sudo) is refused.
+
+Exit status: 0 = path printed on stdout, 1 = cancelled, 2 = usage error,
+3 = refused (the reason goes to stderr and to a desktop notification).
+
+Example (bash):
+  target=$(pick-path --base ~/Pictures/screenshots --default "$stamp" --ext png) || exit
+  cp "$tmp" "$target"
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+logger = logging.getLogger("pick-path")
+
+CANCELLED = 1
+REFUSED = 3
+EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,5}")
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+    """Preserve description whitespace and show defaults."""
+
+
+class Refused(Exception):
+    """The typed path cannot be used; the message says why."""
+
+
+def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="pick-path", description=__doc__, formatter_class=HelpFormatter)
+    parser.add_argument(
+        "--base", type=Path, default=Path.cwd(), help="directory for names and relative paths"
+    )
+    parser.add_argument("--default", default="", help="prefilled name")
+    parser.add_argument("--ext", default="", help="extension (without the dot) the file must have")
+    parser.add_argument("--prompt", default="Save as", help="prompt label")
+    parser.add_argument("--output", default="", help="Wayland output (monitor) to show the prompt on")
+    parser.add_argument(
+        "--input",
+        help="use this text instead of prompting (scripts and tests); an existing file is refused",
+    )
+    parser.add_argument(
+        "--loglevel",
+        "-l",
+        default="WARNING",
+        type=lambda v: v.strip().upper(),
+        help="Logging verbosity (DEBUG, INFO, WARNING, ERROR).",
+    )
+    return parser.parse_args(argv)
+
+
+def setup_logger(args: argparse.Namespace) -> None:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("pick-path: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(args.loglevel)
+
+
+def ask(prompt: str, prefill: str = "", choices: list[str] | None = None, output: str = "") -> str | None:
+    """Show a one-line prompt (or a list of choices); None when cancelled."""
+    if os.environ.get("WAYLAND_DISPLAY"):
+        cmd = ["fuzzel", "--dmenu", "--width", "60"]
+        cmd += (
+            ["--prompt", f"{prompt}: "] if choices else ["--prompt-only", f"{prompt}: ", "--search", prefill]
+        )
+        if output:
+            cmd += ["--output", output]
+    elif os.environ.get("DISPLAY"):
+        cmd = ["rofi", "-dmenu", "-p", prompt]
+        cmd += ["-no-custom"] if choices else ["-l", "0", "-filter", prefill]
+    else:
+        raise Refused("no graphical session to prompt in (use --input)")
+    if not shutil.which(cmd[0]):
+        raise Refused(f"'{cmd[0]}' not found")
+    stdin = "\n".join(choices) if choices else ""
+    result = subprocess.run(cmd, input=stdin, text=True, capture_output=True, check=False)
+    logger.debug("%s exited %d", cmd[0], result.returncode)
+    answer = result.stdout.rstrip("\n")
+    return answer if result.returncode == 0 and answer else None
+
+
+def resolve(text: str, base: Path, default: str, ext: str) -> Path:
+    """Turn the typed text into an absolute path, applying the rules in the docstring."""
+    text = text.strip()
+    if not text:
+        raise Refused("empty name")
+    path = Path(os.path.expanduser(text))
+    if not path.is_absolute():
+        path = base.expanduser() / path
+    path = Path(os.path.abspath(path))
+    if text.endswith("/") or path.is_dir():
+        if not default:
+            raise Refused(f"{path} is a directory; type a file name")
+        path = path / default
+    if ext:
+        suffix = path.suffix
+        if not EXTENSION.fullmatch(suffix):
+            path = path.with_name(f"{path.name}.{ext}")
+        elif suffix.lower() != f".{ext.lower()}":
+            raise Refused(f"{path.name}: only .{ext} files can be saved here")
+    return path
+
+
+def check_writable(path: Path) -> None:
+    """Refuse paths the user cannot write without root, or that are not plain files."""
+    if path.is_dir():
+        raise Refused(f"{path} is a directory")
+    if path.exists():
+        if not os.access(path, os.W_OK):
+            raise Refused(f"{path} is not writable by you; saving there needs sudo")
+        return
+    ancestor = path.parent
+    while not ancestor.exists():
+        ancestor = ancestor.parent
+    if not ancestor.is_dir():
+        raise Refused(f"{ancestor} is a file, not a directory")
+    if not os.access(ancestor, os.W_OK | os.X_OK):
+        raise Refused(f"{ancestor} is not writable by you; saving there needs sudo")
+
+
+def notify(message: str) -> None:
+    if shutil.which("notify-send") and (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
+        subprocess.run(
+            ["notify-send", "-a", "pick-path", "-u", "critical", "Not saved", message], check=False
+        )
+
+
+def pick(args: argparse.Namespace) -> Path | None:
+    """Prompt until a usable path is chosen; None when cancelled."""
+    prefill = args.default
+    while True:
+        text = args.input if args.input is not None else ask(args.prompt, prefill, output=args.output)
+        if text is None:
+            return None
+        path = resolve(text, args.base, args.default, args.ext)
+        check_writable(path)
+        if not path.exists():
+            return path
+        if args.input is not None:
+            raise Refused(f"{path} exists")
+        if ask(f"Overwrite {path.name}?", choices=["no", "yes"], output=args.output) == "yes":
+            return path
+        prefill = text
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = get_cli_arguments(argv)
+    setup_logger(args)
+    try:
+        path = pick(args)
+        if path is None:
+            return CANCELLED
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except (Refused, OSError) as err:
+        logger.error("%s", err)
+        notify(str(err))
+        return REFUSED
+    print(path)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

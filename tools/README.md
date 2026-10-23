@@ -7,6 +7,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [compare-trees.py](compare-trees.py) | Path-level comparison of two chezmoi source trees (the BOCO survey) |
 | [zsh-probe/](zsh-probe/) | Render the zsh files into a scratch home, dump the resulting shell state, and diff two dumps |
 | [home-snapshot/](home-snapshot/) | Save paths under `$HOME` and restore them exactly: the escape route for a risky apply |
+| [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 
 ## zsh-probe
 
