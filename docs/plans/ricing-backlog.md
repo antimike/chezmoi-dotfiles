@@ -33,7 +33,16 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
 - [x] Neovim config migration ([boco-merge.md](boco-merge.md), Phase 2, merged 2026-10-17)
 - [ ] Wayland-compatible i3 replacement: SwayFX plus a compositor trial ([wayland-desktop.md](wayland-desktop.md))
 - [ ] Status bar / tray, notification daemon, lock, idle: [wayland-desktop.md](wayland-desktop.md) (shared helper components)
-- [ ] Kitty config update and assessment
+- [ ] Kitty config update and assessment. **Include a wider colour-scheme compatibility test** (MH, 2026-10-23):
+  zsh comments render **pure black, invisible** on kitty's dark background. Cause (confirmed by pixel sampling and
+  MH's check on both monitors): fast-syntax-highlighting's default theme has `comment = black,bold`, kitty does not
+  brighten bold, and `~/.config/kitty/colors.conf` (included last, so it wins over `current-theme.conf`) sets
+  `color0 #000000` on `background #0D1926`; `color8 #262626` is barely better. Not a GPU, monitor or resume fault.
+  The test: every highlighter style (fast-syntax-highlighting, `bat`, `less`, `git`, `ls`/`eza`, the prompt) and
+  the 16 ANSI colours against each kitty theme in use, so no style lands on colour 0 or 8 against a dark background;
+  fix via an fsh theme override (e.g. `comment = 8` with a lighter `color8`) or the theme itself. Also settle which
+  of `colors.conf` and `current-theme.conf` is the source (two palettes are included today). Belongs with
+  [theming.md](theming.md).
 - [ ] Investigate browser options
 - [ ] Nix config derivations (exploration notes exist in the reference clone's `docs/`)
 
