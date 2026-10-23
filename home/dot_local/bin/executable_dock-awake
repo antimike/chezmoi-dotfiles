@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+# dock-awake — never suspend while docked on AC; one suspend command for every case.
+#
+#   dock-awake            watch (dock-awake.service): hold a sleep inhibitor while
+#                         an external monitor is connected AND AC is online
+#   dock-awake suspend    suspend now: releases the inhibitor if it is held (re-held
+#                         after resume), else plain `systemctl suspend` (also where
+#                         the service does not run: i3/X11, GNOME). $mod+Ctrl+Escape
+#   dock-awake power-key  the compositor's XF86PowerOff binding: suspend while the
+#                         inhibitor is held (logind then ignores the key), else nothing
+#                         (logind handles the key itself)
+#   dock-awake status     docked, AC, inhibitor, grace timer
+#
+# The inhibitor (systemd-inhibit --mode=block, sleep:handle-power-key) refuses every
+# suspend request from the session, swayidle's and stray ones alike. `systemctl
+# suspend -i` is no way around it (polkit suspend-ignore-inhibit is auth_admin_keep),
+# hence `dock-awake suspend`. AC lost while docked: the inhibitor goes at once with a
+# critical notification; if the screen is locked (nobody there), suspend after
+# $DOCK_AWAKE_AC_GRACE seconds unless AC returns or the screen is unlocked. swayidle's
+# timeout fires once per idle period, so it would not catch that.
+# Design: docs/open-items.md, "dock-awake".
+set -euo pipefail
+shopt -s extglob nullglob
+
+state_dir=${XDG_RUNTIME_DIR:?}/dock-awake
+held_file=$state_dir/held
+grace_file=$state_dir/grace-until
+request_fifo=$state_dir/requests
+unit=dock-awake.service
+
+usage() { echo "usage: dock-awake [suspend|power-key|status]" >&2; exit 2; }
+
+# Connected outputs other than a built-in panel (eDP, LVDS, DSI).
+external_outputs() {
+  local status name
+  for status in /sys/class/drm/card*-*/status; do
+    [[ $(<"$status") == connected ]] || continue
+    name=${status%/status}
+    name=${name##*/}
+    name=${name#card*-}
+    [[ $name == @(eDP|LVDS|DSI)* ]] || echo "$name"
+  done
+}
+
+docked() { [[ -n $(external_outputs) ]]; }
+on_ac() { systemd-ac-power; }
+locked() { pgrep -u "$UID" -x swaylock >/dev/null; }
+held() { [[ -e $held_file ]] && systemctl --user --quiet is-active "$unit"; }
+
+notify() { notify-send -a dock-awake -h string:x-dunst-stack-tag:dock-awake "$@" || true; }
+
+case ${1:-} in
+  suspend | power-key)
+    if held; then
+      # The service releases the inhibitor, suspends, and holds it again on resume.
+      # shellcheck disable=SC2016 # $1 is expanded by sh
+      timeout 2 sh -c 'echo suspend >"$1"' sh "$request_fifo"
+    elif [[ $1 == suspend ]]; then
+      exec systemctl suspend
+    fi
+    exit 0
+    ;;
+  status)
+    outputs=$(external_outputs | paste -sd ' ')
+    if [[ -n $outputs ]]; then echo "docked:    yes ($outputs)"; else echo "docked:    no"; fi
+    on_ac && echo "AC:        online" || echo "AC:        offline"
+    if held; then echo "inhibitor: held"; else echo "inhibitor: released"; fi
+    [[ -e $grace_file ]] && echo "grace:     suspend at $(date -d "@$(<"$grace_file")" +%T) unless AC returns"
+    systemctl --user --quiet is-active "$unit" || echo "service:   $unit not running"
+    exit 0
+    ;;
+  '') ;;
+  *) usage ;;
+esac
+
+# --- watch (the service) ---
+grace=${DOCK_AWAKE_AC_GRACE:-60}
+[[ $grace =~ ^[0-9]+$ ]] || { echo "dock-awake: DOCK_AWAKE_AC_GRACE must be seconds" >&2; exit 2; }
+mkdir -p "$state_dir"
+rm -f "$held_file" "$grace_file" "$request_fifo"
+mkfifo -m 0600 "$request_fifo"
+
+inhibit_pid=
+events_pid=
+grace_until=0
+suspending=0 # deadline: set by a suspend request, cleared on resume (or if no sleep follows)
+
+hold() {
+  [[ -n $inhibit_pid ]] && return
+  systemd-inhibit --what=sleep:handle-power-key --who=dock-awake \
+    --why="Docked on AC (dock-awake suspend still suspends)" --mode=block sleep infinity &
+  inhibit_pid=$!
+  touch "$held_file"
+  echo "inhibitor held"
+}
+
+release() {
+  [[ -n $inhibit_pid ]] || return 0
+  # Ending the child ends systemd-inhibit, which drops the lock.
+  pkill -P "$inhibit_pid" sleep 2>/dev/null || true
+  kill "$inhibit_pid" 2>/dev/null || true
+  wait "$inhibit_pid" 2>/dev/null || true
+  inhibit_pid=
+  rm -f "$held_file"
+  echo "inhibitor released"
+}
+
+cancel_grace() {
+  ((grace_until)) || return 0
+  grace_until=0
+  rm -f "$grace_file"
+  echo "grace cancelled"
+}
+
+evaluate() {
+  local now
+  if ((suspending)); then
+    return
+  fi
+  if docked && on_ac; then
+    cancel_grace
+    hold
+    return
+  fi
+  if [[ -n $inhibit_pid ]]; then
+    release
+    if docked; then # docked, AC lost
+      if locked; then
+        grace_until=$(($(date +%s) + grace))
+        echo "$grace_until" >"$grace_file"
+        notify -u critical -i battery-caution "AC lost while docked" \
+          "Screen locked: suspending in ${grace}s unless AC returns."
+      else
+        notify -u critical -i battery-caution "AC lost while docked" \
+          "Suspend is allowed again (idle suspend on battery after 20 min)."
+      fi
+    fi
+  fi
+  if ((grace_until)); then
+    now=$(date +%s)
+    if on_ac || ! locked; then
+      cancel_grace
+    elif ((now >= grace_until)); then
+      cancel_grace
+      echo "grace over on battery, locked: suspending"
+      systemctl suspend || true
+    fi
+  fi
+}
+
+request_suspend() {
+  echo "suspend requested"
+  cancel_grace
+  suspending=$(($(date +%s) + 30))
+  release
+  if ! systemctl suspend; then
+    suspending=0
+    notify -u critical "Suspend failed" "See: journalctl --user -u $unit"
+    evaluate
+  fi
+}
+
+cleanup() {
+  release
+  rm -f "$grace_file" "$request_fifo"
+  # Kill the event readers (the process substitution's subshell and its children).
+  [[ -n $events_pid ]] || return 0
+  pkill -P "$events_pid" 2>/dev/null || true
+  kill "$events_pid" 2>/dev/null || true
+}
+
+trap 'exit 0' TERM INT
+trap cleanup EXIT
+
+# One stream: udev events for outputs and power supplies, logind's PrepareForSleep
+# (true before sleep, false on resume), and requests from `dock-awake suspend`
+# (read-write open, so the FIFO never reaches EOF between writers).
+exec 3< <(
+  cat <>"$request_fifo" &
+  udevadm monitor --udev --subsystem-match=drm --subsystem-match=power_supply &
+  gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 &
+  wait
+)
+events_pid=$!
+
+evaluate
+while :; do
+  timeout=
+  if ((grace_until)); then
+    timeout=$((grace_until - $(date +%s)))
+    ((timeout > 0)) || timeout=1
+  elif ((suspending)); then
+    timeout=$((suspending - $(date +%s)))
+    ((timeout > 0)) || timeout=1
+  fi
+  line=
+  if read -r ${timeout:+-t "$timeout"} line <&3; then
+    :
+  else
+    rc=$?
+    # >128: timeout; anything else: the event stream ended.
+    ((rc > 128)) || { echo "dock-awake: event stream ended" >&2; exit 1; }
+  fi
+  if [[ $line == suspend ]]; then
+    request_suspend
+    continue
+  fi
+  if [[ $line == *PrepareForSleep*false* ]]; then
+    echo "resumed"
+    suspending=0
+  elif ((suspending)) && (($(date +%s) >= suspending)) && [[ $line != *PrepareForSleep* ]]; then
+    # No sleep started within 30 s of the request (refused elsewhere): hold again.
+    echo "no sleep after the suspend request; re-evaluating"
+    suspending=0
+  fi
+  [[ $line == *PrepareForSleep*true* ]] && suspending=$(($(date +%s) + 3600))
+  evaluate
+done

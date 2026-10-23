@@ -1,0 +1,16 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=No suspend while docked on AC (dock-awake)
+Documentation=file://%h/.local/share/chezmoi/docs/open-items.md
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+# Grace before suspending a locked session after AC loss: .chezmoidata/dock-awake.yaml
+# (per host: data.dockAwake in ~/.config/chezmoi/chezmoi.yml).
+Environment=DOCK_AWAKE_AC_GRACE={{ .dockAwake.acLossGraceSeconds }}
+ExecStart=%h/.local/bin/dock-awake
+Restart=on-failure
+RestartSec=2
+{{- end }}

@@ -1,0 +1,12 @@
+# dock-awake (~/.local/bin/dock-awake, dock-awake.service): no suspend while docked on AC.
+#
+# acLossGraceSeconds: when AC is lost while docked and the screen is locked, suspend
+# after this many seconds unless AC returns (MH, 2026-10-23: 60 s). Rendered into
+# dock-awake.service. Override per host in ~/.config/chezmoi/chezmoi.yml:
+#   data:
+#     dockAwake:
+#       acLossGraceSeconds: 120
+#
+# Top-level key is camelCase because hyphens break Go template dot-access.
+dockAwake:
+  acLossGraceSeconds: 60
