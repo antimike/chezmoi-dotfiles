@@ -3,14 +3,17 @@
 # the clipboard as PNG and show a notification.
 #
 #   screenshot window          click a window or drag a region; clipboard only
-#   screenshot window NAME     same, and save it as NAME.png in the screenshot folder
-#   screenshot window --ask    same, and ask for the name, prefilled with a timestamp
+#   screenshot window NAME     same, and save it as NAME (see below)
+#   screenshot window --ask    same, and ask where to save it, prefilled with a timestamp
 #   screenshot desktop         every output; clipboard, and saved with a timestamp name
-#   screenshot desktop --ask   same, but ask for the name, prefilled with the timestamp
+#   screenshot desktop --ask   same, but ask where to save it, prefilled with the timestamp
 #
-# The name prompt is fuzzel on Wayland (on the output where the capture was made) and
-# rofi on X11. Enter accepts the name, Escape skips saving (the clipboard copy stays).
-# The screenshot folder is $SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots".
+# Saving goes through pick-path: a name or relative path lands in the screenshot folder
+# ($SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots"), ~/ and absolute
+# paths are taken as given, .png is added when there is no extension, an existing file
+# is only overwritten after a confirmation, and a path needing sudo is refused. The
+# prompt (fuzzel; rofi on X11) shows on the output where the capture was made. Escape
+# there, or a refused path, leaves the screenshot in the clipboard only.
 # Wayland is picked when $WAYLAND_DISPLAY is set. Window boxes for the click come from
 # swaymsg (SwayFX/sway only; other compositors get a plain region drag). Escape cancels
 # the selection: nothing is copied or saved, and the exit status is 1.
@@ -38,11 +41,9 @@ if [[ -n ${WAYLAND_DISPLAY:-} ]]; then
   session=wayland
   need grim; need wl-copy
   [[ $mode == window ]] && need slurp
-  ((ask)) && need fuzzel
 elif [[ -n ${DISPLAY:-} ]]; then
   session=x11
   need maim; need xclip
-  ((ask)) && need rofi
 else
   echo "screenshot: no graphical session (neither WAYLAND_DISPLAY nor DISPLAY is set)" >&2
   exit 1
@@ -100,18 +101,6 @@ prompt_output() {
              and .rect.y <= $y and $y < .rect.y + .rect.height) | .name) // empty' || true
 }
 
-# Ask for a file name, prefilled with $1. Prints nothing if the prompt is cancelled.
-ask_name() {
-  if [[ $session == wayland ]]; then
-    local output args=(--dmenu --prompt-only 'Save screenshot as: ' --search "$1" --width 45)
-    output=$(prompt_output)
-    [[ -n $output ]] && args+=(--output "$output")
-    fuzzel "${args[@]}" </dev/null || true
-  else
-    rofi -dmenu -p 'Save screenshot as' -l 0 -filter "$1" </dev/null || true
-  fi
-}
-
 case $mode in
   window) capture_window || exit 1 ;;
   desktop) capture_desktop ;;
@@ -119,24 +108,27 @@ esac
 copy_image
 
 stamp=$(date +%Y-%m-%dT%H-%M-%S)
+dir=${SCREENSHOT_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/screenshots}
+pick=(--base "$dir" --default "$stamp" --ext png --prompt 'Save screenshot as')
 if ((ask)); then
-  name=$(ask_name "$stamp")
+  pick+=(--output "$(prompt_output)")
+elif [[ -n $name ]]; then
+  pick+=(--input "$name")
 elif [[ $mode == desktop ]]; then
-  name=$stamp
+  pick+=(--input "$stamp")
+else
+  pick=()
 fi
 
-if [[ -z $name ]]; then
+target=''
+if ((${#pick[@]})); then
+  need pick-path
+  target=$(pick-path "${pick[@]}") || target=''   # 1 = cancelled, 3 = refused (it notifies)
+fi
+if [[ -z $target ]]; then
   notify camera-photo "Screenshot copied" "In the clipboard (not saved)"
   exit 0
 fi
 
-dir=${SCREENSHOT_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/screenshots}
-name=${name//\//-}   # a name, not a path
-[[ $name == *.png ]] || name+=.png
-mkdir -p "$dir"
-target=$dir/$name
-if [[ -e $target ]]; then
-  target=$dir/${name%.png}-$(date +%H-%M-%S).png
-fi
 cp --no-preserve=mode "$tmp" "$target"   # mktemp files are 0600; use the umask
-notify "$target" "Screenshot saved and copied" "${target##*/}"
+notify "$target" "Screenshot saved and copied" "${target/#"$HOME"/\~}"
