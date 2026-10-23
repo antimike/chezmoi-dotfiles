@@ -27,6 +27,21 @@ zbook's own Wi-Fi (wlp112s0) to the home AP on 5 GHz: fallback route only
   own 5 GHz Wi-Fi did 81-86 down, 38.5 up. The cap is the router's 5 GHz client link (rx 65 Mbit/s, VHT-MCS 1, one
   spatial stream, signal -69..-72 dBm), not its CPU; moving the router closer to the AP should raise it (open item).
 
+### Video calls and bufferbloat (measured 2026-10-23, wired path, ping to 1.1.1.1 at 5/s)
+
+| Load | Avg | Max | Jitter (mdev) | Loss |
+|---|---|---|---|---|
+| Idle, 60 s | 3.9 ms | 25 ms | 2.5 ms | 0% |
+| Download saturated (~40 Mbit/s) | 47 ms | 120 ms | 22 ms | 0% |
+| Upload saturated (~36 Mbit/s) | **189 ms** | **355 ms** | **68 ms** | 0% |
+
+The router hop stays under 1 ms during an upload, so the queue is beyond the router: its 5 GHz uplink or the home
+AP/ISP. A call needs only about 2-4 Mbit/s each way, so on an otherwise idle link it gets the idle numbers (far inside
+Microsoft's Teams targets); a large upload during a call (cloud sync, a big push, a video upload) breaks it. Fix: SQM
+(cake) on the router's WAN, shaped a little below the measured rates (open item). Re-run: `ping -q -i 0.2 -c 100
+1.1.1.1` alongside `head -c 150000000 /dev/zero | curl -s -o /dev/null -X POST --data-binary @-
+https://speed.cloudflare.com/__up` (downloads: `__down?bytes=25000000`, larger sizes are refused).
+
 ## Why: Wi-Fi + Bluetooth on one radio
 
 zbook's Intel AX200 does Wi-Fi and Bluetooth on one radio. On **2.4 GHz** the two time-share airtime, and a continuous
