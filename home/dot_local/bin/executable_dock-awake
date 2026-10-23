@@ -117,11 +117,12 @@ release() {
   echo "inhibitor released"
 }
 
-cancel_grace() {
+# end_grace [reason]: stop the grace timer; log the reason if one is given.
+end_grace() {
   ((grace_until)) || return 0
   grace_until=0
   rm -f "$grace_file"
-  echo "grace cancelled"
+  [[ -z ${1:-} ]] || echo "grace cancelled: $1"
 }
 
 evaluate() {
@@ -137,7 +138,7 @@ evaluate() {
     notify -u normal -i battery-full-charging "Back on AC" "$body"
   fi
   if docked && on_ac; then
-    cancel_grace
+    end_grace "back on AC"
     hold
     return
   fi
@@ -147,6 +148,7 @@ evaluate() {
       if locked; then
         grace_until=$(($(date +%s) + grace))
         echo "$grace_until" >"$grace_file"
+        echo "grace: suspend at $(date -d "@$grace_until" +%T) unless AC returns"
         notify -u critical -i battery-caution "AC lost while docked" \
           "Screen locked: suspending in ${grace}s unless AC returns."
       else
@@ -158,10 +160,12 @@ evaluate() {
   fi
   if ((grace_until)); then
     now=$(date +%s)
-    if on_ac || ! locked; then
-      cancel_grace
+    if on_ac; then
+      end_grace "back on AC"
+    elif ! locked; then
+      end_grace "unlocked"
     elif ((now >= grace_until)); then
-      cancel_grace
+      end_grace
       echo "grace over on battery, locked: suspending"
       systemctl suspend || true
     fi
@@ -170,7 +174,7 @@ evaluate() {
 
 request_suspend() {
   echo "suspend requested"
-  cancel_grace
+  end_grace "suspend requested"
   suspending=$(($(date +%s) + 30))
   release
   if ! systemctl suspend; then
