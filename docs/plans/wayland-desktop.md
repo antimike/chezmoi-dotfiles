@@ -395,6 +395,26 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
          while docked on AC), then check kitty for black text (open item: black text after resume with NVIDIA
          rendering, seen under SwayFX 2026-10-23). Before it: `dock-awake status` shows the lock held. After it: held
          again. Optional: one short power-key press (Hyprland's XF86PowerOff binding, `locked = true`).
+
+      **Results 2026-10-23 (MH, docked login, monitors plugged in at GDM):**
+      1. **Passed, and the panel works while NVIDIA renders**: aquamarine makes `card0` (NVIDIA, renderer
+         `Quadro T1000`) primary and drives `card1` (i915) as a secondary backend, copying the panel's frames.
+         All three outputs at the plan's modes/scales/positions. SwayFX cannot do this (D59).
+      2. Passed: dgpu first in `AQ_DRM_DEVICES`, `XDG_CURRENT_DESKTOP=Hyprland`, uwsm 0.27.0; helper target
+         active, kanshi condition-skipped; swayidle, dock-awake (held), wifi-band-watch, clipboard stack, dunst
+         running (dunst renders; test notification shown).
+      3. `hypr-nvidia` (terminals only, 3 outputs): hands off 0.3% avg / 2.0% max, mouse 21.3% / 39.9%; SwayFX
+         `nvidia` (2 outputs): 2.0% / 19.0%. MH: cursor smooth. NVIDIA P5, 9.1 W. A video run was skipped (no
+         matched SwayFX baseline: `nvidia-d59`'s conditions were not recorded); do a matched pair if it is close.
+      4. Passed: undock kept the panel running and moved the windows onto it (the bar survived); re-dock lit
+         both externals in the right layout, workspaces back in place; dock-awake released/held. The ASUS
+         flapped once on reconnect (absorbed). Hyprland log: routine commit/GBM fallback errors, plus two
+         `eglCreateImageKHR EGL_BAD_MATCH` (dmabuf import) before the undock, no visible effect: watch.
+
+      Differences found: no bar or workspace indicator (expected; a throwaway waybar from the session
+      scratchpad was used); kitty text clipped by the rounded corners, fixed for both compositors
+      (`window_padding_width 4`); `follow_mouse = 1` here vs `focus_follows_mouse no` (shared i3/SwayFX data):
+      MH likes it, decides after using it; then both configs follow one setting.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
