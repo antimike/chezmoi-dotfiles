@@ -8,6 +8,7 @@ updated: 2026-10-23
 
 Read this **before** installing a compositor, changing the display manager or greeter, or changing GPU/driver
 settings. MH has been locked out by such changes before. Plan: [../plans/wayland-desktop.md](../plans/wayland-desktop.md).
+NVIDIA driver updates and their rollback: [nvidia-driver.md](nvidia-driver.md).
 
 Baseline on zbook (2026-10-17): GDM is the display manager (`display-manager.service` → `gdm.service`); `lightdm` is
 installed but not enabled; sessions offered: GNOME, GNOME Classic, i3; kernel cmdline has `nvidia-drm.modeset=1`.
