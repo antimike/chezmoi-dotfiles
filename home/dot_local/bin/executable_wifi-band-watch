@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# wifi-band-watch — notify when Wi-Fi joins a network below 5 GHz (the 2.4 GHz band).
+#
+#   wifi-band-watch           watch: check now, then on every association (user service)
+#   wifi-band-watch --check   check the current links once
+#
+# 2.4 GHz is slower here and shares the Intel radio's airtime with Bluetooth (keyboard lag,
+# repeated keys). `iw event` reports every (re)association, including roaming between a
+# router and a repeater with the same name, which NetworkManager does not show as a new
+# connection. $WIFI_BAND_MIN_MHZ (default 5000) sets the threshold, e.g. 6000 to test.
+set -euo pipefail
+
+usage() { echo "usage: wifi-band-watch [--check]" >&2; exit 2; }
+
+min_mhz=${WIFI_BAND_MIN_MHZ:-5000}
+[[ $min_mhz =~ ^[0-9]+$ ]] || usage
+command -v iw >/dev/null || { echo "wifi-band-watch: 'iw' not found" >&2; exit 127; }
+
+check() {
+  local iface=$1 link freq ssid
+  link=$(iw dev "$iface" link 2>/dev/null) || return 0
+  freq=$(awk '/freq:/ { printf "%d", $2 }' <<<"$link")
+  ssid=$(sed -n 's/^\s*SSID: //p' <<<"$link")
+  [[ -n $freq ]] || return 0   # not connected
+  if ((freq < min_mhz)); then
+    notify-send -a wifi-band-watch -i network-wireless-signal-weak \
+      -h string:x-dunst-stack-tag:wifi-band \
+      "Wi-Fi on $((freq / 1000)).$((freq % 1000 / 100)) GHz" \
+      "${ssid:-Wi-Fi} at $freq MHz: slower, and it competes with Bluetooth (keyboard lag)" || true
+  fi
+}
+
+check_all() {
+  local iface
+  for iface in $(iw dev | awk '/Interface/ { print $2 }'); do check "$iface"; done
+}
+
+case ${1:-} in
+  --check) check_all; exit 0 ;;
+  '') ;;
+  *) usage ;;
+esac
+
+check_all
+# Lines look like "wlp112s0 (phy #0): connected to 34:bc:5e:57:c8:87".
+iw event | while read -r iface _ _ event _; do
+  [[ $event == connected ]] && check "$iface"
+done

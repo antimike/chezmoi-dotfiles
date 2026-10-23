@@ -1,0 +1,9 @@
+[Unit]
+Description=Notify when Wi-Fi joins a network below 5 GHz
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/wifi-band-watch
+Restart=on-failure
+RestartSec=5
