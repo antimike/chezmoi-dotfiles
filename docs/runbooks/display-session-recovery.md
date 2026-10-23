@@ -1,7 +1,7 @@
 ---
 summary: Failsafe runbook for display manager, greeter and compositor changes: preparation, safe test procedure, symptom-by-symptom recovery, rollback
 status: current (written before any DM/greeter change; update after the first real use)
-updated: 2026-10-17
+updated: 2026-10-23
 ---
 
 # Display session recovery
@@ -47,6 +47,7 @@ sudo systemctl start gdm`. Only after a successful login and logout, make it the
 | Black screen **before** the greeter (no login screen) | DM or greeter crashed, or GPU/driver problem | `Ctrl+Alt+F3`, log in, `journalctl -b -u display-manager` (and `-u sddm`/`-u greetd`); roll back: `sudo systemctl enable --force gdm && sudo reboot`. |
 | No console either | Graphics stack hangs at boot | At the GRUB menu press `e`, append `systemd.unit=multi-user.target` (or `3`) to the `linux` line, `Ctrl+X`; you get a text login; roll back from there. If GRUB is hidden, hold `Shift` or press `Esc` during boot. |
 | Black screen **after** choosing a session, or straight back to the greeter | Compositor failed to start | Console: `journalctl --user -b` (uwsm: `journalctl --user -b -u 'wayland-wm@*'`); GDM also logs to `journalctl -b -u gdm`. Common causes: config error (`sway -C` validates), NVIDIA device in use without `--unsupported-gpu`, wrong `WLR_DRM_DEVICES` path. Log into GNOME meanwhile. |
+| SwayFX: all screens black after logging in docked, or after undocking mid-session | NVIDIA renders docked sessions (D59); the laptop panel cannot be lit then, and an experiment in `~/.config/uwsm/env` can black out everything | Re-dock if undocked. Otherwise `Ctrl+Alt+F3` (open the lid to see it), log in, `loginctl terminate-user $USER`, pick GNOME or log in undocked. A plain `chezmoi apply --force ~/.config/uwsm/env` removes manual experiments; `prefer_nvidia_for_external: false` in `~/.config/chezmoi/chezmoi.yml` returns to Intel rendering (D53) |
 | Session starts but no bar, notifications, lock | Helper units not started | `systemctl --user status wm-helpers-wayland.target`, `systemctl --user --failed`. |
 | Cannot unlock the lock screen | Locker crashed (Sway shows a solid red screen and stays locked) or PAM issue | From a console, start a new locker in the session and unlock with it: `SWAYSOCK=$(ls /run/user/$UID/sway-ipc.*.sock) swaymsg exec swaylock`. Last resort: `loginctl terminate-session <id>` (loses the session). |
 | Login loop on every session (including GNOME) | Home permissions, full disk, or a shell profile that exits/errors | Console: `df -h ~`, check `~/.zprofile`/`~/.profile` for errors (`zsh -lc true`), `ls -ld ~`. |
