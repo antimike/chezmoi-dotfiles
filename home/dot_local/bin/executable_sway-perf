@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# sway-perf — measure sway's CPU cost at rest, while the mouse moves, and (optionally)
+# while a network connection is held in "connecting" (the nm-applet tray-animation case).
+#
+#   sway-perf measure LABEL                 hands off 20 s, then mouse 20 s
+#   sway-perf measure LABEL --connecting    also 30 s of mouse with a veth profile activating
+#   sway-perf results                       print the results so far
+#
+# Desktop notifications say when to keep hands off and when to move the mouse. Run it
+# from a terminal with nothing else animating (a busy Claude Code spinner adds ~40%).
+# Each run appends the GPU order (WLR_DRM_DEVICES), the active outputs, NVIDIA's power
+# draw and one line per phase (sway CPU avg/max from top, cursor-plane errors = software
+# cursor, swaybar tray errors) to $SWAY_PERF_DIR (default ~/.local/state/sway-perf).
+# Used for D58 (nm-applet) and the GPU rendering experiments (D53, open items).
+set -euo pipefail
+
+usage() { echo "usage: sway-perf measure LABEL [--connecting] | results" >&2; exit 2; }
+
+dir=${SWAY_PERF_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/sway-perf}
+results=$dir/results.txt
+
+case ${1:-} in
+  results) cat "$results"; exit 0 ;;
+  measure) label=${2:-}; [[ -n $label && $label != -* ]] || usage ;;
+  *) usage ;;
+esac
+connecting=0
+case ${3:-} in
+  --connecting) connecting=1 ;;
+  '') ;;
+  *) usage ;;
+esac
+[[ $# -le 3 ]] || usage
+
+sway=$(pgrep -x sway | head -1) || { echo "sway-perf: sway is not running" >&2; exit 1; }
+mkdir -p "$dir"
+
+note() { notify-send -a sway-perf -u critical -t 6000 "sway-perf: $label" "$1" || true; echo "[$(date +%T)] $1"; }
+
+count() { journalctl --user --since "$1" --no-pager | grep -c "$2" || true; }
+
+# sample PHASE SECONDS: per-second sway CPU from top, plus error counts over the phase.
+sample() {
+  local since; since=$(date '+%Y-%m-%d %H:%M:%S')
+  top -b -d 1 -n "$2" -p "$sway" | awk '$1 ~ /^[0-9]+$/ { print $9 }' >"$dir/$label-$1.cpu"
+  awk -v l="$label/$1" -v c="$(count "$since" 'cursor plane')" -v t="$(count "$since" IconPixmap)" \
+    '{ s += $1; if ($1 > m) m = $1; n++ }
+     END { printf "%-24s sway CPU avg %5.1f%%  max %5.1f%%  (n=%d)  cursor-plane errors %s  tray errors %s\n",
+           l, s / n, m, n, c, t }' "$dir/$label-$1.cpu" | tee -a "$results"
+}
+
+veth='sway-perf-veth'
+cleanup() {
+  ((connecting)) || return 0
+  nmcli connection down "$veth" >/dev/null 2>&1 || true
+  nmcli connection delete "$veth" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+{
+  echo "== $label $(date -Is)"
+  systemctl --user show-environment | grep '^WLR_DRM' || echo "WLR_DRM_DEVICES not set"
+  swaymsg -t get_outputs | jq -r '.[] | select(.active)
+    | "output \(.name) \(.model) \(.current_mode.width)x\(.current_mode.height) scale \(.scale)"'
+  if command -v nvidia-smi >/dev/null; then
+    echo "nvidia $(nvidia-smi --query-gpu=pstate,power.draw,utilization.gpu --format=csv,noheader)"
+  fi
+  pgrep -x nm-applet >/dev/null && echo "nm-applet running" || echo "nm-applet not running"
+} | tee -a "$results"
+
+note "Starting in 5 s: HANDS OFF the mouse and keyboard for 20 s."
+sleep 5
+sample handsoff 20
+note "Now MOVE the mouse and drag a window across the monitors for 20 s."
+sleep 2
+sample mouse 20
+
+if ((connecting)); then
+  # A veth that asks for DHCP nobody answers stays "connecting" for the whole phase;
+  # nm-applet ignores dummy devices, but animates for veth.
+  cleanup
+  nmcli connection add type veth con-name "$veth" ifname spveth0 veth.peer spveth1 \
+    ipv4.method auto ipv4.dhcp-timeout 40 ipv6.method disabled connection.autoconnect no >/dev/null
+  note "Keep MOVING the mouse for 30 s (a test connection is now connecting)."
+  (nmcli connection up "$veth" >/dev/null 2>&1 &)
+  sample connecting 30
+fi
+
+note "Done: sway-perf results"
