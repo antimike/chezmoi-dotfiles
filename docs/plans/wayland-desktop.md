@@ -410,6 +410,12 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
          both externals in the right layout, workspaces back in place; dock-awake released/held. The ASUS
          flapped once on reconnect (absorbed). Hyprland log: routine commit/GBM fallback errors, plus two
          `eglCreateImageKHR EGL_BAD_MATCH` (dmabuf import) before the undock, no visible effect: watch.
+      5. `hypr-intel` (Intel primary, `card1`; terminals only, 3 outputs): hands off 1.5% / 9.0%, mouse
+         **14.5% / 22.0%**; NVIDIA 8.0 W. MH: no felt difference from NVIDIA-first. Unlike SwayFX (`intel`:
+         42.3%, software cursor), Hyprland has no Intel-first penalty, so D59's reason does not carry over.
+         Whether Intel-first is *better* is open (one run each; CPU only, not GPU load). If step 7 shows the
+         black text after resume on NVIDIA, Intel-first Hyprland is a candidate fix (decision for MH).
+      6. Passed: lock and unlock on all three monitors (Intel-first session).
 
       Differences found: no bar or workspace indicator (expected; a throwaway waybar from the session
       scratchpad was used); kitty text clipped by the rounded corners, fixed for both compositors
