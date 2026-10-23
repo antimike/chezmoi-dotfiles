@@ -138,5 +138,5 @@ target=$dir/$name
 if [[ -e $target ]]; then
   target=$dir/${name%.png}-$(date +%H-%M-%S).png
 fi
-cp "$tmp" "$target"
+cp --no-preserve=mode "$tmp" "$target"   # mktemp files are 0600; use the umask
 notify "$target" "Screenshot saved and copied" "${target##*/}"
