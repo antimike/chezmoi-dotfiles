@@ -7,6 +7,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [compare-trees.py](compare-trees.py) | Path-level comparison of two chezmoi source trees (the BOCO survey) |
 | [zsh-probe/](zsh-probe/) | Render the zsh files into a scratch home, dump the resulting shell state, and diff two dumps |
 | [home-snapshot/](home-snapshot/) | Save paths under `$HOME` and restore them exactly: the escape route for a risky apply |
+| [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 
 ## zsh-probe
@@ -46,3 +47,19 @@ env -i HOME="$HOME" PATH=/usr/bin:/bin bash --noprofile --norc tools/home-snapsh
 ```
 
 Paths are relative to `$HOME`. A path that does not exist at `create` time is recorded as absent, and `restore` deletes it again. Restoring replaces whatever is there with the saved copy (files, directories and symlinks), so use it only on paths you are prepared to roll back wholesale. `restore` is plain bash plus `tar`/`rm`, so it works even when zsh or Python is broken. `home-snapshot selftest` checks create/restore against a throwaway home. Run `restore` through `env -i … bash --noprofile --norc` when the thing you changed could break your login shell.
+
+## resume-check
+
+```sh
+tools/resume-check/resume-check                       # every suspend since boot
+tools/resume-check/resume-check --since 18:20         # only suspends that started after 18:20
+tools/resume-check/resume-check --since -1h --details # plus the error lines, dock-awake's log, power-key presses
+```
+
+Reads the journal only. Each row is one suspend: when it started and resumed, how many `semsurf` errors (the
+nvidia-drm sync-FD error behind the black/hung kitty after resume; [../docs/open-items.md](../docs/open-items.md),
+"black text in kitty") and other NVIDIA kernel errors it logged, and `clean` or `ERRORS`. An error is charged to the
+suspend whose window, from `PM: suspend entry` to 10 s after `PM: suspend exit`, contains it: the kernel writes its
+resume messages before the exit line (checked on the 2026-10-23 resumes). The rendering GPU is printed for the current
+session only, since the journal does not record it per resume; note it yourself when you compare sessions. Kernel
+messages are per boot, so `--since` before the last boot shows nothing earlier.
