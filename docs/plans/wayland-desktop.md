@@ -391,8 +391,10 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       5. Log out (`$mod+Shift+Ctrl+e`), `touch ~/.local/state/hyprland-intel-first`, log in, `sway-perf measure
          hypr-intel`, then `rm` the file.
       6. Lock (`$mod+Escape`) and unlock once.
-      7. Suspend and resume once (`systemctl suspend`), then check kitty for black text (open item: black text after
-         resume with NVIDIA rendering, seen under SwayFX 2026-10-23).
+      7. Suspend and resume once with `$mod+Ctrl+Escape` (`dock-awake suspend`; plain `systemctl suspend` is refused
+         while docked on AC), then check kitty for black text (open item: black text after resume with NVIDIA
+         rendering, seen under SwayFX 2026-10-23). Before it: `dock-awake status` shows the lock held. After it: held
+         again. Optional: one short power-key press (Hyprland's XF86PowerOff binding, `locked = true`).
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
