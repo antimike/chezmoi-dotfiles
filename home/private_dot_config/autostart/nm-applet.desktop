@@ -1,0 +1,9 @@
+[Desktop Entry]
+# Masks network-manager-applet's /etc/xdg/autostart entry (D58, provisional).
+# Under SwayFX its tray animation while a connection activates pegs sway's CPU
+# (98%, 2026-10-23); GNOME never runs it (NotShowIn=GNOME), so only uwsm
+# sessions change. Without it there is no NetworkManager secret agent: new
+# Wi-Fi/VPN passwords go through nmcli --ask, nmtui or the bar's picker.
+Type=Application
+Name=nm-applet
+Hidden=true
