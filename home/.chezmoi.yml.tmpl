@@ -39,7 +39,9 @@ data:
   # the other value without editing: chezmoi apply --override-data
   # '{"prefer_nvidia_for_external":true}' ~/.config/uwsm/env (the next plain
   # apply reverts it).
-  prefer_nvidia_for_external: false
+  # true since D59 (2026-10-23): NVIDIA renders docked sessions (half the sway
+  # CPU, hardware cursor); the panel is then unusable (kanshi config-nvidia).
+  prefer_nvidia_for_external: true
   # Desktop-notification client behind ~/.claude/scripts/notify. Under WSL2,
   # D-Bus advertises org.freedesktop.Notifications but no daemon runs, so stock
   # notify-send blocks; use the wsl-notify-send shim there when its chezmoi
