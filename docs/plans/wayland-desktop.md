@@ -368,6 +368,29 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [x] **NVIDIA renders docked sessions** (D59, 2026-10-23): `sway-perf` measurements, nm-applet dropped (D58), kanshi `config-nvidia`, lid notice. **MH's docked login passed 2026-10-23 15:50**: kanshi ran `config-nvidia` (`docked-asus-dell`: ASUS 0,0 scale 1.5, Dell 2560,0, panel off), lid open showed the notice and left the layout alone; `sway-perf` nvidia-d59: hands off 11%, mouse 22.7% (max 29%), 0 cursor-plane errors, NVIDIA P5 10.5 W.
 - [ ] **Hyprland trial: smooth *and* the panel?** (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
+      **Built 2026-10-23** (branch `wayland/hyprland-trial`, not merged): correction to the start note: GDM already
+      lists **"Hyprland (uwsm-managed)"** (`/usr/share/wayland-sessions/hyprland-uwsm.desktop` from the COPR's
+      `hyprland-uwsm`; `uwsm.yaml` says so), so no new entry. Hyprland is 0.56.2 and its config is **Lua** (hyprlang
+      deprecated since 0.55): `~/.config/hypr/hyprland.lua` (kanshi's three-screen layout as `hl.monitor` rules plus a
+      catch-all, no blur/shadows/animations so the CPU numbers compare with SwayFX, a small key subset: `$mod+Return`
+      kitty, `$mod+o` fuzzel, `$mod+Shift+q`, hjkl focus/move, workspaces, `$mod+Escape` lock, `$mod+Shift+Ctrl+e`
+      `uwsm stop`, volume/brightness/Print). It starts `wm-helpers-wayland.target` after `uwsm finalize`;
+      `kanshi.service` skips Hyprland (`ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland`, negation tested).
+      GPU order comes from `~/.config/uwsm/env` (D59: NVIDIA first when docked); `touch
+      ~/.local/state/hyprland-intel-first` before login gives the Intel-first control (`env-hyprland`, tested both
+      ways). `sway-perf` now measures `Hyprland` too (sway path re-run under SwayFX: 17.6% / 18.3%); its cursor-plane
+      and tray counters are sway log lines, so 0 under Hyprland: judge the cursor by eye. `screens-power` uses the
+      Lua dpms dispatcher (stub-tested only). Checked: `Hyprland --verify-config` passes, and it catches unknown keys,
+      unknown dispatchers and bad arguments (red test). **Not tested: any Hyprland login.**
+      **MH's login test** (docked, lid open; GNOME is the way back, runbook row "Hyprland"):
+      1. GDM → "Hyprland (uwsm-managed)". Do all three screens light? (`hyprctl monitors`: modes, scales, positions)
+      2. `systemctl --user show-environment | grep -E 'AQ_DRM|XDG_CURRENT'` (expect dgpu first, `Hyprland`);
+         `uwsm --version` and `systemctl --user status wm-helpers-wayland.target` (kanshi inactive, condition skipped).
+      3. `sway-perf measure hypr-nvidia` from kitty; watch the cursor for lag or flicker.
+      4. Unplug the dock mid-session, then replug: does the panel keep going, and do the externals come back?
+      5. Log out (`$mod+Shift+Ctrl+e`), `touch ~/.local/state/hyprland-intel-first`, log in, `sway-perf measure
+         hypr-intel`, then `rm` the file.
+      6. Lock (`$mod+Escape`) and unlock once.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
