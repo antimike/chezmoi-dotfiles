@@ -15,7 +15,8 @@ esac
 
 case ${XDG_CURRENT_DESKTOP:-} in
   *sway*) swaymsg -q "output * power $state" ;;
-  *Hyprland*) hyprctl -q dispatch dpms "$state" ;;
+  # Hyprland >= 0.55 (Lua config): dispatchers are Lua expressions.
+  *Hyprland*) hyprctl -q dispatch "hl.dsp.dpms({ action = \"$([[ $state == on ]] && echo enable || echo disable)\" })" ;;
   *niri*) [[ $state == off ]] && niri msg action power-off-monitors ;;  # niri wakes them on input
   *) echo "screens-power: no method for '${XDG_CURRENT_DESKTOP:-}'; skipping" >&2 ;;
 esac
