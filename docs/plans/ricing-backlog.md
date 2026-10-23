@@ -15,6 +15,11 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
 - [ ] Try [`swindings`](https://github.com/sondalex/swindings) (maybe fork); the cheat sheet stays the main lookup tool
 - [ ] Package map refactor (D32): [../open-items.md](../open-items.md#detail-package-map-refactor)
 - [ ] Minimal niri, Hyprland, Wayfire configs (try the generated defaults first)
+- [ ] Wake from suspend with the Keychron, MX Keys and MX Master (MH, 2026-10-23). Today only the power button, the
+  lid and the ACPI sleep button wake zbook (deep/S3): `power/wakeup` is disabled on every USB hub, and the
+  Bluetooth keyboard and mouse go through the internal USB Bluetooth controller. Likely a udev rule setting
+  `power/wakeup=enabled` on the Keychron and the Bluetooth controller (and its hub path); Bluetooth wake in S3 may
+  not work at all. Check battery drain overnight.
 
 ## Claude tooling
 - [x] Editor preferences (vi mode), skills, home-rolled tooling (`bd-track`), beads install (dolt, uv, bun, bd)
