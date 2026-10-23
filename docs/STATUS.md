@@ -36,6 +36,7 @@ updated: 2026-10-23
    1. **Screenshots: done, merged and pushed 2026-10-22** (`3a38c79`): `~/.local/bin/screenshot` + shared `pick-path` (D54); keys for Print, the MX Keys and keyboards without Print, all checked by MH.
    2. **nm-applet lag test: done 2026-10-23**, nm-applet dropped (D58, provisional). **GPU follow-up: NVIDIA renders docked sessions (D59)**; MH's docked login test passed 2026-10-23 (layout, lid notice, 22.7% sway CPU moving the mouse, hardware cursor).
    3. **Hyprland trial** (smooth *and* the panel?), before the bar so the bar targets the winner. **Built 2026-10-23 on branch `wayland/hyprland-trial` (not merged, not pushed): next is MH's login test** (6-step checklist in [plans/wayland-desktop.md](plans/wayland-desktop.md), "Hyprland trial"). Hyprland 0.56 uses a Lua config; GDM already had the COPR's "Hyprland (uwsm-managed)" entry.
+   3a. **`dock-awake`** (never suspend docked on AC; design agreed 2026-10-23, in [open-items.md](open-items.md)): build and test with MH at the machine, before the Hyprland login test.
    4. **Screen sharing test with both monitors**, the C270 webcam and Birdbox (basic sharing, camera and mic passed 2026-10-18 on the panel; Meet camera/mic passed 2026-10-21).
    5. Minimal bar (waybar or swaybar; maybe a blueman tray agent: no Bluetooth agent runs under SwayFX).
    6. Keybinding cheat sheet.
