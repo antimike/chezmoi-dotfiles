@@ -77,6 +77,14 @@ Append new decisions at the end; mark replaced ones "superseded by Dn". "MH" is 
 | D54 | **One shared save-path prompt, `~/.local/bin/pick-path`, for every widget that writes a file** (MH, 2026-10-22). A standalone CLI (Python, stdlib only, so it runs from a keybinding without a venv), not a sourced Bash library: any script in any language calls it and gets a checked absolute path on stdout (exit 1 cancelled, 3 refused). Rules: a name or relative path goes under the caller's `--base` (directories created); `~/` and absolute paths as given; `--ext` is added to an extensionless name and other extensions are refused (upload pickers and chat apps filter by extension); an existing file is overwritten only after a confirmation prompt, anywhere; a path that would need sudo is refused with a notification, never escalated. First caller: `screenshot`. A read-side (open-file) variant is not built until a widget needs it. |
 | D30 | The 2 gitleaks findings in the tree (a polybar-weather API key in a service template, a Jupyter service-key `.pem`) are expected and accepted (MH, 2026-10-15); a scan showing anything else is a stop. Since 2026-10-17 both are listed in `.gitleaksignore`, so a scan shows none. |
 
+## Home network (see [runbooks/home-network.md](runbooks/home-network.md))
+
+| # | Decision |
+|---|---|
+| D55 | **zbook goes online by Ethernet through a GL-AR750S repeater on the home AP's 5 GHz band; its own Wi-Fi is the fallback** (MH, 2026-10-23, router session). Chosen over Wi-Fi tuning alone or a USB Bluetooth dongle: the AX200 shares one radio between Wi-Fi and Bluetooth, and on 2.4 GHz a Bluetooth audio stream starved Wi-Fi (12.5% loss, 135 ms) and Bluetooth input lagged. The wired path takes Wi-Fi off the laptop's radio. Cost: ~40 Mbit/s down (the router's 1-stream 5 GHz client link at MCS 1) against 81-86 on the laptop's own 5 GHz; to improve by moving the router. |
+| D56 | **The router runs GL stock firmware 4.3.25 (OpenWrt 22.03.4 base), for now** (MH, 2026-10-23). Rejected: GL's "clean" image (one unmaintained 2023 build) and, for now, upstream OpenWrt (signed images and current fixes, but a manual repeater setup and unverified AR750S support). The 22.03 base is past end of life, so this is interim: track GL builds on a newer base, else plan the move to upstream. |
+| D57 | **The laptop's home Wi-Fi profile is locked to 5 GHz** (`802-11-wireless.band a`; MH, 2026-10-22). After a suspend, wpa_supplicant rejoined the stronger 2.4 GHz BSS, where Bluetooth audio starves Wi-Fi. Cost: no Wi-Fi where only 2.4 GHz reaches (signal at the desk is weak, about -80 dBm). Review with the profile cleanup (open item); `wifi-band-watch` reports any join below 5 GHz either way. |
+
 ## Tooling (proposed)
 
 | # | Decision |
