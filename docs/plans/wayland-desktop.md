@@ -367,7 +367,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
-      **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **Depends on the nm-applet test**
+      **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
       SwayFX lag). If nm-applet is cleared: `nm-applet --indicator` in the tray (Wi-Fi list, passwords, VPN; no own
       code). If not: no nm-applet; the network module's click opens `networkmanager_dmenu` (config already in
