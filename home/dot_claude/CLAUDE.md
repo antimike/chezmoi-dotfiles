@@ -38,6 +38,7 @@ Hygiene rules that persist:
 - For multi-part work, screen each part with minimal effort before committing to full treatment
 - Prioritize working software over scaffolding — a running feature beats a planned architecture
 - For small-scope work (< 2 hours), prefer a plan-mode discussion followed by implementation over creating a separate planning document. The conversation is the plan; don't persist it as an artifact unless the scope grows
+- **Python scripts follow the `python-scripting` skill** (`~/.claude/skills/python-scripting/SKILL.md`), the source of truth for Python conventions (argparse with `--loglevel`, `logging` over `print`, ruff, credentials from config/env). Load it before writing or editing any `.py` file, even when it does not trigger on its own
 
 ## Verification Before Claiming Completion
 
