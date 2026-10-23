@@ -1,0 +1,9 @@
+# Sourced by uwsm after ./env, for Hyprland sessions only. POSIX sh.
+# Hyprland trial (docs/plans/wayland-desktop.md): the control run renders on Intel
+# while NVIDIA still drives the externals. ./env puts NVIDIA first when an external
+# monitor is connected (D59); to get Intel first instead, before logging in:
+#   touch ~/.local/state/hyprland-intel-first     (rm it to go back)
+if [ -e "${XDG_STATE_HOME:-$HOME/.local/state}/hyprland-intel-first" ] \
+	&& [ -e /dev/dri/igpu ] && [ -e /dev/dri/dgpu ]; then
+	export AQ_DRM_DEVICES=/dev/dri/igpu:/dev/dri/dgpu
+fi
