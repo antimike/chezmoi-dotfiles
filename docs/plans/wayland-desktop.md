@@ -338,7 +338,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       connect over LE and the Keychron Q3 Pro over classic Bluetooth, so `ControllerMode = bredr` is ruled out.
       Under SwayFX no Bluetooth agent runs (GNOME has one): pairing an untrusted device asks `bluetoothctl` to
       authorize A2DP (`Authorize service 0000110d`); a tray agent (blueman) could come with the bar.
-- [x] **Screenshots** (2026-10-22, branch `wayland/screenshots`). Rewrite of i3-config-mbp's `screenshot.bash` as
+- [x] **Screenshots** (2026-10-22, merged `3a38c79`). Rewrite of i3-config-mbp's `screenshot.bash` as
       `~/.local/bin/screenshot` for both session types (D48): `window` (click a window, boxes from `swaymsg`, or drag
       a region) copies the PNG to the clipboard; `window NAME` / `window --ask` (rofi prompt) also save to
       `~/Pictures/screenshots` (`$SCREENSHOT_DIR`); `desktop` captures every output and saves with a timestamp name.
@@ -370,7 +370,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive): `nm-applet --indicator` in the tray
       (installed; Wi-Fi list, passwords, VPN; no own code), the network module's click opens it or
       `nm-connection-editor`. A rofi/fuzzel picker (port of i3-config-mbp's `rofi-wifi`) is a later option.
-- [x] **Wi-Fi band notification** (2026-10-22, branch `wifi/band-notify`): `wifi-band-watch` (user service, wanted by
+- [x] **Wi-Fi band notification** (2026-10-22, merged `e0ab1c1`): `wifi-band-watch` (user service, wanted by
       both `wm-helpers-*` targets) notifies on any association below 5 GHz, roaming included (`iw event`). Tested:
       `--check` silent on 5 GHz, notifies with `WIFI_BAND_MIN_MHZ=6000` (one replaced popup, dunst stack tag), event
       path with a stubbed `iw`, service active. Not tested: a real 2.4 GHz association (the band is locked).
