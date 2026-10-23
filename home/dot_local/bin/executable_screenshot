@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# screenshot — take a screenshot on Wayland (grim + slurp) or X11 (maim), copy it to
+# the clipboard as PNG and show a notification.
+#
+#   screenshot window          click a window or drag a region; clipboard only
+#   screenshot window NAME     same, and save it as NAME (see below)
+#   screenshot window --ask    same, and ask where to save it, prefilled with a timestamp
+#   screenshot desktop         every output; clipboard, and saved with a timestamp name
+#   screenshot desktop --ask   same, but ask where to save it, prefilled with the timestamp
+#
+# Saving goes through pick-path: a name or relative path lands in the screenshot folder
+# ($SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots"), ~/ and absolute
+# paths are taken as given, .png is added when there is no extension, an existing file
+# is only overwritten after a confirmation, and a path needing sudo is refused. The
+# prompt (fuzzel; rofi on X11) shows on the output where the capture was made. Escape
+# there, or a refused path, leaves the screenshot in the clipboard only.
+# Wayland is picked when $WAYLAND_DISPLAY is set. Window boxes for the click come from
+# swaymsg (SwayFX/sway only; other compositors get a plain region drag). Escape cancels
+# the selection: nothing is copied or saved, and the exit status is 1.
+set -euo pipefail
+
+usage() { echo "usage: screenshot window [NAME | --ask] | desktop [--ask]" >&2; exit 2; }
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "screenshot: '$1' not found" >&2; exit 127; }
+}
+
+notify() { notify-send -a screenshot -i "$1" "$2" "$3" || true; }
+
+mode=${1:-}
+name=${2:-}
+case $mode in
+  window) [[ $# -le 2 ]] || usage ;;
+  desktop) [[ $# -eq 1 || ($# -eq 2 && $name == --ask) ]] || usage ;;
+  *) usage ;;
+esac
+ask=0
+[[ $name == --ask ]] && { ask=1; name=''; }
+
+if [[ -n ${WAYLAND_DISPLAY:-} ]]; then
+  session=wayland
+  need grim; need wl-copy
+  [[ $mode == window ]] && need slurp
+elif [[ -n ${DISPLAY:-} ]]; then
+  session=x11
+  need maim; need xclip
+else
+  echo "screenshot: no graphical session (neither WAYLAND_DISPLAY nor DISPLAY is set)" >&2
+  exit 1
+fi
+
+sway=0
+[[ $session == wayland && -n ${SWAYSOCK:-} ]] && command -v swaymsg >/dev/null \
+  && command -v jq >/dev/null && sway=1
+
+tmp=$(mktemp --tmpdir screenshot.XXXXXX.png)
+trap 'rm -f "$tmp"' EXIT
+
+geometry=''   # "x,y wxh" of a Wayland window/region capture
+
+# Capture into $tmp. A cancelled selection returns non-zero.
+capture_window() {
+  if [[ $session == wayland ]]; then
+    local boxes=''
+    # Visible windows as "x,y wxh" boxes, so a click selects a whole window.
+    if ((sway)); then
+      boxes=$(swaymsg -t get_tree | jq -r '.. | select(.pid? and .visible?)
+        | .rect | "\(.x),\(.y) \(.width)x\(.height)"') || boxes=''
+    fi
+    geometry=$(slurp -b '#00000066' -c '#6699ccff' -w 2 <<<"$boxes") || return 1
+    grim -g "$geometry" "$tmp"
+  else
+    maim -u -s -b 5 -l -c 0.3,0.4,0.6,0.4 "$tmp"
+  fi
+}
+
+capture_desktop() {
+  if [[ $session == wayland ]]; then
+    grim "$tmp"
+  else
+    maim -u "$tmp"
+  fi
+}
+
+copy_image() {
+  if [[ $session == wayland ]]; then
+    wl-copy --type image/png <"$tmp"
+  else
+    xclip -selection clipboard -t image/png -i "$tmp"
+  fi
+}
+
+# The output to show the prompt on: the one holding the selection's top-left corner,
+# else the compositor's choice (the focused output).
+prompt_output() {
+  ((sway)) && [[ -n $geometry ]] || return 0
+  local x=${geometry%%,*} y=${geometry#*,}
+  y=${y%% *}
+  swaymsg -t get_outputs | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+    | select(.active and .rect.x <= $x and $x < .rect.x + .rect.width
+             and .rect.y <= $y and $y < .rect.y + .rect.height) | .name) // empty' || true
+}
+
+case $mode in
+  window) capture_window || exit 1 ;;
+  desktop) capture_desktop ;;
+esac
+copy_image
+
+stamp=$(date +%Y-%m-%dT%H-%M-%S)
+dir=${SCREENSHOT_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/screenshots}
+pick=(--base "$dir" --default "$stamp" --ext png --prompt 'Save screenshot as')
+if ((ask)); then
+  pick+=(--output "$(prompt_output)")
+elif [[ -n $name ]]; then
+  pick+=(--input "$name")
+elif [[ $mode == desktop ]]; then
+  pick+=(--input "$stamp")
+else
+  pick=()
+fi
+
+target=''
+if ((${#pick[@]})); then
+  need pick-path
+  target=$(pick-path "${pick[@]}") || target=''   # 1 = cancelled, 3 = refused (it notifies)
+fi
+if [[ -z $target ]]; then
+  notify camera-photo "Screenshot copied" "In the clipboard (not saved)"
+  exit 0
+fi
+
+cp --no-preserve=mode "$tmp" "$target"   # mktemp files are 0600; use the umask
+notify "$target" "Screenshot saved and copied" "${target/#"$HOME"/\~}"

@@ -151,7 +151,7 @@ stays for MH's old MacBook Pro (a possible future X11 host); zbook is the test b
 | `i3-nagbar` (exit confirm), `i3-msg exit` | `swaynag`, `swaymsg exit` (under uwsm: `uwsm stop`). |
 | `exec_always ... xss-lock`, `loginctl lock-session` | swayidle + swaylock; `loginctl lock-session` keeps working once swayidle handles the `lock` event. |
 | `$refresh_i3status` on media keys | waybar signal (`pkill -SIGRTMIN+N waybar`), or drop if the module polls. |
-| `~/bin/screenshot` (`maim` + `xclip`) | Rewrite with `grim` + `slurp` + `wl-copy`; same arguments (`desktop`, `window [name]`). |
+| `~/bin/screenshot` (`maim` + `xclip`) | **Done 2026-10-22:** rewritten as `~/.local/bin/screenshot` (`grim` + `slurp` + `wl-copy`, `maim` + `xclip` on X11); `window [NAME \| --ask]`, `desktop`. `--ask` (rofi) replaced the screenshot `i3-input` prompt. |
 | Volume keys (`set-pulseaudio-volume.bash`) and brightness / keyboard backlight keys (`adjust-brightness.bash`) | Scripts are in i3-config-mbp; port or replace with `wpctl`/`pactl` and `brightnessctl` (`-d '*kbd_backlight*'` for the keyboard), feeding the OSD. Also fixes an existing bug: line 80 defines `$audio_intput`, but the mic-mute binding uses `$audio_input`. |
 | `dunstctl` bindings, `notify-send` | Unchanged. |
 | `rofi` launchers, `kitty`, `playerctl`, `cmus` | Unchanged. |
@@ -274,7 +274,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       monitor item forward. Fallback MH accepts: a GNOME session for meetings and interviews. State 2026-10-18: the
       portal stack is in place (`xdg-desktop-portal-wlr` running, Fedora's `sway-portals.conf` routes ScreenCast and
       Screenshot to it, slurp installed for the output picker); PipeWire sees the camera (V4L2 and libcamera) and both
-      mics. Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
+      mics. Test page (no account needed): https://webrtc.github.io/samples/src/content/getusermedia/getdisplaymedia/.
+      Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
       InputCapture via the deprecated `UseIn` key); harmless for screen sharing.
 - [x] **Lock, idle, power** (step 4; built 2026-10-19, **all MH tests passed 2026-10-19**, including lid close with the
       external monitor connected; merged `23e03b2`).
@@ -337,7 +338,34 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       connect over LE and the Keychron Q3 Pro over classic Bluetooth, so `ControllerMode = bredr` is ruled out.
       Under SwayFX no Bluetooth agent runs (GNOME has one): pairing an untrusted device asks `bluetoothctl` to
       authorize A2DP (`Authorize service 0000110d`); a tray agent (blueman) could come with the bar.
-- [ ] **Screenshots** (functional part of step 6).
+- [x] **Screenshots** (2026-10-22, branch `wayland/screenshots`). Rewrite of i3-config-mbp's `screenshot.bash` as
+      `~/.local/bin/screenshot` for both session types (D48): `window` (click a window, boxes from `swaymsg`, or drag
+      a region) copies the PNG to the clipboard; `window NAME` / `window --ask` (rofi prompt) also save to
+      `~/Pictures/screenshots` (`$SCREENSHOT_DIR`); `desktop` captures every output and saves with a timestamp name.
+      Keys moved from the i3-only block to the shared body: Print (also the Keychron's key), `$mod+Print` (`window
+      --ask`), `$mod+Shift+Print` (`desktop --ask`). **MH's key check passed 2026-10-22**; follow-up the same day:
+      the `--ask` prompt is fuzzel (`--prompt-only`, prefilled with the timestamp name, on the output holding the
+      selection; rofi `-filter` on X11), Escape skips saving. The first version's empty rofi box read as a no-op,
+      sometimes opened on the other (focused) monitor, was hard to read with the `fancy` theme, and dunst cut off the
+      saved file name. Prompt tested with `wtype` (default, custom name, Escape) and `--output` placement on both
+      monitors. Tested under SwayFX: `desktop` (3 outputs, 7680x2160), `window` with a stubbed
+      `slurp` (clipboard only, NAME with `/`, name clash, Escape leaves the clipboard alone), usage errors; X11 branch
+      through Xwayland (`maim`, `xclip` offers `image/png`). `sway -C`, `i3 -C` and a live reload clean.
+      Second follow-up (2026-10-22, MH's tests): typed paths were flattened (`a/b` → `a-b`) and saved files were
+      mode 600 (mktemp's mode, kept by `cp`); saving now goes through `pick-path` (D54: subfolders, `~/` and absolute
+      paths, `.png` added, other extensions and sudo paths refused, overwrite confirmation). MH also reported
+      "multiple screenshots" after typing a slash: **not reproduced** (one capture per run with `wtype` input); watch
+      for it, possibly the Keychron Mod issue (open item). More keys: the MX Keys S screenshot key sends
+      `Super+Shift+S` (firmware macro), bound for that keyboard only (`bindsym --input-device`, SwayFX; elsewhere
+      `$mod+Shift+s` stays `sticky toggle`); `$mod+Ctrl+s` for the laptop and any keyboard without Print. Tested:
+      pytest (20 cases, mutation check), `wtype` runs of the prompt (subfolder with spaces, absolute, `.jpg` and
+      `/usr/share` refused, overwrite no → rename, yes → replaced), `$mod+Ctrl+s` starts slurp, a non-MX keyboard's
+      `Super+Shift+S` does not.
+      MX key check passed; MH found `$mod+`/`$mod+Shift+` variants useless with one Super key, so: `$mod+Ctrl+Shift+s`
+      (`window --ask`) and `$mod+Ctrl+Alt+s` (`desktop --ask`) on every keyboard; on the MX Keys, Ctrl+screenshot key
+      arrives as the former and Alt+screenshot key (`$mod+Shift+Alt+s`, MX-only) runs `desktop --ask`. Fn never
+      reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
+      **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
       (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);
@@ -449,7 +477,7 @@ After steps 0-3, the functional checklist above comes first (D50); the rest of e
    `$refresh_i3status`, `corner_radius`, swaynag/`uwsm stop` exit keys, the placeholder bar and the uwsm exec.
    Checked: `sway -C` clean (negative control fails as expected), live `swaymsg reload` clean.
    **i3-only blocks** (SwayFX gets them when their step ports them): volume and brightness keys (scripts missing; step
-   5); screenshot keys and the 7 `i3-input` prompts (step 6); the `nop` bindings `new-workspace`, `container-info`,
+   5); screenshot keys (shared since 2026-10-22) and the 7 `i3-input` prompts (6 left; step 6); the `nop` bindings `new-workspace`, `container-info`,
    `workspace-info`, `kitty_media`, `kitty_notepad` (consumer is `i3-companion` in `i3wm-configuration`, not deployed;
    step 6); startup `i3altlayout`, `~/.xsession`, `xss-lock`, `guake`, kitty launchers (step 6; `xss-lock` → step 4);
    `$mod+Shift+w` (`wallpaper.service` does not exist); `restart` (no Sway equivalent).
