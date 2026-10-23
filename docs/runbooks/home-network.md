@@ -6,8 +6,8 @@ updated: 2026-10-23
 
 # Home network
 
-Source: MH's router session of 2026-10-22/23 (report `~/router-session-report.10232026.md`, unmanaged; it holds the
-exact BSSIDs, MACs and ISP addresses, which stay out of this public repo). Confirmed facts unless marked
+Source: MH's router session of 2026-10-22/23 (report `~/.claude/projects/-home-hseldon--local-share-chezmoi/reports/router-session-2026-10-23.md`, in the private
+`claude-state` repo; it holds the exact BSSIDs, MACs and ISP addresses, which stay out of this public repo). Confirmed facts unless marked
 **hypothesis**. Decisions: D55-D57 in [../decisions.md](../decisions.md). Open work: [../open-items.md](../open-items.md),
 "Home network".
 

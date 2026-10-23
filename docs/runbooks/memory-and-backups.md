@@ -10,7 +10,7 @@ Two independent mechanisms protect `~/.claude/projects` (one folder per project 
 
 | | `claude-state` (git) | transcript backup (restic) |
 |---|---|---|
-| What | `memory/` folders only (transcripts gitignored) | everything: transcripts and memory |
+| What | `memory/` and `reports/` folders only (transcripts gitignored; `reports/` added 2026-10-23 for session reports holding private detail) | everything: transcripts and memory |
 | Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree | `/run/media/hseldon/PortableSSD/backups/zbook/claude-transcripts` (restic repo on the external exFAT SSD) |
 | When | `sync-repos.timer`, daily (`claude-state` is its list entry; the dedicated `claude-state-sync` timer was retired 2026-10-17); a failed run retries 3 times, 15 min apart | `claude-transcripts-backup.timer`, daily, `Persistent=true`, only when the SSD is mounted |
 | Secrets | gitleaks scan inside `sync-repos` on every unattended commit (refuses without gitleaks), plus the repo's pre-commit hook for commits by hand | restic encrypts the repo; password in `pass` |
