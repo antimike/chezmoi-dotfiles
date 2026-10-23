@@ -277,6 +277,11 @@ bindsym $mod+Escape exec "loginctl lock-session"
 
 # Screenshots (~/.local/bin/screenshot; Print is also the Keychron's screenshot key)
 bindsym Print exec --no-startup-id exec ~/.local/bin/screenshot window
+{{- if eq .wm "sway" }}
+# The MX Keys S has no Print; its screenshot key sends Super+Shift+S (a firmware macro). Bound for
+# that keyboard only: $mod+Shift+s stays "sticky toggle" on the others (i3 has no per-device keys).
+bindsym --input-device=1133:45944:MX_KEYS_S_Keyboard $mod+Shift+s exec ~/.local/bin/screenshot window
+{{- end }}
 bindsym $mod+Print exec --no-startup-id exec ~/.local/bin/screenshot window --ask
 bindsym $mod+Shift+Print exec --no-startup-id exec ~/.local/bin/screenshot desktop --ask
 {{- if eq .wm "i3" }}
