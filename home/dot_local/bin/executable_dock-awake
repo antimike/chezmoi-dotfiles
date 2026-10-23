@@ -43,7 +43,18 @@ external_outputs() {
 }
 
 docked() { [[ -n $(external_outputs) ]]; }
-on_ac() { systemd-ac-power; }
+# The AC adapter's own flag. systemd-ac-power also counts a battery that is not
+# discharging as AC, and a full battery reports "Discharging" seconds after an unplug.
+on_ac() {
+  local supply found=0
+  for supply in /sys/class/power_supply/*; do
+    [[ -r $supply/type && $(<"$supply/type") == Mains ]] || continue
+    found=1
+    [[ $(<"$supply/online") == 1 ]] && return 0
+  done
+  ((found)) && return 1
+  systemd-ac-power # no adapter in sysfs
+}
 locked() { pgrep -u "$UID" -x swaylock >/dev/null; }
 held() { [[ -e $held_file ]] && systemctl --user --quiet is-active "$unit"; }
 
@@ -83,6 +94,7 @@ mkfifo -m 0600 "$request_fifo"
 inhibit_pid=
 events_pid=
 grace_until=0
+ac_lost_notified=0 # the critical "AC lost" notification is up
 suspending=0 # deadline: set by a suspend request, cleared on resume (or if no sleep follows)
 
 hold() {
@@ -113,9 +125,16 @@ cancel_grace() {
 }
 
 evaluate() {
-  local now
+  local now body
   if ((suspending)); then
     return
+  fi
+  if ((ac_lost_notified)) && on_ac; then
+    # Same stack tag: replaces the critical notification, and times out.
+    ac_lost_notified=0
+    body="Suspend blocked again while docked."
+    ((grace_until)) && body="Suspend cancelled. $body"
+    notify -u normal -i battery-full-charging "Back on AC" "$body"
   fi
   if docked && on_ac; then
     cancel_grace
@@ -134,6 +153,7 @@ evaluate() {
         notify -u critical -i battery-caution "AC lost while docked" \
           "Suspend is allowed again (idle suspend on battery after 20 min)."
       fi
+      ac_lost_notified=1
     fi
   fi
   if ((grace_until)); then
