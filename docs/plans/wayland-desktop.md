@@ -416,6 +416,10 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
          Whether Intel-first is *better* is open (one run each; CPU only, not GPU load). If step 7 shows the
          black text after resume on NVIDIA, Intel-first Hyprland is a candidate fix (decision for MH).
       6. Passed: lock and unlock on all three monitors (Intel-first session).
+      7. **Failed: kitty hung after the resume** (NVIDIA first, 18:04:48 suspend via `$mod+Ctrl+Escape`; dock-awake
+         released/re-held correctly). Hyprland's "application not responding" for kitty; kernel `nvidia-drm` sync-FD
+         `semsurf` error during the resume, the same as before the black text under SwayFX. Not a Hyprland fault
+         (open item "black text in kitty"). Next: the Intel-first suspend series (draft D60), then decide.
 
       Differences found: no bar or workspace indicator (expected; a throwaway waybar from the session
       scratchpad was used); kitty text clipped by the rounded corners, fixed for both compositors

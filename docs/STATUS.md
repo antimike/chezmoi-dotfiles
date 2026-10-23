@@ -29,6 +29,7 @@ updated: 2026-10-23
 - **Functional SwayFX work 2026-10-19..22, all merged and pushed** (last merge `d20a401`): external monitors (D52, D53: NVIDIA card always opened, Intel renders; kanshi profiles for panel | ASUS PB287Q 4K@60 scale 1.5 | Dell U2717D 1440p, hotplug and clamshell; ASUS 4K@60 needs its menu's "DisplayPort Stream: 1.2"); lock, idle, power (step 4: swayidle, swaylock, logind drop-in, `idle-toggle`); kitty errors; WirePlumber priorities (Bluetooth first, C270 webcam mic and camera; Chromium's camera/mic set by MH); `volume`/`brightness` keys shared by i3 and SwayFX (dunst OSD, feedback sound); Keychron udev rule. Detail: [plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver".
 - **Home network reworked 2026-10-22/23** (MH's router session; [runbooks/home-network.md](runbooks/home-network.md), D55-D57): slow Chromium and MX Keys lag had one cause, 2.4 GHz Wi-Fi time-sharing the AX200 with Bluetooth audio. zbook is now **wired through a GL-AR750S repeater** (5 GHz upstream, GL 4.3.25) as the default route, Wi-Fi (5 GHz-locked) as fallback; `wifi-band-watch` (merged `e0ab1c1`) notifies on any join below 5 GHz. Side finding: SwayFX lag during wired reconnects, confirmed as nm-applet's tray animation (dropped, D58); behind it, Intel rendering + a software cursor (NVIDIA renders docked sessions now, D59; `sway-perf` measures).
 - **Session 2026-10-23 (evening), on branch `wayland/hyprland-trial`:** Hyprland trial built (Lua config, kanshi skips Hyprland, `sway-perf`/`screens-power` Hyprland support; all applied live, SwayFX unaffected: `sway-perf` re-run, kanshi active). Found: an unexplained suspend 16:09:21 (no lid/key event; cause open), then black text in kitty on the ASUS (NVIDIA rendering, D59). Agreed with MH: `dock-awake` (next action 3).
+- **Session 2026-10-23 (late evening), same branch:** `dock-awake` built and fully tested (design and results in open items); kitty padding for rounded corners; Hyprland login test steps 1-7 (above); the NVIDIA sync-FD resume bug tied to both kitty failures; driver upgrade planned and deferred ([runbooks/nvidia-driver.md](runbooks/nvidia-driver.md)); draft D60.
 - A private doc (keys, findings, client terms) is committed in `~/Source/chezmoi-boco` but **not pushed** (waiting for MH's OK).
 
 ## Next actions (in order; reprioritized by MH 2026-10-18, D50)
@@ -36,21 +37,23 @@ updated: 2026-10-23
 2. **Functional SwayFX checklist** (the 2026-10-20 deadline passed; still first priority) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order:
    1. **Screenshots: done, merged and pushed 2026-10-22** (`3a38c79`): `~/.local/bin/screenshot` + shared `pick-path` (D54); keys for Print, the MX Keys and keyboards without Print, all checked by MH.
    2. **nm-applet lag test: done 2026-10-23**, nm-applet dropped (D58, provisional). **GPU follow-up: NVIDIA renders docked sessions (D59)**; MH's docked login test passed 2026-10-23 (layout, lid notice, 22.7% sway CPU moving the mouse, hardware cursor).
-   3. **`dock-awake`: done 2026-10-23, all tests passed** (docked, undocked, monitors in/out mid-session; `cda90a3`..`2ec5560` on `wayland/hyprland-trial`, not pushed; one fix: AC read from the adapter's `online` flag, not `systemd-ac-power`). Results: [open-items.md](open-items.md), "`dock-awake`".
-   4. **Hyprland trial login test** (smooth *and* the panel?), before the bar so the bar targets the winner. Built 2026-10-23 on branch `wayland/hyprland-trial` (pushed, not merged: merge after the login test, as with step 2). 7-step checklist in [plans/wayland-desktop.md](plans/wayland-desktop.md), "Hyprland trial". Hyprland 0.56 uses a Lua config; GDM already had the COPR's "Hyprland (uwsm-managed)" entry.
+   3. **`dock-awake`: done 2026-10-23, all tests passed** (docked, undocked, monitors in/out mid-session; `cda90a3`..`2ec5560` on `wayland/hyprland-trial`, pushed; one fix: AC read from the adapter's `online` flag, not `systemd-ac-power`). Results: [open-items.md](open-items.md), "`dock-awake`".
+   4. **Hyprland trial login test: steps 1-6 passed, step 7 found the NVIDIA resume bug (2026-10-23)**: Hyprland lights the panel while NVIDIA renders, and has no Intel-first penalty (`sway-perf` 14.5% vs 21.3%); kitty hung after an NVIDIA-first resume (kernel `semsurf` sync-FD error, the same as the black text under SwayFX). **Next: the Intel-first suspend series** (open item; draft D60), then decide D60 and the compositor. Results: [plans/wayland-desktop.md](plans/wayland-desktop.md), "Hyprland trial". Branch `wayland/hyprland-trial` merges after this.
    5. **Screen sharing test with both monitors**, the C270 webcam and Birdbox (basic sharing, camera and mic passed 2026-10-18 on the panel; Meet camera/mic passed 2026-10-21).
    6. Minimal bar (waybar or swaybar; maybe a blueman tray agent: no Bluetooth agent runs under SwayFX).
    7. Keybinding cheat sheet.
    8. i3 off zbook (D50 amends D49).
-3. **Home network follow-ups** (open items): DNS pinning, Wi-Fi profile cleanup, router move + re-measure, router hardening/backup; MH's router projects.
-4. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
-5. Atlassian/Jira review pass when MH schedules it.
-6. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
+3. **NVIDIA driver 595.80 -> 615 upgrade**, after the compositor questions (MH, 2026-10-23): [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md).
+4. **Home network follow-ups** (open items): DNS pinning, Wi-Fi profile cleanup, router move + re-measure, router hardening/backup; MH's router projects.
+5. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
+6. Atlassian/Jira review pass when MH schedules it.
+7. Phase 4 (mail): **low priority** (MH: time-consuming, and webmail covers the need).
 
 Side quests (spare time, D50): keybinding manifest, package map refactor, `swindings`, theming, other compositors' configs ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-state` and of one `dstask` repo (all in [open-items.md](open-items.md)).
 
 ## Blockers / watch
+- **A plain `sudo dnf upgrade` installs NVIDIA 615** (deferred): exclude it or version-lock it until the planned upgrade ([runbooks/nvidia-driver.md](runbooks/nvidia-driver.md)).
 - `gitleaks dir .` reports **no leaks**: the 2 accepted findings (D30) are in `.gitleaksignore` by `file:rule:line` fingerprint. If one of those files changes so the finding moves line, it reappears: re-review, then refresh the fingerprint. Anything else is a stop.
 - The YubiKey must be plugged in for pushes, signing tags, `pass`, and the backup/sync timers.
 - Atlassian/Jira items are held until a redaction pass ([plans/boco-merge.md](plans/boco-merge.md), "Held items").

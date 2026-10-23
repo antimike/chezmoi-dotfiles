@@ -1,7 +1,7 @@
 ---
 summary: Backlog of non-essential zbook improvements (ricing, security, resume) with done/open state
 status: living checklist
-updated: 2026-10-18
+updated: 2026-10-23
 ---
 
 # Backlog (aesthetic and quality-of-life work)
