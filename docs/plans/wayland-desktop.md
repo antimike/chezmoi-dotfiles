@@ -351,7 +351,17 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       monitors. Tested under SwayFX: `desktop` (3 outputs, 7680x2160), `window` with a stubbed
       `slurp` (clipboard only, NAME with `/`, name clash, Escape leaves the clipboard alone), usage errors; X11 branch
       through Xwayland (`maim`, `xclip` offers `image/png`). `sway -C`, `i3 -C` and a live reload clean.
-      **Left for MH:** retry `$mod+Print` and `$mod+Shift+Print` with the fuzzel prompt.
+      Second follow-up (2026-10-22, MH's tests): typed paths were flattened (`a/b` → `a-b`) and saved files were
+      mode 600 (mktemp's mode, kept by `cp`); saving now goes through `pick-path` (D54: subfolders, `~/` and absolute
+      paths, `.png` added, other extensions and sudo paths refused, overwrite confirmation). MH also reported
+      "multiple screenshots" after typing a slash: **not reproduced** (one capture per run with `wtype` input); watch
+      for it, possibly the Keychron Mod issue (open item). More keys: the MX Keys S screenshot key sends
+      `Super+Shift+S` (firmware macro), bound for that keyboard only (`bindsym --input-device`, SwayFX; elsewhere
+      `$mod+Shift+s` stays `sticky toggle`); `$mod+Ctrl+s` for the laptop and any keyboard without Print. Tested:
+      pytest (20 cases, mutation check), `wtype` runs of the prompt (subfolder with spaces, absolute, `.jpg` and
+      `/usr/share` refused, overwrite no → rename, yes → replaced), `$mod+Ctrl+s` starts slurp, a non-MX keyboard's
+      `Super+Shift+S` does not.
+      **Left for MH:** the MX key and the save prompt by hand.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
 - [x] **kitty errors fixed** (2026-10-19, `924ac7f`; the full BOCO merge stays later). `symbol_map` in `U+` form
       (the `0x` form failed every config parse: error screen in new windows, and `kitten choose-fonts` crashed);
