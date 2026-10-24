@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# hypr-mark — i3-style window marks for Hyprland, kept as window tags "mark_<name>".
+#
+#   hypr-mark set    mark the focused window: drops its other marks, and the name moves
+#                    off any other window (marks are unique, as in i3)        $mod+m
+#   hypr-mark add    add a mark, keeping the window's others                  $mod+Shift+m
+#   hypr-mark focus  pick a mark, focus its window                            $mod+n
+#   hypr-mark swap   pick a mark, swap the focused window with it             $mod+Alt+n
+#   hypr-mark move   pick a mark, move the focused window to its workspace    $mod+Ctrl+m
+#   hypr-mark list   print "name<TAB>address<TAB>class: title"
+#
+# The prompt is fuzzel (set/add accept a new name; names are letters, digits, - and _).
+# i3's "move window to mark" puts the window next to the marked one in the tree; Hyprland
+# has no tree, so `move` only goes to the marked window's workspace.
+# Dispatchers run as `hyprctl dispatch '<Lua expression>'` (Hyprland >= 0.55 Lua config);
+# hyprctl prints "error: ..." and exits 7 when one fails.
+set -euo pipefail
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "hypr-mark: '$1' not found" >&2; exit 127; }
+}
+need hyprctl; need jq; need fuzzel
+
+usage() { echo "usage: hypr-mark set|add|focus|swap|move|list" >&2; exit 2; }
+
+notify() { notify-send -a hypr-mark "$@" || true; }
+
+# dispatch LUA: run one dispatcher; on failure show hyprctl's message and stop.
+dispatch() {
+  local out
+  if ! out=$(hyprctl dispatch "$1" 2>&1); then
+    notify -u critical "hypr-mark failed" "$out"
+    echo "hypr-mark: $out" >&2
+    exit 1
+  fi
+}
+
+tag() { dispatch "hl.dsp.window.tag({ tag = \"$1\", window = \"address:$2\" })"; }
+
+list() {
+  hyprctl clients -j | jq -r '.[] | .address as $a | "\(.class): \(.title)" as $t
+    | .tags[] | select(startswith("mark_")) | "\(ltrimstr("mark_"))\t\($a)\t\($t)"' | sort
+}
+
+# pick PROMPT: choose an existing mark; prints "name<TAB>address".
+pick() {
+  local marks choice
+  marks=$(list)
+  [[ -n $marks ]] || { notify "No marks" "Mark a window with \$mod+m first."; exit 1; }
+  choice=$(awk -F'\t' '{ printf "%s\t%s\n", $1, $3 }' <<<"$marks" |
+    fuzzel --dmenu --only-match --prompt "$1 " --index) || exit 1
+  [[ $choice =~ ^[0-9]+$ ]] || exit 1
+  sed -n "$((choice + 1))p" <<<"$marks" | cut -f1,2
+}
+
+# ask PROMPT: a mark name, new or existing.
+ask() {
+  local name
+  name=$(list | cut -f1 | sort -u | fuzzel --dmenu --prompt "$1 ") || exit 1
+  [[ $name =~ ^[A-Za-z0-9_-]+$ ]] || { notify -u normal "Not a mark name" "'$name': letters, digits, - and _ only."; exit 1; }
+  echo "$name"
+}
+
+active=$(hyprctl activewindow -j | jq -r '.address // empty')
+
+case ${1:-} in
+  list) list ;;
+  set | add)
+    [[ -n $active ]] || exit 1
+    name=$(ask "Mark:")
+    # Unique: take the name off every window that has it.
+    while IFS=$'\t' read -r _ addr _; do
+      tag "-mark_$name" "$addr"
+    done < <(list | awk -F'\t' -v n="$name" '$1 == n')
+    if [[ $1 == set ]]; then
+      while IFS=$'\t' read -r old addr _; do
+        if [[ $addr == "$active" ]]; then tag "-mark_$old" "$addr"; fi
+      done < <(list)
+    fi
+    tag "+mark_$name" "$active"
+    ;;
+  focus)
+    sel=$(pick "Focus:") || exit 1
+    IFS=$'\t' read -r _ addr <<<"$sel"
+    dispatch "hl.dsp.focus({ window = \"address:$addr\" })"
+    ;;
+  swap)
+    [[ -n $active ]] || exit 1
+    sel=$(pick "Swap with:") || exit 1
+    IFS=$'\t' read -r _ addr <<<"$sel"
+    [[ $addr != "$active" ]] || exit 0
+    dispatch "hl.dsp.window.swap({ target = \"address:$addr\" })"
+    ;;
+  move)
+    [[ -n $active ]] || exit 1
+    sel=$(pick "Move to:") || exit 1
+    IFS=$'\t' read -r _ addr <<<"$sel"
+    ws=$(hyprctl clients -j | jq -r --arg a "$addr" '.[] | select(.address == $a) | .workspace.id')
+    dispatch "hl.dsp.window.move({ workspace = $ws })"
+    ;;
+  *) usage ;;
+esac

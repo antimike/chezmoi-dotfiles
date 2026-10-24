@@ -44,6 +44,19 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   of `colors.conf` and `current-theme.conf` is the source (two palettes are included today). Belongs with
   [theming.md](theming.md).
 - [ ] Investigate browser options
+- [ ] **hy3 and hyprbars via hyprpm, after the NVIDIA upgrade** (MH, 2026-10-23). hy3 (i3-style manual tiling) has an
+  `hl0.56.0.1` tag with Lua dispatchers (`hl.plugin.hy3`); hyprbars gives per-window title bars (a window rule turns them
+  off). Needs `hyprland-devel` (COPR, same 0.56.2) and a `hyprpm update` after every Hyprland update; not the COPR's
+  `hyprland-plugin-*` packages (0.53 builds). Check first that hyprpm maps 0.56.2 to hy3's tag.
+- [ ] **Solaar** (MH, 2026-10-23): install through the package manifest; configure the Logitech Bluetooth keyboards (the
+  MX Keys S's screenshot key could be diverted to Print), and feed device battery levels to the bar.
+- [ ] **Clipboard picker with image thumbnails in rofi** (MH, 2026-10-24): rofi dmenu rows take an icon
+  (`label\0icon\x1f/path.png`); decode image entries (`cliphist decode <id>`) into a cache by entry ID and size
+  `element-icon` large in the theme. fuzzel knows the same protocol but sizes icons to the text line. After the rofi theme
+  is settled (theming). About 30 lines in `clipboard-history`.
+- [ ] **hyprshutdown**: check that it works under uwsm before using it for `$mod+Shift+e` (D63).
+- [ ] **hyprlock** as the Hyprland lock screen (blurred screenshot background), with `lock-screen` choosing by compositor;
+  **hyprpaper** for the wallpaper picker (D63; both installed, not configured).
 - [ ] Nix config derivations (exploration notes exist in the reference clone's `docs/`)
 
 ## Hardware checks

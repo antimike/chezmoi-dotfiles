@@ -3,6 +3,8 @@
 # the clipboard.
 #
 #   clipboard-history          fuzzy-pick with fzf, copy the choice with wl-copy
+#   clipboard-history --menu   the same with fuzzel, no terminal needed ($mod+v in Hyprland);
+#                              no preview: multi-line entries show their first line
 #   clipboard-history --list   print the history (what cliphist list prints)
 #
 # History is recorded by the clipboard-stack-wayland.target user units (see
@@ -17,11 +19,21 @@ need() {
 need cliphist
 case "${1:-}" in
   --list) exec cliphist list ;;
-  "") ;;
-  *) echo "usage: clipboard-history [--list]" >&2; exit 2 ;;
+  --menu | "") ;;
+  *) echo "usage: clipboard-history [--menu | --list]" >&2; exit 2 ;;
 esac
-need fzf
 need wl-copy
+
+if [[ ${1:-} == --menu ]]; then
+  need fuzzel
+  # Shows the preview column; prints the whole "ID<TAB>preview" line for cliphist decode.
+  selection=$(cliphist list | fuzzel --dmenu --only-match --with-nth=2 --prompt='clipboard ') || exit 0
+  [ -n "$selection" ] || exit 0
+  printf '%s' "$selection" | cliphist decode | wl-copy
+  exit 0
+fi
+
+need fzf
 
 # Lines look like "ID<TAB>preview"; images show as "[[ binary data ... ]]". The
 # preview pane shows text entries in full and just the label for binary ones.

@@ -93,10 +93,22 @@ packagesWayland:
     - waybar
     # Output profiles (monitor layouts per set of connected screens)
     - kanshi
+    # Hyprland-only tools for roles SwayFX covers otherwise or not at all (D63)
+    - name: hyprsunset       # colour temperature (CTM protocol); schedule in ~/.config/hypr/hyprsunset.conf
+      copr: hyprland
+    - name: hyprlock         # lock screen (to be adopted: lock-screen still runs swaylock)
+      copr: hyprland
+    - name: hyprpaper        # wallpaper daemon (for the wallpaper picker)
+      copr: hyprland
+    - name: hyprpolkitagent  # polkit agent (none ran in the uwsm sessions before)
+      copr: hyprland
+    - name: hyprpicker       # colour picker
+      copr: hyprland
     # Screenshots and typing
     - grim
     - slurp
     - wtype
+    - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
     # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
     - meson
     - scdoc

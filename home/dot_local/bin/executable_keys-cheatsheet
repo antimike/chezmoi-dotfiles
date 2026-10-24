@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# keys-cheatsheet — list Hyprland's key bindings in fuzzel; Enter runs the chosen one.
+#
+#   keys-cheatsheet          pick a bind, then press it for you ($mod+slash)
+#   keys-cheatsheet --list   print the table ("keys<TAB>description<TAB>submap")
+#
+# Source: `hyprctl binds -j` and each bind's description (hyprland.lua sets one on every
+# bind). Running replays the key combo with wtype after the menu closes, which works for
+# Lua-function binds too (their dispatcher shows as "__lua"); it needs
+# input.resolve_binds_by_sym in the Hyprland config, as wtype brings its own keymap.
+# Not run, only listed: mouse, switch (lid) and submap binds. Exit, suspend, the power key
+# and passthrough ask first.
+set -euo pipefail
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "keys-cheatsheet: '$1' not found" >&2; exit 127; }
+}
+need hyprctl; need jq
+
+# modmask bits (wlr/xkb order) to names; wtype names in the same order
+table() {
+  hyprctl binds -j | jq -r '
+    def mods: [ (if . / 64 | floor % 2 == 1 then "Super" else empty end),
+                (if . / 4  | floor % 2 == 1 then "Ctrl"  else empty end),
+                (if . / 8  | floor % 2 == 1 then "Alt"   else empty end),
+                (if .      % 2 == 1         then "Shift" else empty end) ];
+    .[] | select(.has_description)
+    | ((.modmask | mods) + [.key] | join("+")) as $keys
+    | "\($keys)\t\(.description)\t\(.submap)"'
+}
+
+if [[ ${1:-} == --list ]]; then table; exit 0; fi
+[[ $# -eq 0 ]] || { echo "usage: keys-cheatsheet [--list]" >&2; exit 2; }
+need fuzzel; need wtype
+
+rows=$(table)
+# Shown: "keys   description [submap]"; main-map binds first, as hyprctl lists them.
+choice=$(awk -F'\t' '{ printf "%-28s %s%s\n", $1, $2, ($3 != "" ? "  [" $3 " mode]" : "") }' <<<"$rows" |
+  fuzzel --dmenu --only-match --index --width 80 --lines 25 --prompt 'keys ') || exit 0
+[[ $choice =~ ^[0-9]+$ ]] || exit 0
+IFS=$'\t' read -r keys desc submap < <(sed -n "$((choice + 1))p" <<<"$rows")
+
+key=${keys##*+}
+if [[ -n $submap || $key == mouse:* || $key == switch:* ]]; then
+  notify-send -a keys-cheatsheet "Not run" "$keys: $desc (only listed: mouse, lid and mode keys)" || true
+  exit 0
+fi
+
+shopt -s nocasematch
+if [[ $desc == *exit* || $desc == *suspend* || $desc == *passthrough* ]]; then
+  answer=$(printf 'No\nYes\n' | fuzzel --dmenu --only-match --lines 2 --prompt "Run \"$desc\"? ") || exit 0
+  [[ $answer == Yes ]] || exit 0
+fi
+shopt -u nocasematch
+
+args=()
+mods=()
+IFS=+ read -ra parts <<<"${keys%+*}"
+[[ $keys == *+* ]] || parts=()
+for m in "${parts[@]}"; do
+  case $m in
+    Super) mods+=(logo) ;;
+    Ctrl) mods+=(ctrl) ;;
+    Alt) mods+=(alt) ;;
+    Shift) mods+=(shift) ;;
+  esac
+done
+for m in "${mods[@]}"; do args+=(-M "$m"); done
+args+=(-k "$key")
+for m in "${mods[@]}"; do args+=(-m "$m"); done
+# Let fuzzel's surface go first, so the keys reach the compositor with the window focused.
+sleep 0.2
+exec wtype "${args[@]}"

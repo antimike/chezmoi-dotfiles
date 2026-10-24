@@ -15,7 +15,7 @@
 # prompt (fuzzel; rofi on X11) shows on the output where the capture was made. Escape
 # there, or a refused path, leaves the screenshot in the clipboard only.
 # Wayland is picked when $WAYLAND_DISPLAY is set. Window boxes for the click come from
-# swaymsg (SwayFX/sway only; other compositors get a plain region drag). Escape cancels
+# swaymsg (SwayFX/sway) or hyprctl (Hyprland); other compositors get a plain region drag. Escape cancels
 # the selection: nothing is copied or saved, and the exit status is 1.
 set -euo pipefail
 
@@ -49,9 +49,11 @@ else
   exit 1
 fi
 
-sway=0
-[[ $session == wayland && -n ${SWAYSOCK:-} ]] && command -v swaymsg >/dev/null \
-  && command -v jq >/dev/null && sway=1
+sway=0 hypr=0
+if [[ $session == wayland ]] && command -v jq >/dev/null; then
+  [[ -n ${SWAYSOCK:-} ]] && command -v swaymsg >/dev/null && sway=1
+  [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl >/dev/null && hypr=1
+fi
 
 tmp=$(mktemp --tmpdir screenshot.XXXXXX.png)
 trap 'rm -f "$tmp"' EXIT
@@ -66,6 +68,13 @@ capture_window() {
     if ((sway)); then
       boxes=$(swaymsg -t get_tree | jq -r '.. | select(.pid? and .visible?)
         | .rect | "\(.x),\(.y) \(.width)x\(.height)"') || boxes=''
+    elif ((hypr)); then
+      # Windows on the workspaces shown now (each monitor's normal and special one);
+      # hidden ones (other workspaces, inactive group members) would be phantom boxes.
+      boxes=$(jq -rn --argjson m "$(hyprctl monitors -j)" --argjson c "$(hyprctl clients -j)" '
+        [$m[] | .activeWorkspace.id, .specialWorkspace.id] as $shown
+        | $c[] | select(.mapped and (.hidden | not) and (.workspace.id as $w | $shown | index($w)))
+        | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"') || boxes=''
     fi
     geometry=$(slurp -b '#00000066' -c '#6699ccff' -w 2 <<<"$boxes") || return 1
     grim -g "$geometry" "$tmp"
@@ -93,12 +102,20 @@ copy_image() {
 # The output to show the prompt on: the one holding the selection's top-left corner,
 # else the compositor's choice (the focused output).
 prompt_output() {
-  ((sway)) && [[ -n $geometry ]] || return 0
+  ((sway || hypr)) && [[ -n $geometry ]] || return 0
   local x=${geometry%%,*} y=${geometry#*,}
   y=${y%% *}
-  swaymsg -t get_outputs | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
-    | select(.active and .rect.x <= $x and $x < .rect.x + .rect.width
-             and .rect.y <= $y and $y < .rect.y + .rect.height) | .name) // empty' || true
+  if ((sway)); then
+    swaymsg -t get_outputs | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+      | select(.active and .rect.x <= $x and $x < .rect.x + .rect.width
+               and .rect.y <= $y and $y < .rect.y + .rect.height) | .name) // empty' || true
+  else
+    # hyprctl reports modes in physical pixels: divide by the scale for the layout size.
+    # (No rotated monitors here: a 90/270 transform would swap width and height.)
+    hyprctl monitors -j | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+      | select(.x <= $x and $x < .x + .width / .scale
+               and .y <= $y and $y < .y + .height / .scale) | .name) // empty' || true
+  fi
 }
 
 case $mode in

@@ -49,8 +49,8 @@ local function sync_panel(lid)
     hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x360", scale = 1, disabled = off })
 end
 sync_panel(lid_closed())
-hl.bind("switch:on:Lid Switch",  function() sync_panel(true) end,  { locked = true })
-hl.bind("switch:off:Lid Switch", function() sync_panel(false) end, { locked = true })
+hl.bind("switch:on:Lid Switch",  function() sync_panel(true) end,  { locked = true, description = "Lid closed: panel off while docked" })
+hl.bind("switch:off:Lid Switch", function() sync_panel(false) end, { locked = true, description = "Lid opened: panel on" })
 hl.on("monitor.added",   function() sync_panel(lid_closed()) end)
 hl.on("monitor.removed", function() sync_panel(lid_closed()) end)
 hl.monitor({
@@ -108,56 +108,197 @@ hl.config({
     },
     input = {
         kb_layout    = "us",
+        -- Focus follows the mouse: on trial in Hyprland and SwayFX (MH, 2026-10-23; i3 stays off).
         follow_mouse = 1,
+        -- Match binds by keysym, not keycode: keys-cheatsheet replays binds with wtype,
+        -- whose own keymap has other keycodes. Same result with the one US layout.
+        resolve_binds_by_sym = true,
     },
 })
 
 ---------------------
 ---- KEYBINDINGS ----
 ---------------------
--- A small subset of the i3/SwayFX keys (.chezmoitemplates/wm/common).
+-- Ported from the i3/SwayFX keys (.chezmoitemplates/wm/common, sway/config.tmpl), without
+-- i3-style tiling control (splits, tabbed/stacked containers). Every bind has a
+-- description: the cheat sheet (keys-cheatsheet, $mod+slash) lists them from `hyprctl binds`.
 local mod = "SUPER"
 local term = "kitty"
+local bin = "{{ joinPath .chezmoi.homeDir ".local" "bin" }}/"
+local function bind(keys, dispatcher, description, opts)
+    local o = { description = description } -- a copy: callers share option tables
+    for k, v in pairs(opts or {}) do o[k] = v end
+    return hl.bind(keys, dispatcher, o)
+end
+local function run(cmd) return hl.dsp.exec_cmd(cmd) end
+local function app(cmd) return hl.dsp.exec_cmd("uwsm app -- " .. cmd) end
 
-hl.bind(mod .. " + Return",          hl.dsp.exec_cmd("uwsm app -- " .. term))
-hl.bind(mod .. " + o",               hl.dsp.exec_cmd("fuzzel --launch-prefix='uwsm app -- '"))
-hl.bind(mod .. " + SHIFT + q",       hl.dsp.window.close())
-hl.bind(mod .. " + f",               hl.dsp.window.fullscreen({ action = "toggle" }))
-hl.bind(mod .. " + SHIFT + space",   hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mod .. " + Escape",          hl.dsp.exec_cmd("loginctl lock-session"))
--- Exit (under uwsm, `uwsm stop` ends the session cleanly)
-hl.bind(mod .. " + SHIFT + CTRL + e", hl.dsp.exec_cmd("uwsm stop"))
+-- Apps, session, notifications
+bind(mod .. " + Return", app(term), "Terminal")
+bind(mod .. " + o", run("fuzzel --launch-prefix='uwsm app -- '"), "App launcher")
+bind("XF86LaunchA", run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window"), "Window switcher")
+{{- if lookPath "passmenu" }}
+-- passmenu (dmenu-wl + wtype under Wayland), as .i3.keys.programs; a fuzzel picker is D40.
+bind(mod .. " + p", run("passmenu --type"), "Password picker: type it")
+bind(mod .. " + SHIFT + p", run("passmenu"), "Password picker: copy it")
+{{- end }}
+bind(mod .. " + v", run(bin .. "clipboard-history --menu"), "Clipboard history: pick an entry, copy it")
+bind(mod .. " + backslash", run("dunstctl close"), "Close the newest notification")
+bind(mod .. " + bracketright", run("dunstctl history-pop"), "Show the last closed notification")
+bind(mod .. " + slash", run(bin .. "keys-cheatsheet"), "Key cheat sheet (Enter runs the key)")
+bind(mod .. " + SHIFT + q", hl.dsp.window.close(), "Close window")
+bind(mod .. " + SHIFT + c", run("hyprctl reload"), "Reload the Hyprland config")
+-- Exit (under uwsm, `uwsm stop` ends the session cleanly); hyprland-dialog prints the button.
+bind(mod .. " + SHIFT + e",
+     run([[sh -c '[ "$(hyprland-dialog --title "Exit Hyprland" --text "Exit Hyprland? This ends the session." --buttons "Exit;Cancel")" = Exit ] && uwsm stop']]),
+     "Exit Hyprland (asks first)")
+bind(mod .. " + SHIFT + CTRL + e", run("uwsm stop"), "Exit Hyprland now")
+bind(mod .. " + Escape", run("loginctl lock-session"), "Lock the screen")
+-- Suspend ($mod+Ctrl+Escape) and the power key's short press (logind ignores it) both go
+-- through dock-awake: suspend undocked, refuse docked (D61). A 5 s press is a hard power cut.
+bind(mod .. " + CTRL + Escape", run(bin .. "dock-awake suspend"), "Suspend (refused while docked)")
+bind("XF86PowerOff", run(bin .. "dock-awake power-key"), "Power key: suspend (refused while docked)", { locked = true })
+bind(mod .. " + SHIFT + Escape", run(bin .. "idle-toggle"), "Pause/resume the idle timeouts")
 
-local dirs = {
-    { key = "{{ .i3.keys.named.left }}",  dir = "left" },
-    { key = "{{ .i3.keys.named.down }}",  dir = "down" },
-    { key = "{{ .i3.keys.named.up }}",    dir = "up" },
-    { key = "{{ .i3.keys.named.right }}", dir = "right" },
-}
-for _, d in ipairs(dirs) do
-    hl.bind(mod .. " + " .. d.key,             hl.dsp.focus({ direction = d.dir }))
-    hl.bind(mod .. " + SHIFT + " .. d.key,     hl.dsp.window.move({ direction = d.dir }))
+-- Volume, media, brightness (shared helpers, as in i3/SwayFX); Shift for 1% steps
+local held = { locked = true, repeating = true }
+bind("XF86AudioRaiseVolume", run(bin .. "volume up"), "Volume up", held)
+bind("XF86AudioLowerVolume", run(bin .. "volume down"), "Volume down", held)
+bind("SHIFT + XF86AudioRaiseVolume", run(bin .. "volume up 1"), "Volume up 1%", held)
+bind("SHIFT + XF86AudioLowerVolume", run(bin .. "volume down 1"), "Volume down 1%", held)
+bind("XF86AudioMute", run(bin .. "volume mute"), "Mute output", { locked = true })
+bind("XF86AudioMicMute", run(bin .. "volume mic-mute"), "Mute microphone", { locked = true })
+for key, action in pairs({ Play = "play-pause", Pause = "pause", Stop = "stop", Next = "next", Prev = "previous" }) do
+    bind("XF86Audio" .. key, run("playerctl -p cmus " .. action), "cmus: " .. action, { locked = true })
+end
+bind("XF86MonBrightnessUp", run(bin .. "brightness up"), "Panel brightness up", held)
+bind("XF86MonBrightnessDown", run(bin .. "brightness down"), "Panel brightness down", held)
+bind("SHIFT + XF86MonBrightnessUp", run(bin .. "brightness up 1"), "Panel brightness up 1%", held)
+bind("SHIFT + XF86MonBrightnessDown", run(bin .. "brightness down 1"), "Panel brightness down 1%", held)
+bind("XF86KbdBrightnessUp", run(bin .. "brightness kbd-up"), "Keyboard backlight up", held)
+bind("XF86KbdBrightnessDown", run(bin .. "brightness kbd-down"), "Keyboard backlight down", held)
+
+-- Screenshots (~/.local/bin/screenshot). Print is also the Keychron's key; the MX Keys S's
+-- screenshot key sends $mod+Shift+s (a firmware macro), so that is a screenshot key everywhere.
+local shot = bin .. "screenshot "
+bind("Print", run(shot .. "window"), "Screenshot: window or region, to the clipboard")
+bind(mod .. " + CTRL + s", run(shot .. "window"), "Screenshot: window or region, to the clipboard")
+bind(mod .. " + SHIFT + s", run(shot .. "window"), "Screenshot: window or region, to the clipboard")
+bind(mod .. " + CTRL + SHIFT + s", run(shot .. "window --ask"), "Screenshot: window or region, ask where to save")
+bind(mod .. " + Print", run(shot .. "window --ask"), "Screenshot: window or region, ask where to save")
+bind(mod .. " + CTRL + ALT + s", run(shot .. "desktop --ask"), "Screenshot: all screens, ask where to save")
+bind(mod .. " + SHIFT + ALT + s", run(shot .. "desktop --ask"), "Screenshot: all screens, ask where to save")
+bind(mod .. " + SHIFT + Print", run(shot .. "desktop --ask"), "Screenshot: all screens, ask where to save")
+
+-- Focus and move: vim keys and arrows
+for _, d in ipairs({
+    { keys = { "{{ .i3.keys.named.left }}", "Left" },   dir = "left" },
+    { keys = { "{{ .i3.keys.named.down }}", "Down" },   dir = "down" },
+    { keys = { "{{ .i3.keys.named.up }}", "Up" },       dir = "up" },
+    { keys = { "{{ .i3.keys.named.right }}", "Right" }, dir = "right" },
+}) do
+    for _, key in ipairs(d.keys) do
+        bind(mod .. " + " .. key, hl.dsp.focus({ direction = d.dir }), "Focus " .. d.dir)
+        bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ direction = d.dir }), "Move window " .. d.dir)
+    end
 end
 
+-- Workspaces and monitors. "e-1"/"e+1": the previous/next existing workspace, all monitors (as i3).
 for i = 1, 10 do
     local key = i % 10 -- 10 is key 0
-    hl.bind(mod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+    bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }), "Workspace " .. i)
+    bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }), "Move window to workspace " .. i)
 end
+bind(mod .. " + Tab", hl.dsp.focus({ workspace = "previous" }), "Previous workspace (back and forth)")
+for _, key in ipairs({ "Left", "{{ .i3.keys.named.left }}" }) do
+    bind(mod .. " + ALT + " .. key, hl.dsp.focus({ workspace = "e-1" }), "Previous workspace")
+    bind(mod .. " + ALT + SHIFT + " .. key, hl.dsp.window.move({ workspace = "e-1" }), "Move window to the previous workspace")
+end
+for _, key in ipairs({ "Right", "{{ .i3.keys.named.right }}" }) do
+    bind(mod .. " + ALT + " .. key, hl.dsp.focus({ workspace = "e+1" }), "Next workspace")
+    bind(mod .. " + ALT + SHIFT + " .. key, hl.dsp.window.move({ workspace = "e+1" }), "Move window to the next workspace")
+end
+bind(mod .. " + ALT + o", hl.dsp.focus({ monitor = "+1" }), "Focus the next monitor")
+bind(mod .. " + CTRL + o", hl.dsp.window.move({ monitor = "+1" }), "Move window to the next monitor")
+bind(mod .. " + SHIFT + o", hl.dsp.workspace.move({ monitor = "+1" }), "Move workspace to the next monitor")
 
-hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
-hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+-- Windows
+bind(mod .. " + f", hl.dsp.window.fullscreen({ action = "toggle" }), "Fullscreen")
+bind(mod .. " + SHIFT + f", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), "Maximize (keeps gaps and bar)")
+bind(mod .. " + SHIFT + space", hl.dsp.window.float({ action = "toggle" }), "Toggle floating")
+-- i3's "focus mode_toggle": from a floating window to a tiled one on the workspace, or back.
+bind(mod .. " + space", function()
+    local w = hl.get_active_window()
+    if not w then return end
+    for _, other in ipairs(hl.get_windows({ workspace = w.workspace, mapped = true })) do
+        if other.floating ~= w.floating then
+            hl.dispatch(hl.dsp.focus({ window = "address:" .. other.address }))
+            return
+        end
+    end
+end, "Focus floating <-> tiled")
+bind(mod .. " + SHIFT + t", hl.dsp.window.pin({ action = "toggle" }), "Pin (floating window on every workspace)")
+bind(mod .. " + ALT + c", hl.dsp.window.center(), "Center floating window")
+bind(mod .. " + e", hl.dsp.layout("togglesplit"), "Toggle split direction (dwindle)")
+-- Scratchpad: a special workspace; it shows all its windows at once (i3 cycles them).
+bind(mod .. " + CTRL + x", hl.dsp.window.move({ workspace = "special:scratchpad" }), "Move window to the scratchpad")
+bind(mod .. " + CTRL + SHIFT + x", hl.dsp.workspace.toggle_special("scratchpad"), "Show/hide the scratchpad")
+hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true, description = "Drag window" })
+hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "Resize window" })
 
--- Shared helpers (~/.local/bin), as in i3/SwayFX.
-local bin = "{{ joinPath .chezmoi.homeDir ".local" "bin" }}/"
-hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd(bin .. "volume up"),   { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd(bin .. "volume down"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute",         hl.dsp.exec_cmd(bin .. "volume mute"), { locked = true })
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(bin .. "brightness up"),   { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(bin .. "brightness down"), { locked = true, repeating = true })
-hl.bind("Print",                 hl.dsp.exec_cmd(bin .. "screenshot window"))
--- Suspend ($mod+Ctrl+Escape) and the power key's short press (logind ignores it) both go
--- through dock-awake: suspend undocked, refuse docked (D61). A 5 s press is logind's power off.
-hl.bind(mod .. " + CTRL + Escape", hl.dsp.exec_cmd(bin .. "dock-awake suspend"))
-hl.bind("XF86PowerOff",          hl.dsp.exec_cmd(bin .. "dock-awake power-key"), { locked = true })
+-- Marks (i3's marks as window tags; ~/.local/bin/hypr-mark asks with fuzzel)
+bind(mod .. " + m", run(bin .. "hypr-mark set"), "Mark window (replaces its marks)")
+bind(mod .. " + SHIFT + m", run(bin .. "hypr-mark add"), "Add a mark to the window")
+bind(mod .. " + n", run(bin .. "hypr-mark focus"), "Focus a marked window")
+bind(mod .. " + ALT + n", run(bin .. "hypr-mark swap"), "Swap with a marked window")
+bind(mod .. " + CTRL + m", run(bin .. "hypr-mark move"), "Move window to a marked window's workspace")
+
+-- Submaps (i3's modes). `hyprctl submap` prints the active one ("default" when none);
+-- waybar's hyprland/submap module will show it too. Until then a dunst notice (one stack
+-- tag, so each replaces the last): resize stays up until it is left; passthrough times out,
+-- as the dunst keys do not reach dunst there.
+local submap_notices = {
+    resize      = { title = "Resize mode", body = "hjkl or arrows; Return, Escape or Super+r leaves", ms = 0 },
+    passthrough = { title = "Passthrough mode", body = "All keys go to the window; Super+Ctrl+Shift+p leaves", ms = 3000 },
+}
+local current_notice
+hl.on("keybinds.submap", function(name)
+    local n = submap_notices[name]
+    if not n and not current_notice then return end
+    local title, body, ms = (current_notice or "Mode") .. " off", "", 1500
+    if n then title, body, ms = n.title, n.body, n.ms end
+    current_notice = n and n.title or nil
+    -- Fixed texts without single quotes, so plain single-quoting is safe.
+    hl.exec_cmd(string.format("notify-send -a hyprland -h string:x-dunst-stack-tag:submap -t %d '%s' '%s'", ms, title, body))
+end)
+bind(mod .. " + r", hl.dsp.submap("resize"), "Resize mode")
+hl.define_submap("resize", function()
+    local step = 40
+    for _, k in ipairs({
+        { keys = { "h", "Left" },  x = -step, y = 0, what = "Narrower" },
+        { keys = { "l", "Right" }, x = step,  y = 0, what = "Wider" },
+        { keys = { "j", "Down" },  x = 0, y = -step, what = "Shorter" },
+        { keys = { "k", "Up" },    x = 0, y = step,  what = "Taller" },
+    }) do
+        for _, key in ipairs(k.keys) do
+            bind(key, hl.dsp.window.resize({ x = k.x, y = k.y, relative = true }), k.what, { repeating = true })
+        end
+    end
+    for _, key in ipairs({ "Return", "Escape", mod .. " + r" }) do
+        bind(key, hl.dsp.submap("reset"), "Leave resize mode")
+    end
+end)
+-- Passthrough: every other bind off, for VMs, remote desktops and games (i3's "locked" mode).
+bind(mod .. " + CTRL + SHIFT + p", hl.dsp.submap("passthrough"), "Passthrough mode: all keys to the window")
+hl.define_submap("passthrough", function()
+    bind(mod .. " + CTRL + SHIFT + p", hl.dsp.submap("reset"), "Leave passthrough mode")
+end)
+
+----------------------
+---- WINDOW RULES ----
+----------------------
+-- As SwayFX's `inhibit_idle fullscreen`: a fullscreen window holds off the idle chain.
+-- Not `idle_inhibit = "fullscreen"`: that also counts maximized windows ($mod+Shift+f;
+-- inhibitingIdle in `hyprctl clients -j`), so a maximized terminal would never lock.
+hl.window_rule({ name = "idle-inhibit-fullscreen", match = { fullscreen_state_internal = 2 }, idle_inhibit = "always" })
 {{- end }}
