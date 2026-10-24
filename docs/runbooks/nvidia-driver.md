@@ -36,7 +36,7 @@ boot) is the way back if the graphical session does not start.
 ## Plan: upgrade 595.80 -> 615.x (deferred, MH 2026-10-23)
 **When:** deferred by MH (2026-10-23): the last NVIDIA upgrade on this machine was very disruptive and had to be
 rolled back, and D61 (no suspend while docked) is acceptable meanwhile. A security fix does apply (above):
-not an emergency on a single-user laptop, but no longer a reason to defer indefinitely (MH to decide the date). Do it as a change of its own, so a fix or regression can be put on the right cause. At a quiet time, not before
+not an emergency on a single-user laptop, so MH planned it for **2026-10-24** (a quiet day). Do it as a change of its own, so a fix or regression can be put on the right cause. At a quiet time, not before
 something important.
 
 **Trade-offs** (Claude, 2026-10-23):

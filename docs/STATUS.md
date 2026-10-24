@@ -44,7 +44,7 @@ updated: 2026-10-23
    6. Minimal bar (waybar or swaybar; maybe a blueman tray agent: no Bluetooth agent runs under SwayFX).
    7. Keybinding cheat sheet.
    8. i3 off zbook (D50 amends D49).
-3. **NVIDIA driver 595.80 -> 615 upgrade: deferred by MH** (2026-10-23; the last upgrade was disruptive and rolled back; D61 is acceptable meanwhile). Revisit if a 595-branch security bulletin applies, or to lift D61: [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md). After it: the docked suspend workaround (open item).
+3. **NVIDIA driver 595.80 -> 615 upgrade: planned for 2026-10-24** (MH; the September 2026 bulletin affects 595.80; 615.78.08 is fixed): [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md). After it: a docked resume series, then maybe lift D61, and the docked suspend workaround (open item).
 4. **Home network follow-ups** (open items): DNS pinning, Wi-Fi profile cleanup, router move + re-measure, router hardening/backup; MH's router projects.
 5. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
 6. Atlassian/Jira review pass when MH schedules it.
@@ -54,7 +54,7 @@ Side quests (spare time, D50): keybinding manifest, package map refactor, `swind
 Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-state` and of one `dstask` repo (all in [open-items.md](open-items.md)).
 
 ## Blockers / watch
-- **No suspend while docked (D61)**: unplug the monitors first. A wedged display after a docked resume needs a hard power-off today (no SysRq reboot, no sshd; open item).
+- **No suspend while docked (D61)**: unplug the monitors first. A wedged display: hold the power key 5-7 s (clean power off); SysRq 244 (Alt+Fn+Home) once installed.
 - **A plain `sudo dnf upgrade` installs NVIDIA 615** (deferred): exclude it or version-lock it until the planned upgrade ([runbooks/nvidia-driver.md](runbooks/nvidia-driver.md)).
 - `gitleaks dir .` reports **no leaks**: the 2 accepted findings (D30) are in `.gitleaksignore` by `file:rule:line` fingerprint. If one of those files changes so the finding moves line, it reappears: re-review, then refresh the fingerprint. Anything else is a stop.
 - The YubiKey must be plugged in for pushes, signing tags, `pass`, and the backup/sync timers.
