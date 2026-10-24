@@ -11,6 +11,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [hypr-trial-bar/](hypr-trial-bar/) | Throwaway waybar for the Hyprland trial (workspaces, window, battery, clock); start after each login |
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
+| [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
 
 ## zsh-probe
 
@@ -84,3 +85,13 @@ Exit 1 on a hit (term or gitleaks), 2 if the pattern file is missing. Red-tested
 
 `tools/hypr-trial-bar/hypr-trial-bar` from a Hyprland session (replaces a running copy). waybar runs under uwsm as
 its own scope, so it outlives the terminal and ends with the session. Not deployed; the real bar is next action 2.6.
+
+## term-contrast
+
+```sh
+tools/term-contrast/term-contrast.py                         # live kitty config, failures only
+tools/term-contrast/term-contrast.py --theme Blazer --theme "Tokyo Night" --sources palette,fsh,autosuggest
+tools/term-contrast/term-contrast.py --conf ~/.config/kitty/current-theme.conf --all
+```
+
+Resolves the palette through kitty itself (`kitty +runpy`, so includes and defaults count as kitty sees them; `--theme` dumps one of kitty's built-in themes), collects the colour styles the shell and CLI tools use, and lists every foreground/background pair below `--min` (WCAG ratio, default 3.0). Exits 1 on any failure. The rule it enforces for a dark theme: colour 8 must be legible on the background (comments and autosuggestions use it), and no text style may use colour 0. Needs `uv`, `kitty` and `zsh`; the `fsh` source sources the plugin from your zinit tree plus `~/.config/zsh/fsh-styles.zsh`. Known noise: trapd00r's `LS_COLORS` uses fixed 256-colour dims that fail on any dark background (`--sources` without `ls` to hide them).
