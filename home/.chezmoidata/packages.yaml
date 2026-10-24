@@ -20,6 +20,12 @@ packageManagers:
 #              one of its packages is about to be installed (D32 item 6)
 #   pipx       install with pipx instead of the distro manager (D32 item 3):
 #              `true` for the PyPI name = `name`, or a pip spec; a manager key wins
+#   release    the id of the repo's own installer, run_onchange_install-<id>.sh.tmpl
+#              (pinned release, its pins in .chezmoidata/<tool>.yaml): listed here
+#              for the inventory, installed by that script, not by this one. Not
+#              for installers that set up no package (sysrq, logind-power, udev rules).
+# mise tools are pinned in ~/.config/mise/config.toml (private_dot_config/mise), the
+# one source for those versions; use `mise:` here only as a per-distro fallback.
 #   verify     a shell check run after installing; failing it fails the install
 #              (D32 item 4: for names that mean different programs on different
 #              distros, such as yq, which also needs an explicit entry per manager)
@@ -33,7 +39,7 @@ packageTargets:
       - curl
       - direnv
       - { name: fd, dnf: fd-find }
-      - fzf
+      - { name: fzf, release: fzf }   # ~/.local/bin; zsh's integration is generated from it
       - git
       - git-crypt
       - { name: delta, dnf: git-delta }
@@ -92,6 +98,20 @@ packageTargets:
       - xz-devel
       # Misc
       - logrotate
+      # Pinned-release tools (own installers; inventory entries)
+      - { name: appimagelauncher, release: appimagelauncher }
+      - { name: bd-track, release: bd-track }     # the project's `just install-dev` at a pinned tag
+      - { name: bd, release: beads }
+      - { name: bv, release: beads_viewer }
+      - { name: cheat, release: cheat }
+      - { name: cht.sh, release: cht-sh }
+      - { name: clipse, release: clipse }
+      - { name: d2, release: d2 }
+      - { name: dnote, release: dnote }
+      - { name: dolt, release: dolt }
+      - { name: dstask, release: dstask }
+      - { name: nb, release: nb }
+      - { name: the-way, release: the-way }
 
   python-tools:
     description: Python CLI tools, installed with pipx (pipx itself is in base)
@@ -182,6 +202,16 @@ packageTargets:
       - python3-pyxdg
       - newt                 # whiptail, for uwsm's selection menu
       - inotify-tools
+      # Pinned-release tools (own installers; inventory entries)
+      - { name: uwsm, release: uwsm }
+      - { name: wl-clip-persist, release: wl-clip-persist }
+
+  work:
+    description: Employer-only tooling (work_tooling host key)
+    when:
+      work_tooling: true
+    packages:
+      - { name: rano, release: rano }
 
 # COPR repositories, referenced by `copr:` in the package lists. `project` is
 # the owner/name passed to `dnf copr enable`; that name is the pin. Checked
