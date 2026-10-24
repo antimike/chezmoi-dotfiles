@@ -1,0 +1,15 @@
+{{- if and (ne (dig "display_server" "x11" .) "none") (lookPath "chromium-browser") -}}
+#!/bin/sh
+# run_onchange_after_default-browser.sh.tmpl — make Chromium the default browser
+# (MH, 2026-10-24; it was Firefox). Writes the user's ~/.config/mimeapps.list through
+# xdg-settings/xdg-mime instead of managing that file, which GNOME and apps also
+# edit. Re-runs when this script changes. Idempotent.
+set -eu
+
+desktop=chromium-browser.desktop
+xdg-settings set default-web-browser "$desktop"
+for type in x-scheme-handler/http x-scheme-handler/https text/html application/xhtml+xml; do
+  xdg-mime default "$desktop" "$type"
+done
+echo "default-browser: $(xdg-settings get default-web-browser)" >&2
+{{- end }}
