@@ -6,7 +6,8 @@
 # Renders run_onchange_install-packages.sh.tmpl with `chezmoi execute-template
 # --override-data` for each case and checks the resolved list (`--list`): target
 # selection and `when`, `includes`, `false` entries, per-manager names, COPRs only for
-# dnf, and render failures for unknown targets. Uses the live packages.yaml, so counts
+# dnf, pipx entries (and a manager key winning over them), `verify` checks, and render
+# failures for unknown targets. Uses the live packages.yaml, so counts
 # are derived from it, not hard-coded. Prints one line per case; exits 1 if any fails.
 # Needs chezmoi and python3 (PyYAML, for the expected counts).
 set -euo pipefail
@@ -34,14 +35,18 @@ check() { # NAME CONDITION...
   if "$@"; then echo "pass  $name"; else echo "FAIL  $name"; failed=1; fi
 }
 lines() { wc -l <"$tmp/list"; }
-coprs() { grep -c $'\t.' "$tmp/list" || true; }
+coprs() { grep -c $'\t[^\t]\+$' "$tmp/list" || true; }
+pipxs() { grep -c '^pipx' "$tmp/list" || true; }
 
 resolve '{"display_server":"wayland","package_targets":["base","wayland"]}'
 check "wayland host: base + wayland ($((base + wayland)))" test "$(lines)" = $((base + wayland))
 check "wayland host: COPR packages present" test "$(coprs)" -gt 0
-check "dnf: per-manager name (git-delta, not delta)" bash -c "grep -q \$'^git-delta\t' '$tmp/list' && ! grep -q \$'^delta\t' '$tmp/list'"
+check "dnf: per-manager name (git-delta, not delta)" bash -c "grep -q \$'^native\tgit-delta\t' '$tmp/list' && ! grep -q \$'\tdelta\t' '$tmp/list'"
 resolve '{"display_server":"x11","package_targets":["base","wayland"]}'
 check "x11 host: the wayland target's when fails ($base)" test "$(lines)" = "$base"
+x11=$(count x11)
+resolve '{"display_server":"x11","package_targets":["base","wayland","x11"]}'
+check "x11 host: base + x11, no wayland ($((base + x11)))" test "$(lines)" = $((base + x11))
 resolve '{"display_server":"wayland","package_targets":["base"]}'
 check "package_targets [base] ($base)" test "$(lines)" = "$base"
 check "unknown target fails the render" bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"nope\"]}' <'$tmpl' >/dev/null 2>&1"
@@ -50,9 +55,17 @@ check "includes: base + one new, duplicate once ($((base + 1)))" test "$(lines)"
 check "unknown include fails the render" \
   bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"t\"],\"packageTargets\":{\"t\":{\"includes\":[\"nope\"],\"packages\":[]}}}' <'$tmpl' >/dev/null 2>&1"
 resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-absent","dnf":false},"pmt-new"]}}}'
-check "false entry: skipped, listed as such" bash -c "test \"\$(cat '$tmp/list')\" = \$'pmt-new\t' && grep -q 'skipped=( \"pmt-absent\" )' '$tmp/installer'"
+check "false entry: skipped, listed as such" bash -c "test \"\$(cat '$tmp/list')\" = \$'native\tpmt-new\t' && grep -q 'skipped=( \"pmt-absent\" )' '$tmp/installer'"
 resolve '{"packageManagers":{"fedora":"apt"},"display_server":"wayland","package_targets":["base","wayland"]}'
-check "other manager: logical names (delta, not git-delta)" bash -c "grep -q \$'^delta\t' '$tmp/list' && ! grep -q '^git-delta' '$tmp/list'"
+check "other manager: logical names (delta, not git-delta)" bash -c "grep -q \$'^native\tdelta\t' '$tmp/list' && ! grep -q 'git-delta' '$tmp/list'"
 check "other manager: no COPRs" test "$(coprs)" = 0
 check "other manager: installer refuses it" bash -c "bash '$tmp/installer' 2>&1 | grep -q \"no installer for manager 'apt'\""
+pyt=$(count python-tools)
+resolve '{"display_server":"wayland","package_targets":["python-tools"]}'
+check "python-tools: $pyt pipx tools, base included ($base native)" test "$(pipxs)/$(lines)" = "$pyt/$((base + pyt))"
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-a","pipx":true},{"name":"pmt-b","pipx":"pmt-b[extra]>=2"},{"name":"pmt-c","pipx":true,"dnf":"pmt-c-rpm"}]}}}'
+check "pipx: true, a pip spec, and a manager key winning" \
+  test "$(cat "$tmp/list")" = $'native\tpmt-c-rpm\t\npipx\tpmt-a\t\npipx\tpmt-b[extra]>=2\t'
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-v","verify":"false"}]}}}'
+check "verify: a failing check fails the run" bash -c "! MANAGER= bash '$tmp/installer' >/dev/null 2>&1 && bash '$tmp/installer' 2>&1 | grep -q 'check failed for pmt-v'"
 exit "$failed"
