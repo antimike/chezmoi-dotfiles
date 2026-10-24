@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# public-scan — the pre-commit scan for this public repo: client/employer terms, then gitleaks.
+#
+#   tools/public-scan/public-scan          changed, staged and untracked files (vs HEAD), then `gitleaks dir .`
+#   tools/public-scan/public-scan PATH...  only these paths for the term grep
+#
+# The term pattern is NOT in this repo: it is read at run time from the private repo
+# (~/Source/chezmoi-boco/docs/zbook-migration/client-terms.md, the `grep -rniIE '…'` line), so the
+# pattern never lands in a public commit. Untracked ricing.md is skipped (MH's notes, never committed).
+# Exit 1 on a term hit or a gitleaks finding, 2 if the pattern file is missing.
+# Rules: docs/conventions.md, "Public vs private".
+set -euo pipefail
+
+terms_doc=${PUBLIC_SCAN_TERMS:-$HOME/Source/chezmoi-boco/docs/zbook-migration/client-terms.md}
+repo=$(git rev-parse --show-toplevel)
+cd "$repo"
+
+[[ -r $terms_doc ]] || { echo "public-scan: pattern file not found: $terms_doc" >&2; exit 2; }
+pattern=$(grep -m1 -oP "grep -rniIE '\K[^']+" "$terms_doc") ||
+  { echo "public-scan: no grep pattern line in $terms_doc" >&2; exit 2; }
+
+if (($#)); then
+  files=("$@")
+else
+  mapfile -t files < <({
+    git diff --name-only HEAD
+    git diff --cached --name-only
+    git ls-files -o --exclude-standard
+  } | grep -vx 'ricing.md' | sort -u)
+fi
+
+status=0
+existing=()
+for f in "${files[@]}"; do [[ -f $f ]] && existing+=("$f"); done
+if ((${#existing[@]})); then
+  if grep -niIE -- "$pattern" "${existing[@]}"; then
+    echo "public-scan: CLIENT/EMPLOYER TERM HIT (above)" >&2
+    status=1
+  else
+    echo "client terms: none (${#existing[@]} files)"
+  fi
+else
+  echo "client terms: no changed files"
+fi
+
+if gitleaks dir . --no-banner --log-level warn; then
+  echo "gitleaks: no leaks"
+else
+  echo "public-scan: gitleaks finding (above)" >&2
+  status=1
+fi
+exit "$status"

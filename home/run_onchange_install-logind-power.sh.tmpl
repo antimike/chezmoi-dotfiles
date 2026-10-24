@@ -5,7 +5,16 @@
 #   lid closed, no external monitor  → suspend (on battery and on AC)
 #   lid closed, external monitor     → keep running ("docked"; SwayFX turns the
 #                                      panel off through bindswitch)
-#   power key                        → suspend; long press → power off
+#   power key, short press           → nothing here: the compositor's XF86PowerOff
+#                                      binding runs `dock-awake power-key` (suspend
+#                                      undocked, refuse docked: D61); GNOME and the GDM
+#                                      greeter handle the key themselves
+#   power key, long press            → poweroff here, but on zbook it never fires: the
+#                                      ACPI power button reports an instant press and
+#                                      release, and HP's firmware cuts power after ~5 s
+#                                      (a hard power-off; tested 2026-10-23). The clean
+#                                      way out of a wedged display is SysRq REISUB
+#                                      (run_onchange_install-sysrq.sh.tmpl)
 #
 # swayidle locks before every sleep (GNOME locks by itself). This applies to GNOME
 # sessions too: GNOME blocks logind's lid handling only while an external monitor
@@ -44,7 +53,7 @@ cat > "$STAGED" <<'EOF'
 HandleLidSwitch=suspend
 HandleLidSwitchExternalPower=suspend
 HandleLidSwitchDocked=ignore
-HandlePowerKey=suspend
+HandlePowerKey=ignore
 HandlePowerKeyLongPress=poweroff
 EOF
 

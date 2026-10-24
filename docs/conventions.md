@@ -1,7 +1,7 @@
 ---
 summary: Working rules for sessions in this repo: commits, branches, public-repo scans, push/auth, chezmoi, shell quirks
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 ---
 
 # Conventions
@@ -19,7 +19,7 @@ updated: 2026-10-22
 - Keep real client/employer detail out of commits to public repos: scan first, show MH the redaction diff (D19).
 
 ## Public vs private
-- This repo, `bd-track`, `claude-config`, `chess_trainer`, `resume-builder` are **public**. Before committing: `gitleaks dir <path>` (`detect` is deprecated; expect no leaks here, see D30) and the client-term grep (pattern list in the private repo: `~/Source/chezmoi-boco/docs/zbook-migration/client-terms.md`).
+- This repo, `bd-track`, `claude-config`, `chess_trainer`, `resume-builder` are **public**. Before committing: `gitleaks dir <path>` (`detect` is deprecated; expect no leaks here, see D30) and the client-term grep (pattern list in the private repo: `~/Source/chezmoi-boco/docs/zbook-migration/client-terms.md`). In this repo both run as `tools/public-scan/public-scan`.
 - Do not migrate client-project material. Sensitive inventories are in `~/Source/chezmoi-boco/docs/zbook-migration/`.
 - Never print secrets (`pass show`, `gpg -d`): redirect or pipe, or they land in the transcript.
 

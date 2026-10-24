@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# resume-check — one line per suspend/resume this boot, with the NVIDIA errors each resume logged.
+#
+#   resume-check                  every suspend since boot
+#   resume-check --since TIME     only suspends that started after TIME (journalctl syntax: 18:20, -1h, today)
+#   resume-check --details        also print the error lines, dock-awake's log and power-key presses
+#
+# Built for the Intel-first Hyprland suspend series (docs/open-items.md, "black text in kitty"; draft D60):
+# the intermittent nvidia-drm sync-FD error ("semsurf") broke NVIDIA-rendered kitty after some resumes.
+# The kernel writes its resume messages before the "PM: suspend exit" line, so an error is charged to
+# the suspend whose window, from "suspend entry" to $GRACE seconds after "suspend exit", contains it.
+# The rendering GPU is shown for the current session only (the journal does not record it per resume).
+# Read-only: it only reads the journal.
+set -euo pipefail
+
+usage() { echo "usage: resume-check [--since TIME] [--details]" >&2; exit 2; }
+
+since=()
+details=0
+while (($#)); do
+  case $1 in
+    --since) (($# >= 2)) || usage; since=(--since "$2"); shift 2 ;;
+    --details) details=1; shift ;;
+    -h | --help) sed -n '2,/^set /p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+    *) usage ;;
+  esac
+done
+
+GRACE=10
+semsurf_re='semsurf'
+nvidia_re='nvidia-drm.*ERROR|NVRM: (Xid|GPU at|.*fallen off)'
+
+# Kernel lines of this boot as "<unix seconds> <message>".
+kernel=$(journalctl -b -k --no-pager -o short-unix "${since[@]}" |
+  grep -E "PM: suspend (entry|exit)|$semsurf_re|$nvidia_re" | cut -d' ' -f1,4- || true)
+
+if [[ -z $kernel ]] || ! grep -q "PM: suspend entry" <<<"$kernel"; then
+  echo "no suspends${since:+ since ${since[1]}} this boot"
+  exit 0
+fi
+
+echo "session: ${AQ_DRM_DEVICES:+AQ_DRM_DEVICES=$AQ_DRM_DEVICES }${WLR_DRM_DEVICES:+WLR_DRM_DEVICES=$WLR_DRM_DEVICES}"
+printf '%-3s %-14s %-14s %7s %8s  %s\n' "#" suspend resume semsurf "nv-errs" result
+awk -v grace="$GRACE" -v semsurf="$semsurf_re" -v nvidia="$nvidia_re" '
+  function hms(t) { return strftime("%H:%M:%S", t) }
+  function day(t) { return strftime("%m-%d", t) }
+  function row(i) {
+    printf "%-3d %-14s %-14s %7d %8d  %s\n", i, day(entry[i]) " " hms(entry[i]),
+      exit_[i] ? (day(exit_[i]) == day(entry[i]) ? "" : day(exit_[i]) " ") hms(exit_[i]) : "-", ss[i], nv[i],
+      exit_[i] ? (ss[i] || nv[i] ? "ERRORS" : "clean") : "no exit logged"
+  }
+  {
+    t = $1 + 0; msg = substr($0, index($0, " ") + 1)
+    if (msg ~ /PM: suspend entry/) { n++; entry[n] = t; next }
+    if (msg ~ /PM: suspend exit/) { if (n) exit_[n] = t; next }
+    # Charge an error to the current suspend if it falls in [entry, exit + grace].
+    if (n && t >= entry[n] && (!exit_[n] || t <= exit_[n] + grace)) {
+      if (msg ~ semsurf) ss[n]++
+      else if (msg ~ nvidia) nv[n]++
+    }
+  }
+  END {
+    for (i = 1; i <= n; i++) { row(i); total_ss += ss[i]; total_nv += nv[i]; if (ss[i] || nv[i]) bad++ }
+    printf "%d suspends, %d with errors (semsurf %d, other nvidia %d)\n", n, bad, total_ss, total_nv
+  }' <<<"$kernel"
+
+((details)) || exit 0
+
+echo
+echo "== NVIDIA error lines"
+journalctl -b -k --no-pager -o short-precise "${since[@]}" | grep -E "$semsurf_re|$nvidia_re" | cut -c1-160 || echo "(none)"
+echo "== dock-awake"
+journalctl --user -u dock-awake --no-pager -o short-precise "${since[@]}" |
+  grep -E "dock-awake\[[0-9]+\]: (suspend|resumed|inhibitor|grace|no sleep)" || echo "(none)"
+echo "== power key (logind)"
+journalctl -b -u systemd-logind --no-pager -o short-precise "${since[@]}" | grep -E "Power key" || echo "(none)"

@@ -262,10 +262,11 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 - Guards: Wayland-only files key off the `display_server` host data (as the clipboard stack does) and installed tools
   (`lookPath`); no WSL guard needed.
 
-## Functional daily driver (D50, 2026-10-18)
+## Functional daily driver (D50, 2026-10-18; retargeted to Hyprland by D62, 2026-10-23)
 
-MH needs a working desktop for a job search soon, so this checklist comes before the numbered steps below. Only what
-makes SwayFX usable every day; anything not done by the deadline, **Tuesday 2026-10-20** (MH), moves to the backlog. Each item takes the
+MH needs a working desktop for a job search soon, so this checklist comes before the numbered steps below. Since D62
+the daily driver is **Hyprland** (SwayFX stays installed and working as the fallback; its done items below stay done).
+Open items target Hyprland first. Only what makes the daily driver usable every day; anything not done by the deadline, **Tuesday 2026-10-20** (MH), moves to the backlog. Each item takes the
 functional part of its step, not the whole step; scripts from `i3-config-mbp` are ported only when an item needs them.
 
 - [ ] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a
@@ -367,8 +368,95 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [x] **NVIDIA renders docked sessions** (D59, 2026-10-23): `sway-perf` measurements, nm-applet dropped (D58), kanshi `config-nvidia`, lid notice. **MH's docked login passed 2026-10-23 15:50**: kanshi ran `config-nvidia` (`docked-asus-dell`: ASUS 0,0 scale 1.5, Dell 2560,0, panel off), lid open showed the notice and left the layout alone; `sway-perf` nvidia-d59: hands off 11%, mouse 22.7% (max 29%), 0 cursor-plane errors, NVIDIA P5 10.5 W.
-- [ ] **Hyprland trial: smooth *and* the panel?** (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
-- [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
+- [x] **Hyprland trial: smooth *and* the panel?** (**answered 2026-10-23: yes; Hyprland became the daily driver, D62**) (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
+      **Built 2026-10-23** (branch `wayland/hyprland-trial`, not merged): correction to the start note: GDM already
+      lists **"Hyprland (uwsm-managed)"** (`/usr/share/wayland-sessions/hyprland-uwsm.desktop` from the COPR's
+      `hyprland-uwsm`; `uwsm.yaml` says so), so no new entry. Hyprland is 0.56.2 and its config is **Lua** (hyprlang
+      deprecated since 0.55): `~/.config/hypr/hyprland.lua` (kanshi's three-screen layout as `hl.monitor` rules plus a
+      catch-all, no blur/shadows/animations so the CPU numbers compare with SwayFX, a small key subset: `$mod+Return`
+      kitty, `$mod+o` fuzzel, `$mod+Shift+q`, hjkl focus/move, workspaces, `$mod+Escape` lock, `$mod+Shift+Ctrl+e`
+      `uwsm stop`, volume/brightness/Print). It starts `wm-helpers-wayland.target` after `uwsm finalize`;
+      `kanshi.service` skips Hyprland (`ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland`, negation tested).
+      GPU order: Intel first, docked too (D60; `~/.config/uwsm/env-hyprland`, host key `hyprland_render_gpu`,
+      `nvidia` for re-tests); during the trial it came from `~/.config/uwsm/env` (D59) with a
+      `~/.local/state/hyprland-intel-first` switch for the Intel-first control (both ways tested; switch retired). `sway-perf` now measures `Hyprland` too (sway path re-run under SwayFX: 17.6% / 18.3%); its cursor-plane
+      and tray counters are sway log lines, so 0 under Hyprland: judge the cursor by eye. `screens-power` uses the
+      Lua dpms dispatcher (stub-tested only). Checked: `Hyprland --verify-config` passes, and it catches unknown keys,
+      unknown dispatchers and bad arguments (red test). **Not tested: any Hyprland login.**
+      **MH's login test** (docked, lid open; GNOME is the way back, runbook row "Hyprland"):
+      1. GDM → "Hyprland (uwsm-managed)". Do all three screens light? (`hyprctl monitors`: modes, scales, positions)
+      2. `systemctl --user show-environment | grep -E 'AQ_DRM|XDG_CURRENT'` (expect dgpu first, `Hyprland`);
+         `uwsm --version` and `systemctl --user status wm-helpers-wayland.target` (kanshi inactive, condition skipped).
+      3. `sway-perf measure hypr-nvidia` from kitty; watch the cursor for lag or flicker.
+      4. Unplug the dock mid-session, then replug: does the panel keep going, and do the externals come back?
+      5. Log out (`$mod+Shift+Ctrl+e`), `touch ~/.local/state/hyprland-intel-first`, log in, `sway-perf measure
+         hypr-intel`, then `rm` the file.
+      6. Lock (`$mod+Escape`) and unlock once.
+      7. Suspend and resume once with `$mod+Ctrl+Escape` (`dock-awake suspend`; plain `systemctl suspend` is refused
+         while docked on AC), then check kitty for black text (open item: black text after resume with NVIDIA
+         rendering, seen under SwayFX 2026-10-23). Before it: `dock-awake status` shows the lock held. After it: held
+         again. Optional: one short power-key press (Hyprland's XF86PowerOff binding, `locked = true`).
+
+      **Results 2026-10-23 (MH, docked login, monitors plugged in at GDM):**
+      1. **Passed, and the panel works while NVIDIA renders**: aquamarine makes `card0` (NVIDIA, renderer
+         `Quadro T1000`) primary and drives `card1` (i915) as a secondary backend, copying the panel's frames.
+         All three outputs at the plan's modes/scales/positions. SwayFX cannot do this (D59).
+      2. Passed: dgpu first in `AQ_DRM_DEVICES`, `XDG_CURRENT_DESKTOP=Hyprland`, uwsm 0.27.0; helper target
+         active, kanshi condition-skipped; swayidle, dock-awake (held), wifi-band-watch, clipboard stack, dunst
+         running (dunst renders; test notification shown).
+      3. `hypr-nvidia` (terminals only, 3 outputs): hands off 0.3% avg / 2.0% max, mouse 21.3% / 39.9%; SwayFX
+         `nvidia` (2 outputs): 2.0% / 19.0%. MH: cursor smooth. NVIDIA P5, 9.1 W. A video run was skipped (no
+         matched SwayFX baseline: `nvidia-d59`'s conditions were not recorded); do a matched pair if it is close.
+      4. Passed: undock kept the panel running and moved the windows onto it (the bar survived); re-dock lit
+         both externals in the right layout, workspaces back in place; dock-awake released/held. The ASUS
+         flapped once on reconnect (absorbed). Hyprland log: routine commit/GBM fallback errors, plus two
+         `eglCreateImageKHR EGL_BAD_MATCH` (dmabuf import) before the undock, no visible effect: watch.
+      5. `hypr-intel` (Intel primary, `card1`; terminals only, 3 outputs): hands off 1.5% / 9.0%, mouse
+         **14.5% / 22.0%**; NVIDIA 8.0 W. MH: no felt difference from NVIDIA-first. Unlike SwayFX (`intel`:
+         42.3%, software cursor), Hyprland has no Intel-first penalty, so D59's reason does not carry over.
+         Whether Intel-first is *better* is open (one run each; CPU only, not GPU load). If step 7 shows the
+         black text after resume on NVIDIA, Intel-first Hyprland is a candidate fix (decision for MH).
+      6. Passed: lock and unlock on all three monitors (Intel-first session).
+      7. **Failed: kitty hung after the resume** (NVIDIA first, 18:04:48 suspend via `$mod+Ctrl+Escape`; dock-awake
+         released/re-held correctly). Hyprland's "application not responding" for kitty; kernel `nvidia-drm` sync-FD
+         `semsurf` error during the resume, the same as before the black text under SwayFX. Not a Hyprland fault
+         (open item "black text in kitty"). Next: the Intel-first suspend series (draft D60), then decide.
+
+      Differences found: no bar or workspace indicator (expected; a throwaway waybar from the session
+      scratchpad was used); kitty text clipped by the rounded corners, fixed for both compositors
+      (`window_padding_width 4`); `follow_mouse = 1` here vs `focus_follows_mouse no` (shared i3/SwayFX data):
+      MH likes it, decides after using it; then both configs follow one setting.
+
+      **Intel-first suspend series (2026-10-23, failed):** the NVIDIA resume bug hits Intel-first Hyprland too
+      (externals black after every resume, a display freeze on replug; detail in the open item). Outcome: D61 (no
+      suspend while docked); D60 kept for other reasons (NVIDIA free for compute, no measured CPU cost, MH prefers
+      Hyprland). The trial's main question is answered for Hyprland: smooth and the panel works. Before merging the
+      branch: D60's default (open item). Later, ricing: an effects CPU test (open item).
+
+- [ ] **Docked suspend workaround** (after the NVIDIA driver upgrade; MH + Claude, 2026-10-23). Scope: before any
+      suspend while docked, disable the external outputs (Hyprland: monitor rules or `hyprctl`; SwayFX: `swaymsg
+      output … disable`; kanshi must not re-enable them), so no NVIDIA head is active during sleep; after resume,
+      enable them again, either automatically after unlock or by asking MH to replug. It has to cover every path that
+      can suspend docked: `dock-awake` (which would then stop refusing), logind (lid with `HandleLidSwitchDocked`,
+      power key), swayidle's idle suspend, and the AC-loss grace; likely a logind/systemd sleep hook
+      (`/usr/lib/systemd/system-sleep/` or a `Before=sleep.target` user unit), since PrepareForSleep only delays
+      with a delay inhibitor. **Risks:** the `semsurf` error is logged inside the kernel's resume, before any
+      compositor action, so the bug may hit even with no active heads; re-enabling outputs is a modeset on the same
+      NVIDIA path that timed out on replug, so it could trigger the freeze itself; testing it means more wedged
+      sessions (have SSH or SysRq ready first, open item). **Open questions:** does the driver upgrade make it
+      unnecessary; does an undocked-equivalent state (heads off, cable in) resume cleanly; does Hyprland/aquamarine
+      release the NVIDIA card's heads fully when outputs are disabled; how to re-enable without a replug; is
+      suspend-then-replug safer than a modeset. Until then: D61.
+- [ ] **Port the i3/SwayFX keys to Hyprland** (MH, 2026-10-23): as many of the shared body's bindings
+      (`home/.chezmoitemplates/wm/common`) and the SwayFX-only ones as Hyprland can do, in
+      `home/private_dot_config/hypr/hyprland.lua.tmpl`; i3-style tiling control (splits, tabbed/stacked
+      containers, `hy3`) is **not** a priority. Already there: launcher, terminal, close, fullscreen, floating toggle
+      (`$mod+Shift+Space`), focus/move by direction, workspaces 1-10, mouse move/resize, lock, suspend, power key,
+      volume/brightness, Print, lid. Left: the rest of the screenshot keys, `idle-toggle`, resize mode, scratchpad,
+      move workspace to output, layout keys that map to dwindle, exit confirmation, clipboard history, and the
+      Keychron/MX Keys device-specific binds. Keep one source of truth in mind for the parked keybinding manifest.
+- [ ] **Minimal bar:** battery, network, volume, clock, tray (**waybar, for Hyprland** since D62: `hyprland/workspaces`;
+      the trial bar `tools/hypr-trial-bar/` is the starting point; no styling; step 7 later).
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
       SwayFX lag). If nm-applet is cleared: `nm-applet --indicator` in the tray (Wi-Fi list, passwords, VPN; no own
@@ -389,7 +477,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       `~/.config/kitty/` were fast-forwarded to upstream (`e115f36`, `992c1f3`); open item to manage them. Checked with
       kitty's config parser (no bad lines; the wal include read when present, skipped when absent) and the kittens'
       imports; **MH confirmed 2026-10-19** in a new window: no error screen, `Alt+Shift+c`, `kitten choose-fonts`.
-- [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
+- [ ] **Keybinding cheat sheet:** from Hyprland since D62 (`hyprctl binds -j`, which carries each bind's `description`) → fuzzel/rofi; was `swaymsg -t get_config`, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
 - [x] **Keyring unlock prompts** (D51; merged 2026-10-18; **both login paths verified**: the fresh-daemon path on
       2026-10-21 21:33, see below). Symptom:

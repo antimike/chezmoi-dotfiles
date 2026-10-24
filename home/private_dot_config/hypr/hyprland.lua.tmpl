@@ -1,0 +1,148 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+-- Hyprland: minimal trial config (docs/plans/wayland-desktop.md, "Hyprland trial").
+-- Start it from GDM's "Hyprland (uwsm-managed)" entry (the COPR's hyprland-uwsm
+-- package). The question is GPUs, not looks: can it light the laptop panel and
+-- both externals at once while NVIDIA renders, smoothly? So no blur, shadows or
+-- animations (comparable with the SwayFX sway-perf numbers), and only the keys
+-- needed to get around. Hyprland >= 0.55 reads Lua; API stubs:
+-- /usr/share/hypr/stubs/hl.meta.lua. Check with: Hyprland --verify-config -c <file>
+--
+-- GPU order: ~/.config/uwsm/env (D59: NVIDIA first when an external monitor is
+-- connected at login); ~/.config/uwsm/env-hyprland has the Intel-first control.
+
+------------------
+---- MONITORS ----
+------------------
+-- Hyprland lays out the outputs itself: kanshi.service skips Hyprland. Same layout
+-- as ~/.config/kanshi/config (panel | ASUS 4K scale 1.5 | Dell 1440p, bottom edges
+-- of panel and externals aligned). Positions are logical pixels. The panel stays on
+-- whatever renders: that is the test.
+-- Clamshell: the panel is off while the lid is closed (as SwayFX's bindswitch). The
+-- rule reads the lid at every config load (login, `hyprctl reload`); the lid switch
+-- binds below re-apply it. Closing the lid while docked does not suspend
+-- (logind HandleLidSwitchDocked=ignore).
+local function lid_closed()
+    for _, path in ipairs({ "/proc/acpi/button/lid/LID/state", "/proc/acpi/button/lid/LID0/state" }) do
+        local f = io.open(path)
+        if f then
+            local state = f:read("a")
+            f:close()
+            return state:find("closed") ~= nil
+        end
+    end
+    return false -- no lid
+end
+local function panel(off)
+    hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x360", scale = 1, disabled = off })
+end
+panel(lid_closed())
+hl.bind("switch:on:Lid Switch",  function() panel(true) end,  { locked = true })
+hl.bind("switch:off:Lid Switch", function() panel(false) end, { locked = true })
+hl.monitor({
+    output   = "desc:Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
+    mode     = "3840x2160@60",
+    position = "1920x0",
+    scale    = 1.5,
+})
+hl.monitor({
+    output   = "desc:Dell Inc. DELL U2717D 67YGV84PAUZS",
+    mode     = "2560x1440@59.95",
+    position = "4480x0",
+    scale    = 1,
+})
+-- Anything else: right of the others, preferred mode.
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+
+-------------------
+---- AUTOSTART ----
+-------------------
+hl.on("hyprland.start", function()
+{{- if lookPath "gnome-keyring-daemon" }}
+    -- Take over GDM's PAM-unlocked keyring daemon (D51; as in the sway config).
+    hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
+{{- end }}
+    -- uwsm: export WAYLAND_DISPLAY/HYPRLAND_INSTANCE_SIGNATURE and signal readiness,
+    -- then start the shared helpers (clipboard, swayidle, Wi-Fi band watch).
+    hl.exec_cmd("uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target")
+end)
+
+-----------------------
+---- LOOK AND FEEL ----
+-----------------------
+hl.config({
+    general = {
+        gaps_in     = 2,
+        gaps_out    = 4,
+        border_size = 2,
+        col = {
+            active_border   = "rgba({{ trimPrefix "#" .i3.colors.fg.default }}ff)",
+            inactive_border = "rgba(595959aa)",
+        },
+        layout = "dwindle",
+    },
+    decoration = {
+        rounding = {{ .i3.gaps.corner_radius }},
+        shadow   = { enabled = false },
+        blur     = { enabled = false },
+    },
+    animations = { enabled = false },
+    dwindle    = { preserve_split = true },
+    misc = {
+        force_default_wallpaper = 0,
+        disable_hyprland_logo   = true,
+    },
+    input = {
+        kb_layout    = "us",
+        follow_mouse = 1,
+    },
+})
+
+---------------------
+---- KEYBINDINGS ----
+---------------------
+-- A small subset of the i3/SwayFX keys (.chezmoitemplates/wm/common).
+local mod = "SUPER"
+local term = "kitty"
+
+hl.bind(mod .. " + Return",          hl.dsp.exec_cmd("uwsm app -- " .. term))
+hl.bind(mod .. " + o",               hl.dsp.exec_cmd("fuzzel --launch-prefix='uwsm app -- '"))
+hl.bind(mod .. " + SHIFT + q",       hl.dsp.window.close())
+hl.bind(mod .. " + f",               hl.dsp.window.fullscreen({ action = "toggle" }))
+hl.bind(mod .. " + SHIFT + space",   hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mod .. " + Escape",          hl.dsp.exec_cmd("loginctl lock-session"))
+-- Exit (under uwsm, `uwsm stop` ends the session cleanly)
+hl.bind(mod .. " + SHIFT + CTRL + e", hl.dsp.exec_cmd("uwsm stop"))
+
+local dirs = {
+    { key = "{{ .i3.keys.named.left }}",  dir = "left" },
+    { key = "{{ .i3.keys.named.down }}",  dir = "down" },
+    { key = "{{ .i3.keys.named.up }}",    dir = "up" },
+    { key = "{{ .i3.keys.named.right }}", dir = "right" },
+}
+for _, d in ipairs(dirs) do
+    hl.bind(mod .. " + " .. d.key,             hl.dsp.focus({ direction = d.dir }))
+    hl.bind(mod .. " + SHIFT + " .. d.key,     hl.dsp.window.move({ direction = d.dir }))
+end
+
+for i = 1, 10 do
+    local key = i % 10 -- 10 is key 0
+    hl.bind(mod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
+    hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+end
+
+hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
+hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+
+-- Shared helpers (~/.local/bin), as in i3/SwayFX.
+local bin = "{{ joinPath .chezmoi.homeDir ".local" "bin" }}/"
+hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd(bin .. "volume up"),   { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd(bin .. "volume down"), { locked = true, repeating = true })
+hl.bind("XF86AudioMute",         hl.dsp.exec_cmd(bin .. "volume mute"), { locked = true })
+hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(bin .. "brightness up"),   { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(bin .. "brightness down"), { locked = true, repeating = true })
+hl.bind("Print",                 hl.dsp.exec_cmd(bin .. "screenshot window"))
+-- Suspend ($mod+Ctrl+Escape) and the power key's short press (logind ignores it) both go
+-- through dock-awake: suspend undocked, refuse docked (D61). A 5 s press is logind's power off.
+hl.bind(mod .. " + CTRL + Escape", hl.dsp.exec_cmd(bin .. "dock-awake suspend"))
+hl.bind("XF86PowerOff",          hl.dsp.exec_cmd(bin .. "dock-awake power-key"), { locked = true })
+{{- end }}

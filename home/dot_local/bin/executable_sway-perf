@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# sway-perf — measure sway's CPU cost at rest, while the mouse moves, and (optionally)
-# while a network connection is held in "connecting" (the nm-applet tray-animation case).
+# sway-perf — measure the compositor's CPU cost (sway, or Hyprland for its trial) at
+# rest, while the mouse moves, and (optionally) while a network connection is held in
+# "connecting" (the nm-applet tray-animation case).
 #
 #   sway-perf measure LABEL                 hands off 20 s, then mouse 20 s
 #   sway-perf measure LABEL --connecting    also 30 s of mouse with a veth profile activating
@@ -8,9 +9,10 @@
 #
 # Desktop notifications say when to keep hands off and when to move the mouse. Run it
 # from a terminal with nothing else animating (a busy Claude Code spinner adds ~40%).
-# Each run appends the GPU order (WLR_DRM_DEVICES), the active outputs, NVIDIA's power
-# draw and one line per phase (sway CPU avg/max from top, cursor-plane errors = software
-# cursor, swaybar tray errors) to $SWAY_PERF_DIR (default ~/.local/state/sway-perf).
+# Each run appends the GPU order (WLR_DRM_DEVICES/AQ_DRM_DEVICES), the active outputs,
+# NVIDIA's power draw and one line per phase (compositor CPU avg/max from top, cursor-plane
+# errors = software cursor, swaybar tray errors; both sway log lines, so 0 under Hyprland)
+# to $SWAY_PERF_DIR (default ~/.local/state/sway-perf).
 # Used for D58 (nm-applet) and the GPU rendering experiments (D53, open items).
 set -euo pipefail
 
@@ -32,7 +34,8 @@ case ${3:-} in
 esac
 [[ $# -le 3 ]] || usage
 
-sway=$(pgrep -x sway | head -1) || { echo "sway-perf: sway is not running" >&2; exit 1; }
+if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then comp=Hyprland; else comp=sway; fi
+sway=$(pgrep -x "$comp" | head -1) || { echo "sway-perf: $comp is not running" >&2; exit 1; }
 mkdir -p "$dir"
 
 note() { notify-send -a sway-perf -u critical -t 6000 "sway-perf: $label" "$1" || true; echo "[$(date +%T)] $1"; }
@@ -43,10 +46,10 @@ count() { journalctl --user --since "$1" --no-pager | grep -c "$2" || true; }
 sample() {
   local since; since=$(date '+%Y-%m-%d %H:%M:%S')
   top -b -d 1 -n "$2" -p "$sway" | awk '$1 ~ /^[0-9]+$/ { print $9 }' >"$dir/$label-$1.cpu"
-  awk -v l="$label/$1" -v c="$(count "$since" 'cursor plane')" -v t="$(count "$since" IconPixmap)" \
+  awk -v l="$label/$1" -v c="$(count "$since" 'cursor plane')" -v t="$(count "$since" IconPixmap)" -v comp="$comp" \
     '{ s += $1; if ($1 > m) m = $1; n++ }
-     END { printf "%-24s sway CPU avg %5.1f%%  max %5.1f%%  (n=%d)  cursor-plane errors %s  tray errors %s\n",
-           l, s / n, m, n, c, t }' "$dir/$label-$1.cpu" | tee -a "$results"
+     END { printf "%-24s %s CPU avg %5.1f%%  max %5.1f%%  (n=%d)  cursor-plane errors %s  tray errors %s\n",
+           l, comp, s / n, m, n, c, t }' "$dir/$label-$1.cpu" | tee -a "$results"
 }
 
 veth='sway-perf-veth'
@@ -59,9 +62,15 @@ trap cleanup EXIT
 
 {
   echo "== $label $(date -Is)"
-  systemctl --user show-environment | grep '^WLR_DRM' || echo "WLR_DRM_DEVICES not set"
-  swaymsg -t get_outputs | jq -r '.[] | select(.active)
-    | "output \(.name) \(.model) \(.current_mode.width)x\(.current_mode.height) scale \(.scale)"'
+  if [[ $comp == Hyprland ]]; then
+    systemctl --user show-environment | grep '^AQ_DRM' || echo "AQ_DRM_DEVICES not set"
+    hyprctl -j monitors | jq -r '.[] | select(.disabled | not)
+      | "output \(.name) \(.model) \(.width)x\(.height)@\(.refreshRate) scale \(.scale)"'
+  else
+    systemctl --user show-environment | grep '^WLR_DRM' || echo "WLR_DRM_DEVICES not set"
+    swaymsg -t get_outputs | jq -r '.[] | select(.active)
+      | "output \(.name) \(.model) \(.current_mode.width)x\(.current_mode.height) scale \(.scale)"'
+  fi
   if command -v nvidia-smi >/dev/null; then
     echo "nvidia $(nvidia-smi --query-gpu=pstate,power.draw,utilization.gpu --format=csv,noheader)"
   fi

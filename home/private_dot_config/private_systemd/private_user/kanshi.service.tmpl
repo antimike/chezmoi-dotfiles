@@ -7,6 +7,8 @@ Documentation=man:kanshi(1) man:kanshi(5)
 PartOf=wm-helpers-wayland.target
 After=graphical-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
+# Hyprland lays out outputs with its own monitor rules (~/.config/hypr/hyprland.lua).
+ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland
 
 [Service]
 # Profiles `exec` helpers in ~/.local/bin (lid-panel-sync).

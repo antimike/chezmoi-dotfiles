@@ -7,6 +7,9 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [compare-trees.py](compare-trees.py) | Path-level comparison of two chezmoi source trees (the BOCO survey) |
 | [zsh-probe/](zsh-probe/) | Render the zsh files into a scratch home, dump the resulting shell state, and diff two dumps |
 | [home-snapshot/](home-snapshot/) | Save paths under `$HOME` and restore them exactly: the escape route for a risky apply |
+| [public-scan/](public-scan/) | Pre-commit scan for this public repo: client/employer terms (pattern read from the private repo at run time) and gitleaks |
+| [hypr-trial-bar/](hypr-trial-bar/) | Throwaway waybar for the Hyprland trial (workspaces, window, battery, clock); start after each login |
+| [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 
 ## zsh-probe
@@ -46,3 +49,38 @@ env -i HOME="$HOME" PATH=/usr/bin:/bin bash --noprofile --norc tools/home-snapsh
 ```
 
 Paths are relative to `$HOME`. A path that does not exist at `create` time is recorded as absent, and `restore` deletes it again. Restoring replaces whatever is there with the saved copy (files, directories and symlinks), so use it only on paths you are prepared to roll back wholesale. `restore` is plain bash plus `tar`/`rm`, so it works even when zsh or Python is broken. `home-snapshot selftest` checks create/restore against a throwaway home. Run `restore` through `env -i … bash --noprofile --norc` when the thing you changed could break your login shell.
+
+## resume-check
+
+```sh
+tools/resume-check/resume-check                       # every suspend since boot
+tools/resume-check/resume-check --since 18:20         # only suspends that started after 18:20
+tools/resume-check/resume-check --since -1h --details # plus the error lines, dock-awake's log, power-key presses
+```
+
+Reads the journal only. Each row is one suspend: when it started and resumed, how many `semsurf` errors (the
+nvidia-drm sync-FD error behind the black/hung kitty after resume; [../docs/open-items.md](../docs/open-items.md),
+"black text in kitty") and other NVIDIA kernel errors it logged, and `clean` or `ERRORS`. An error is charged to the
+suspend whose window, from `PM: suspend entry` to 10 s after `PM: suspend exit`, contains it: the kernel writes its
+resume messages before the exit line (checked on the 2026-10-23 resumes). The rendering GPU is printed for the current
+session only, since the journal does not record it per resume; note it yourself when you compare sessions. Kernel
+messages are per boot, so `--since` before the last boot shows nothing earlier (use `journalctl -b -1 -k` after a
+reboot). **It does not see black external screens:** on 2026-10-23 two resumes logged no error but left the
+externals black, so look at the screens too.
+
+## public-scan
+
+```sh
+tools/public-scan/public-scan             # changed, staged and untracked files vs HEAD, then gitleaks dir .
+tools/public-scan/public-scan PATH...     # term grep on these paths only (gitleaks still scans the repo)
+```
+
+Run before every commit ([../docs/conventions.md](../docs/conventions.md), "Public vs private"). The term pattern
+lives only in the private repo (`~/Source/chezmoi-boco/docs/zbook-migration/client-terms.md`; override with
+`PUBLIC_SCAN_TERMS`) and is read at run time, so it never enters a public commit. Skips the untracked `ricing.md`.
+Exit 1 on a hit (term or gitleaks), 2 if the pattern file is missing. Red-tested 2026-10-23 with a planted term.
+
+## hypr-trial-bar
+
+`tools/hypr-trial-bar/hypr-trial-bar` from a Hyprland session (replaces a running copy). waybar runs under uwsm as
+its own scope, so it outlives the terminal and ends with the session. Not deployed; the real bar is next action 2.6.

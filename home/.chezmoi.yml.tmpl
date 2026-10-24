@@ -42,6 +42,10 @@ data:
   # true since D59 (2026-10-23): NVIDIA renders docked sessions (half the sway
   # CPU, hardware cursor); the panel is then unusable (kanshi config-nvidia).
   prefer_nvidia_for_external: true
+  # zbook only (D60, 2026-10-23): the GPU that renders Hyprland sessions, docked
+  # too: "intel" (NVIDIA stays free for compute; no measured CPU cost) or "nvidia".
+  # Read as {{ "{{ dig \"hyprland_render_gpu\" \"intel\" . }}" }} in ~/.config/uwsm/env-hyprland.
+  hyprland_render_gpu: intel
   # Desktop-notification client behind ~/.claude/scripts/notify. Under WSL2,
   # D-Bus advertises org.freedesktop.Notifications but no daemon runs, so stock
   # notify-send blocks; use the wsl-notify-send shim there when its chezmoi

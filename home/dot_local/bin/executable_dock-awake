@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+# dock-awake — no suspend while docked (D61); one suspend command for every case.
+#
+#   dock-awake               watch (dock-awake.service): hold logind locks while docked
+#   dock-awake suspend       suspend now, unless docked: then refuse and say why.
+#                            $mod+Ctrl+Escape in i3, SwayFX and Hyprland
+#   dock-awake power-key     the compositor's XF86PowerOff binding (logind ignores a short
+#                            press, HandlePowerKey=ignore): like `suspend`
+#   dock-awake idle-suspend  swayidle's idle timeout: suspend on battery only; docked on
+#                            battery it suspends with the docked-suspend warning
+#   dock-awake status        docked, AC, locks, grace timer
+#
+# Why (D61, 2026-10-23): resuming while external monitors are active can black out the
+# externals or wedge NVIDIA's display engine (flip timeouts; a replug froze the whole
+# display stack). Undocked resumes are fine. So a suspend while docked happens only as a
+# battery last resort, and every such path warns loudly.
+#
+# Lock (systemd-inhibit --mode=block): sleep while docked on AC, which refuses every
+# suspend request from the session, swayidle's and stray ones alike (`systemctl suspend -i` needs admin: polkit suspend-ignore-inhibit). AC lost while
+# docked: the sleep lock goes at once with a critical notification; if the screen is
+# locked (nobody there), suspend after $DOCK_AWAKE_AC_GRACE seconds unless AC returns or
+# the screen is unlocked. Each resume while docked leaves a persistent notice and a
+# warning in the journal. No handle-power-key lock: it would also block logind's
+# long-press power off, the clean way out of a wedged display. Design and tests: docs/open-items.md, "dock-awake".
+set -euo pipefail
+shopt -s extglob nullglob
+
+state_dir=${XDG_RUNTIME_DIR:?}/dock-awake
+grace_file=$state_dir/grace-until
+unit=dock-awake.service
+recovery=docs/runbooks/display-session-recovery.md
+
+usage() { echo "usage: dock-awake [suspend|power-key|idle-suspend|status]" >&2; exit 2; }
+
+# Connected outputs other than a built-in panel (eDP, LVDS, DSI).
+external_outputs() {
+  local status name
+  for status in /sys/class/drm/card*-*/status; do
+    [[ $(<"$status") == connected ]] || continue
+    name=${status%/status}
+    name=${name##*/}
+    name=${name#card*-}
+    [[ $name == @(eDP|LVDS|DSI)* ]] || echo "$name"
+  done
+}
+
+docked() { [[ -n $(external_outputs) ]]; }
+# The AC adapter's own flag. systemd-ac-power also counts a battery that is not
+# discharging as AC, and a full battery reports "Discharging" seconds after an unplug.
+on_ac() {
+  local supply found=0
+  for supply in /sys/class/power_supply/*; do
+    [[ -r $supply/type && $(<"$supply/type") == Mains ]] || continue
+    found=1
+    [[ $(<"$supply/online") == 1 ]] && return 0
+  done
+  ((found)) && return 1
+  systemd-ac-power # no adapter in sysfs
+}
+locked() { pgrep -u "$UID" -x swaylock >/dev/null; }
+# lock_held WHAT: does dock-awake hold logind's WHAT lock (sleep, handle-power-key)?
+lock_held() { systemd-inhibit --list --no-pager 2>/dev/null | grep -qE "^dock-awake .* $1 "; }
+
+# notify [TAG] ARGS...: dunst replaces a notification with the same stack tag. The AC
+# lifecycle (AC lost, grace, back on AC) shares the default tag, so only "Back on AC"
+# replaces the critical AC-lost notice; refusals and the resume notice get their own.
+notify() {
+  local tag=dock-awake
+  case $1 in
+    resume | refuse | idle) tag=dock-awake-$1; shift ;;
+  esac
+  notify-send -a dock-awake -h "string:x-dunst-stack-tag:$tag" "$@" || true
+}
+# The journal reads a "<4>" prefix as priority warning.
+warn() { echo "<4>$*"; }
+
+risk="Resuming while docked can black out the external screens or freeze the display (NVIDIA bug, D61)."
+
+refuse_docked() {
+  echo "dock-awake: suspend refused: docked (D61). Unplug the external monitors, then suspend." >&2
+  notify refuse -u normal -i dialog-warning "Suspend disabled while docked" \
+    "Unplug the external monitors ($(external_outputs | paste -sd ' ')), then suspend. $risk"
+  exit 1
+}
+
+case ${1:-} in
+  suspend | power-key)
+    docked && refuse_docked
+    exec systemctl suspend
+    ;;
+  idle-suspend)
+    on_ac && exit 0 # builds and downloads run on AC
+    if docked; then
+      warn "idle on battery while docked: suspending anyway (last resort)"
+      notify idle -u critical -i battery-caution "Suspending while docked (idle on battery)" "$risk"
+    fi
+    exec systemctl suspend
+    ;;
+  status)
+    outputs=$(external_outputs | paste -sd ' ')
+    if [[ -n $outputs ]]; then echo "docked:    yes ($outputs)"; else echo "docked:    no"; fi
+    on_ac && echo "AC:        online" || echo "AC:        offline"
+    locks=()
+    lock_held sleep && locks+=(sleep)
+    echo "locks:     ${locks[*]:-none}"
+    [[ -e $grace_file ]] && echo "grace:     suspend at $(date -d "@$(<"$grace_file")" +%T) unless AC returns"
+    systemctl --user --quiet is-active "$unit" || echo "service:   $unit not running"
+    exit 0
+    ;;
+  '') ;;
+  *) usage ;;
+esac
+
+# --- watch (the service) ---
+grace=${DOCK_AWAKE_AC_GRACE:-60}
+[[ $grace =~ ^[0-9]+$ ]] || { echo "dock-awake: DOCK_AWAKE_AC_GRACE must be seconds" >&2; exit 2; }
+mkdir -p "$state_dir"
+rm -f "$grace_file"
+
+declare -A lock_pid=() # lock (sleep) -> systemd-inhibit PID
+events_pid=
+grace_until=0
+ac_lost_notified=0 # the critical "AC lost" notification is up
+
+# hold WHAT WHY / release WHAT: one systemd-inhibit per lock.
+hold() {
+  [[ -n ${lock_pid[$1]:-} ]] && return 0
+  systemd-inhibit --what="$1" --who=dock-awake --why="$2" --mode=block sleep infinity &
+  lock_pid[$1]=$!
+  echo "lock held: $1"
+}
+
+release() {
+  local pid=${lock_pid[$1]:-}
+  [[ -n $pid ]] || return 0
+  # Ending the child ends systemd-inhibit, which drops the lock.
+  pkill -P "$pid" sleep 2>/dev/null || true
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  unset "lock_pid[$1]"
+  echo "lock released: $1"
+}
+
+# end_grace [reason]: stop the grace timer; log the reason if one is given.
+end_grace() {
+  ((grace_until)) || return 0
+  grace_until=0
+  rm -f "$grace_file"
+  [[ -z ${1:-} ]] || echo "grace cancelled: $1"
+}
+
+evaluate() {
+  local now body
+  if ((ac_lost_notified)) && on_ac; then
+    # Same stack tag: replaces the critical notification, and times out.
+    ac_lost_notified=0
+    body="The battery last-resort suspend is off again; suspend stays disabled while docked (D61)."
+    ((grace_until)) && body="The pending suspend is cancelled. $body"
+    notify -u normal -i battery-full-charging "Back on AC" "$body"
+  fi
+  if docked && on_ac; then
+    end_grace "back on AC"
+    hold sleep "Docked on AC: no suspend while docked (D61)"
+    return
+  fi
+  if [[ -n ${lock_pid[sleep]:-} ]]; then
+    release sleep
+    if docked; then # docked, AC lost
+      if locked; then
+        grace_until=$(($(date +%s) + grace))
+        echo "$grace_until" >"$grace_file"
+        warn "AC lost while docked and locked: suspend at $(date -d "@$grace_until" +%T) unless AC returns"
+        notify -u critical -i battery-caution "AC lost while docked: suspending in ${grace} s" \
+          "Last resort to save the battery; plug AC back in to cancel. $risk"
+      else
+        warn "AC lost while docked: suspend allowed again"
+        notify -u critical -i battery-caution "AC lost while docked" \
+          "Idle suspend on battery is allowed again (20 min). $risk Undock before leaving it."
+      fi
+      ac_lost_notified=1
+    fi
+  fi
+  if ((grace_until)); then
+    now=$(date +%s)
+    if on_ac; then
+      end_grace "back on AC"
+    elif ! locked; then
+      end_grace "unlocked"
+    elif ((now >= grace_until)); then
+      end_grace
+      warn "grace over on battery, locked, docked: suspending (last resort)"
+      systemctl suspend || true
+    fi
+  fi
+}
+
+cleanup() {
+  release sleep
+  rm -f "$grace_file"
+  # Kill the event readers (the process substitution's subshell and its children).
+  [[ -n $events_pid ]] || return 0
+  pkill -P "$events_pid" 2>/dev/null || true
+  kill "$events_pid" 2>/dev/null || true
+}
+
+trap 'exit 0' TERM INT
+trap cleanup EXIT
+
+# One stream: udev events for outputs and power supplies, and logind's PrepareForSleep
+# (true before sleep, false on resume).
+exec 3< <(
+  udevadm monitor --udev --subsystem-match=drm --subsystem-match=power_supply &
+  gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1 &
+  wait
+)
+events_pid=$!
+
+evaluate
+while :; do
+  line=
+  if ((grace_until)); then
+    timeout=$((grace_until - $(date +%s)))
+    ((timeout > 0)) || timeout=1
+    read -r -t "$timeout" line <&3 || { (($? > 128)) || { echo "dock-awake: event stream ended" >&2; exit 1; }; }
+  else
+    read -r line <&3 || { echo "dock-awake: event stream ended" >&2; exit 1; }
+  fi
+  if [[ $line == *PrepareForSleep*true* ]]; then
+    docked && warn "suspending while docked (outputs: $(external_outputs | paste -sd ' '))"
+  elif [[ $line == *PrepareForSleep*false* ]]; then
+    echo "resumed"
+    if docked; then
+      warn "resumed while docked: check the external screens"
+      notify resume -u critical -t 0 -i dialog-warning "Resumed while docked" \
+        "If the external screens stay black, do not replug them: save your work on the panel and log out. Recovery: ~/.local/share/chezmoi/$recovery"
+    fi
+  fi
+  evaluate
+done
