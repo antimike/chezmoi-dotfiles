@@ -316,6 +316,14 @@
     summary = "Brightness adjusted"
     set_transient = yes
 
+# Hyprland's passthrough notice (hyprland.lua, submaps): the bar is often hidden by a
+# fullscreen window then, so show it over fullscreen windows and while paused.
+[hyprland-passthrough]
+    appname = "hyprland"
+    summary = "Passthrough mode*"
+    fullscreen = show
+    override_pause_level = 100
+
 # Every section that isn't one of the above is interpreted as a rules to
 # override settings for certain messages.
 #
