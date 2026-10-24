@@ -7,6 +7,11 @@
 #   screenshot window --ask    same, and ask where to save it, prefilled with a timestamp
 #   screenshot desktop         every output; clipboard, and saved with a timestamp name
 #   screenshot desktop --ask   same, but ask where to save it, prefilled with the timestamp
+#   screenshot annotate [window | desktop]
+#                              capture (window or region by default), then open it in satty
+#                              to draw on: Enter copies it, Ctrl+S saves it in the screenshot
+#                              folder with a timestamp name; either closes satty, Escape
+#                              discards it. Nothing goes to the clipboard before that.
 #
 # Saving goes through pick-path: a name or relative path lands in the screenshot folder
 # ($SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots"), ~/ and absolute
@@ -19,7 +24,7 @@
 # the selection: nothing is copied or saved, and the exit status is 1.
 set -euo pipefail
 
-usage() { echo "usage: screenshot window [NAME | --ask] | desktop [--ask]" >&2; exit 2; }
+usage() { echo "usage: screenshot window [NAME | --ask] | desktop [--ask] | annotate [window | desktop]" >&2; exit 2; }
 
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "screenshot: '$1' not found" >&2; exit 127; }
@@ -27,6 +32,14 @@ need() {
 
 notify() { notify-send -a screenshot -i "$1" "$2" "$3" || true; }
 
+annotate=0
+if [[ ${1:-} == annotate ]]; then
+  annotate=1
+  shift
+  [[ $# -le 1 ]] || usage
+  set -- "${1:-window}"
+  need satty
+fi
 mode=${1:-}
 name=${2:-}
 case $mode in
@@ -122,10 +135,23 @@ case $mode in
   window) capture_window || exit 1 ;;
   desktop) capture_desktop ;;
 esac
-copy_image
 
 stamp=$(date +%Y-%m-%dT%H-%M-%S)
 dir=${SCREENSHOT_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/screenshots}
+
+if ((annotate)); then
+  # satty notifies on copy and save itself. Its output name is a strftime pattern,
+  # so a literal % in the folder has to be doubled.
+  mkdir -p "$dir"
+  copy_cmd='wl-copy --type image/png'
+  [[ $session == x11 ]] && copy_cmd='xclip -selection clipboard -t image/png'
+  # Not exec: the EXIT trap removes the capture once satty is closed.
+  satty --filename "$tmp" --early-exit \
+    --output-filename "${dir//%/%%}/%Y-%m-%dT%H-%M-%S.png" \
+    --actions-on-enter save-to-clipboard --copy-command "$copy_cmd"
+  exit
+fi
+copy_image
 pick=(--base "$dir" --default "$stamp" --ext png --prompt 'Save screenshot as')
 if ((ask)); then
   pick+=(--output "$(prompt_output)")
