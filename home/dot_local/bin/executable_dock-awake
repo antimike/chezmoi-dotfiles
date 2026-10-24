@@ -62,10 +62,14 @@ locked() { pgrep -u "$UID" -x swaylock >/dev/null; }
 # lock_held WHAT: does dock-awake hold logind's WHAT lock (sleep, handle-power-key)?
 lock_held() { systemd-inhibit --list --no-pager 2>/dev/null | grep -qE "^dock-awake .* $1 "; }
 
-# notify [TAG] ARGS...: TAG "resume" keeps the resume notice apart from the others.
+# notify [TAG] ARGS...: dunst replaces a notification with the same stack tag. The AC
+# lifecycle (AC lost, grace, back on AC) shares the default tag, so only "Back on AC"
+# replaces the critical AC-lost notice; refusals and the resume notice get their own.
 notify() {
   local tag=dock-awake
-  [[ $1 == resume ]] && { tag=dock-awake-resume; shift; }
+  case $1 in
+    resume | refuse | idle) tag=dock-awake-$1; shift ;;
+  esac
   notify-send -a dock-awake -h "string:x-dunst-stack-tag:$tag" "$@" || true
 }
 # The journal reads a "<4>" prefix as priority warning.
@@ -75,7 +79,7 @@ risk="Resuming while docked can black out the external screens or freeze the dis
 
 refuse_docked() {
   echo "dock-awake: suspend refused: docked (D61). Unplug the external monitors, then suspend." >&2
-  notify -u normal -i dialog-warning "Suspend disabled while docked" \
+  notify refuse -u normal -i dialog-warning "Suspend disabled while docked" \
     "Unplug the external monitors ($(external_outputs | paste -sd ' ')), then suspend. $risk"
   exit 1
 }
@@ -93,7 +97,7 @@ case ${1:-} in
     on_ac && exit 0 # builds and downloads run on AC
     if docked; then
       warn "idle on battery while docked: suspending anyway (last resort)"
-      notify -u critical -i battery-caution "Suspending while docked (idle on battery)" "$risk"
+      notify idle -u critical -i battery-caution "Suspending while docked (idle on battery)" "$risk"
     fi
     exec systemctl suspend
     ;;
@@ -156,8 +160,8 @@ evaluate() {
   if ((ac_lost_notified)) && on_ac; then
     # Same stack tag: replaces the critical notification, and times out.
     ac_lost_notified=0
-    body="Suspend blocked again while docked."
-    ((grace_until)) && body="Suspend cancelled. $body"
+    body="The battery last-resort suspend is off again; suspend stays disabled while docked (D61)."
+    ((grace_until)) && body="The pending suspend is cancelled. $body"
     notify -u normal -i battery-full-charging "Back on AC" "$body"
   fi
   if docked; then
