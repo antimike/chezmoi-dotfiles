@@ -9,6 +9,15 @@ updated: 2026-10-23
 ## Git
 - Conventional commits `type(scope): description`; one logical unit per commit; trailer `Co-Authored-By` as configured.
 - `main` is trunk. Significant work on a feature branch (`boco-merge/<phase>`, `docs-…`), merged when its checklist passes.
+- Merge feature branches with `--no-ff`, so the merge commit keeps the branch's history on `main`. Finished branches
+  (D65), with `git retire-branch` (`~/.local/bin/git-retire-branch`, `-n` for a dry run):
+  - unmerged, may resume: keep as a branch, pushed;
+  - unmerged and abandoned, or merged with a D-number or an important bugfix: `--archive` (kept as
+    `refs/archive/<name>` here and on origin, hidden from `git branch` and GitHub's branch list);
+  - merged and routine: `--delete`.
+  List archives with `git for-each-ref refs/archive`; restore with `git branch <name> refs/archive/<name>`. A fresh
+  clone fetches them after `git config --add remote.origin.fetch '+refs/archive/*:refs/archive/*'`. A history
+  rewrite must cover `refs/archive/*` too (`git filter-repo` rewrites all refs by default; check afterwards).
 - Porting a file from the reference clone: add trailer `Source: AudensAurantius/chezmoi@<sha>:home/<path>`
   (`git -C ~/Source/chezmoi-boco log -1 --format=%h -- home/<path>`). The SHAs are not objects in this repo (unrelated
   histories); they resolve in the public upstream. Check the SHA is an upstream commit

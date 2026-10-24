@@ -13,6 +13,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
 | [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
 | [waybar-launch-test/](waybar-launch-test/) | Which monitor `waybar-launch` gives the main bar, for each dock/lid layout (stubbed `hyprctl`): `tools/waybar-launch-test/waybar-launch-test` |
+| [git-retire-branch-test/](git-retire-branch-test/) | Tests `git-retire-branch` (D65: archive/delete finished branches) against a throwaway bare remote |
 | [package-map-test/](package-map-test/) | The package installer's resolution (D32: targets, `when`, includes, `false`, per-manager names, COPRs) via `--override-data`, nothing installed |
 
 ## zsh-probe
@@ -93,6 +94,14 @@ tools/term-contrast/term-contrast.py --conf ~/.config/kitty/current-theme.conf -
 ```
 
 Resolves the palette through kitty itself (`kitty +runpy`, so includes and defaults count as kitty sees them; `--theme` dumps one of kitty's built-in themes), collects the colour styles the shell and CLI tools use, and lists every foreground/background pair below `--min` (WCAG ratio, default 3.0). Exits 1 on any failure. The rule it enforces for a dark theme: colour 8 must be legible on the background (comments and autosuggestions use it), and no text style may use colour 0. Needs `uv`, `kitty` and `zsh`; the `fsh` source sources the plugin from your zinit tree plus `~/.config/zsh/fsh-styles.zsh`. Known noise: trapd00r's `LS_COLORS` uses fixed 256-colour dims that fail on any dark background (`--sources` without `ls` to hide them).
+
+## git-retire-branch-test
+
+```sh
+tools/git-retire-branch-test/git-retire-branch-test
+```
+
+Builds a scratch repo and a bare "origin" in a temp dir (global git config ignored) and runs the source copy of `git-retire-branch` against them. Cases: a dry run changes nothing; `--archive` creates and pushes `refs/archive/*`, adds the fetch refspec once, deletes the branch on both sides, also for an unmerged branch; `--delete` removes a merged branch and refuses an unmerged one; refused: the target branch, the checked-out branch, a branch that differs from origin, an archive ref already at another commit; a fresh clone fetches and restores an archive. Takes about 2 s. Red-green checked (removing the unmerged guard fails `delete refuses unmerged`).
 
 ## lock-screen-test
 
