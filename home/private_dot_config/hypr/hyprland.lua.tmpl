@@ -17,7 +17,27 @@
 -- as ~/.config/kanshi/config (panel | ASUS 4K scale 1.5 | Dell 1440p, bottom edges
 -- of panel and externals aligned). Positions are logical pixels. The panel stays on
 -- whatever renders: that is the test.
-hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x360", scale = 1 })
+-- Clamshell: the panel is off while the lid is closed (as SwayFX's bindswitch). The
+-- rule reads the lid at every config load (login, `hyprctl reload`); the lid switch
+-- binds below re-apply it. Closing the lid while docked does not suspend
+-- (logind HandleLidSwitchDocked=ignore).
+local function lid_closed()
+    for _, path in ipairs({ "/proc/acpi/button/lid/LID/state", "/proc/acpi/button/lid/LID0/state" }) do
+        local f = io.open(path)
+        if f then
+            local state = f:read("a")
+            f:close()
+            return state:find("closed") ~= nil
+        end
+    end
+    return false -- no lid
+end
+local function panel(off)
+    hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x360", scale = 1, disabled = off })
+end
+panel(lid_closed())
+hl.bind("switch:on:Lid Switch",  function() panel(true) end,  { locked = true })
+hl.bind("switch:off:Lid Switch", function() panel(false) end, { locked = true })
 hl.monitor({
     output   = "desc:Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
     mode     = "3840x2160@60",
