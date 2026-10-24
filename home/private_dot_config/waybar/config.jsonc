@@ -45,6 +45,7 @@
     "clock": {
         "format": "{:%a %d %b  %H:%M}",
         "tooltip-format": "<tt>{calendar}</tt>",
+        "on-click": "kitty --class bar-popup -e calcurse",
         "calendar": {
             "mode": "month",
             "weeks-pos": "left",
