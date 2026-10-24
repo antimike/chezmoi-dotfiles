@@ -1,6 +1,6 @@
 ---
-summary: NVIDIA driver on zbook: current state, the deferred 595 -> 615 upgrade (trade-offs, procedure, checks) and rollback
-status: current (upgrade planned, not done)
+summary: NVIDIA driver on zbook: current state, the 595 -> 615 upgrade (done 2026-10-24: procedure, checks, results), backup and rollback
+status: current (615.78.08 installed and tested 2026-10-24)
 updated: 2026-10-24
 ---
 
@@ -9,8 +9,9 @@ updated: 2026-10-24
 Read [display-session-recovery.md](display-session-recovery.md) first: its rollback card (console login, multi-user
 boot) is the way back if the graphical session does not start.
 
-## Current state (checked 2026-10-23)
-- Quadro T1000 (Turing), NVIDIA driver **595.80** from **RPM Fusion nonfree** (`akmod-nvidia`,
+## Current state (checked 2026-10-24)
+- **615.78.08 since 2026-10-24** (`dnf` transaction 29; kmod built by akmods, transaction 30); results in step 5
+  below. Until then: Quadro T1000 (Turing), NVIDIA driver **595.80** from **RPM Fusion nonfree** (`akmod-nvidia`,
   `xorg-x11-drv-nvidia*`; first installed by `dnf` transaction 7, 2026-06-20). The kernel module is NVIDIA's
   **open** module (`modinfo -F license nvidia`: `Dual MIT/GPL`; GSP firmware in `/lib/firmware/nvidia/595.80/`),
   so 615 (open modules only) is no module-flavour switch (checked 2026-10-24). akmods builds the kernel module
@@ -25,7 +26,9 @@ boot) is the way back if the graphical session does not start.
   semaphore surface` on resume; NVIDIA-rendered clients then break (black text in kitty under SwayFX, kitty hung
   under Hyprland), and with Intel rendering the **externals stay black** after a docked resume; a replug then
   timed out NVIDIA's flips (`Flip event timeout on head 1`) and froze the display stack (2026-10-23). So D61: no
-  suspend while docked. Detail and counts: [../open-items.md](../open-items.md), "black text in kitty".
+  suspend while docked. Detail and counts: [../open-items.md](../open-items.md), "black text in kitty". **On 615.78.08:
+  3 of 3 docked Intel-first Hyprland resumes clean** (2026-10-24, step 5), where 595.80 failed every Intel-first one;
+  too few to call it fixed.
 - **Security (checked 2026-10-23):** NVIDIA's September 2026 GPU display driver bulletin (a_id 5861) covers R595; per
   ASEC's summary (NVIDIA's page returned 403 to the fetch, so not read first-hand) the fixed Linux versions are
   **595.91.07** (R595) and **615.71.09** (R615), for CVE-2026-47511/47581/47591. **595.80 is affected**; 615.78.08 is
@@ -35,7 +38,7 @@ boot) is the way back if the graphical session does not start.
 - Available: **615.78.08** in `rpmfusion-nonfree-updates` (a new branch, not a point release). 595.80 is no longer
   in the repos; the only older build left is **595.58.03** (`rpmfusion-nonfree`, the Fedora 44 release repo).
 
-## Plan: upgrade 595.80 -> 615.x (deferred, MH 2026-10-23)
+## Upgrade 595.80 -> 615.x (deferred 2026-10-23, done 2026-10-24)
 **When:** deferred by MH (2026-10-23): the last NVIDIA upgrade on this machine was very disruptive and had to be
 rolled back, and D61 (no suspend while docked) is acceptable meanwhile. A security fix does apply (above):
 not an emergency on a single-user laptop, so MH planned it for **2026-10-24** (a quiet day). Do it as a change of its own, so a fix or regression can be put on the right cause. At a quiet time, not before
@@ -51,7 +54,7 @@ something important.
 - Rule: take driver updates **through RPM Fusion only** (never NVIDIA's `.run` installer, which fights the
   packages), and treat a **branch** change as a tested change, not a routine update.
 
-**Until then: keep routine upgrades from pulling 615.** A plain `sudo dnf upgrade` installs it today. Either
+**Until then (obsolete since 2026-10-24, kept for the next branch change): keep routine upgrades from pulling 615.** A plain `sudo dnf upgrade` installs it today. Either
 exclude it each time (`sudo dnf upgrade --exclude='*nvidia*'`), or lock the version (dnf5's built-in versionlock):
 `sudo dnf versionlock add 'akmod-nvidia' 'xorg-x11-drv-nvidia*' 'nvidia-*'`, undone with `sudo dnf versionlock
 delete …` before the upgrade (`sudo dnf versionlock list` shows the locks). Kernel updates still need a module
@@ -72,12 +75,34 @@ build for 595.80; akmods does that at boot, and the package must stay installed 
 3. Remove the version lock if set; `sudo dnf upgrade --refresh 'akmod-nvidia' 'xorg-x11-drv-nvidia*' 'nvidia-*'`.
 4. Wait for the module build: `sudo akmods --force` if unsure; then `modinfo -F version nvidia` shows 615.x and
    `modinfo -F signer nvidia` the local key. Do not reboot before this.
-5. Reboot. Checks: `nvidia-smi`; GDM on all screens; a docked NVIDIA-first SwayFX or Hyprland login (whichever is
-   the daily driver); `sway-perf measure <label>` for a comparison with the earlier runs; several suspends while
-   docked with kitty open, each followed by `journalctl -k -b | grep semsurf` and a look at kitty.
+5. Reboot **straight away, from the session or a VT: do not log out first.** Until the reboot the loaded module is
+   still the old one and the new libraries refuse it (`NVRM: API mismatch`); on 2026-10-24 a logout at this point
+   crashed GDM's greeter (gnome-shell `code=dumped`, in Mesa `eglSwapBuffers`) and MH rebooted from `Ctrl+Alt+F3`.
+   Checks: `nvidia-smi`; GDM on all screens; a docked login in each session; `sway-perf measure <label>` for a
+   comparison with the earlier runs; `/proc/driver/nvidia/params`; several suspends while docked with kitty open
+   (`systemctl --user stop dock-awake`, lid open, `systemctl suspend`, power button to wake), each followed by
+   `tools/resume-check/resume-check` and a look at the externals and kitty; `systemctl --user start dock-awake` after.
 6. Record the result here and in the open item.
 
+**Results 2026-10-24 (MH at the machine, docked; boot 16:08:50):**
+- `nvidia-smi` and the module: 615.78.08 (Quadro T1000, P5, 6.66 W); kernel log clean. GDM on all screens;
+  SwayFX, GNOME and Hyprland logins all work; Hyprland externals fine (eDP-1, DP-4 4K@59 scale 1.5, DP-5 1440p).
+- `/proc/driver/nvidia/params` **unchanged** from 595.80: `UseKernelSuspendNotifiers: 1` (595.80 had it on
+  already, so 615's new default changed nothing here), `PreserveVideoMemoryAllocations: 2`,
+  `DynamicPowerManagement: 2`.
+- `sway-perf measure hypr-intel-615` (Intel first, D60; waybar now running, absent in the old run): hands off 0.6%
+  avg / 3.0% max, mouse 16.6% / 22.0%; NVIDIA P5 7.07 W. 595.80 (`hypr-intel`, 2026-10-23): 1.5% / 9.0%,
+  14.5% / 22.0%, 8.01 W. No regression.
+- Docked suspend series, Intel-first Hyprland, kitty on the ASUS: **3 of 3 clean** (16:21:53, 16:25:17, 16:27:51;
+  deep sleep; `resume-check`: 0 `semsurf`, 0 other NVIDIA errors; lock screen on the externals ~10 s after the wake,
+  likely the monitors; kitty moved Dell -> ASUS -> Dell after #3, text fine). 595.80's Intel-first series failed on
+  every resume (black externals). One `NVRM: rm_power_source_change_event … status=0x11` at resume #1: 595.80 logged
+  it too (4 of the 5 previous boots), harmless.
+- Not NVIDIA: hyprpolkitagent crash-loops under SwayFX (open items).
+
 ## Backup of the installed build (done 2026-10-24 for 595.80)
+Keep the 595.80 backup until 615 has run for a few weeks, including docked resumes; then delete it (389 MB).
+
 `rpmrebuild` (Fedora repo) repackages installed packages from the rpm database and the files on disk; the
 akmods-built kernel module RPM is already kept in `/var/cache/akmods/nvidia/`. Commands as run on 2026-10-24
 (dnf transaction 28 installed `rpmrebuild-2.21-2.fc44`; the rest as the user, no sudo):

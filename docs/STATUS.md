@@ -48,7 +48,7 @@ updated: 2026-10-23
    7. **Bar: done 2026-10-24** (waybar, Hyprland only; MH reviewed it live). Untested: a real monitor plug/unplug re-placing the main bar, the undocked brightness drawer.
    8. Keybinding cheat sheet: **V1 done 2026-10-24** (`keys-cheatsheet`, `$mod+slash`; Enter replays the key).
    9. i3 off zbook (D50 amends D49).
-3. **NVIDIA driver 595.80 -> 615 upgrade: in progress 2026-10-24** (MH; the September 2026 bulletin affects 595.80; 615.78.08 is fixed): [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md). **615.78.08 installed** (dnf 29), module built and signed; 595.80 backed up locally (rpmrebuild); **next: reboot (procedure step 5) and the post-reboot checks**. Recovery card and new-session prompt: `~/.local/state/nvidia-rollback/RECOVERY.md`. After it: a docked resume series, then maybe lift D61, and the docked suspend workaround (open item).
+3. **NVIDIA driver 595.80 -> 615.78.08: done 2026-10-24** (security fix; [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md), step 5 results): reboot checks passed (GDM, SwayFX/GNOME/Hyprland logins, externals, `sway-perf` no regression), **3 of 3 docked Intel-first resumes clean** (595.80 failed all of them). 595.80 backup kept in `~/.local/state/nvidia-rollback/595.80/` for a few weeks. Next: more docked resumes, then MH decides whether to lift D61 (open items); the docked suspend workaround waits on that. Found on the way: hyprpolkitagent crash-loops under SwayFX (open item).
 4. **Home network follow-ups** (open items): DNS pinning, Wi-Fi profile cleanup, router move + re-measure, router hardening/backup; MH's router projects.
 5. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
 6. Atlassian/Jira review pass when MH schedules it.
@@ -59,7 +59,6 @@ Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-s
 
 ## Blockers / watch
 - **No suspend while docked (D61)**: unplug the monitors first. A wedged display: SysRq REISUB (hold Alt, tap Fn+Home, then R E I S U B; installed and tested); holding the power key is a hard power cut.
-- **A plain `sudo dnf upgrade` installs NVIDIA 615** (deferred): exclude it or version-lock it until the planned upgrade ([runbooks/nvidia-driver.md](runbooks/nvidia-driver.md)).
 - `gitleaks dir .` reports **no leaks**: the 2 accepted findings (D30) are in `.gitleaksignore` by `file:rule:line` fingerprint. If one of those files changes so the finding moves line, it reappears: re-review, then refresh the fingerprint. Anything else is a stop.
 - The YubiKey must be plugged in for pushes, signing tags, `pass`, and the backup/sync timers.
 - Atlassian/Jira items are held until a redaction pass ([plans/boco-merge.md](plans/boco-merge.md), "Held items").
