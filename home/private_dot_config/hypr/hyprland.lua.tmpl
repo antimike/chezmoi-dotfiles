@@ -17,10 +17,13 @@
 -- as ~/.config/kanshi/config (panel | ASUS 4K scale 1.5 | Dell 1440p, bottom edges
 -- of panel and externals aligned). Positions are logical pixels. The panel stays on
 -- whatever renders: that is the test.
--- Clamshell: the panel is off while the lid is closed (as SwayFX's bindswitch). The
--- rule reads the lid at every config load (login, `hyprctl reload`); the lid switch
--- binds below re-apply it. Closing the lid while docked does not suspend
--- (logind HandleLidSwitchDocked=ignore).
+-- Clamshell: the panel is off while the lid is closed AND another monitor is on, so
+-- there is always an output. Undocked, a closed lid suspends with the panel left on:
+-- turning it off there left a black panel after resume (libinput re-adds the lid
+-- switch at resume, so the lid-open bind never fires) and swaylock with no output,
+-- which died when the monitors came back (2026-10-23). Re-evaluated at every config
+-- load, on the lid switch binds and on monitor hotplug. Closing the lid while docked
+-- does not suspend (logind HandleLidSwitchDocked=ignore; dock-awake's lid lock, D64).
 local function lid_closed()
     for _, path in ipairs({ "/proc/acpi/button/lid/LID/state", "/proc/acpi/button/lid/LID0/state" }) do
         local f = io.open(path)
@@ -32,12 +35,24 @@ local function lid_closed()
     end
     return false -- no lid
 end
-local function panel(off)
+local function other_monitor()
+    for _, m in ipairs(hl.get_monitors()) do
+        if m.name ~= "eDP-1" then return true end
+    end
+    return false
+end
+local panel_off -- last state applied; nil until the first sync
+local function sync_panel(lid)
+    local off = lid and other_monitor()
+    if off == panel_off then return end -- enabling the panel fires monitor.added again
+    panel_off = off
     hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x360", scale = 1, disabled = off })
 end
-panel(lid_closed())
-hl.bind("switch:on:Lid Switch",  function() panel(true) end,  { locked = true })
-hl.bind("switch:off:Lid Switch", function() panel(false) end, { locked = true })
+sync_panel(lid_closed())
+hl.bind("switch:on:Lid Switch",  function() sync_panel(true) end,  { locked = true })
+hl.bind("switch:off:Lid Switch", function() sync_panel(false) end, { locked = true })
+hl.on("monitor.added",   function() sync_panel(lid_closed()) end)
+hl.on("monitor.removed", function() sync_panel(lid_closed()) end)
 hl.monitor({
     output   = "desc:Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
     mode     = "3840x2160@60",

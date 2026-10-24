@@ -8,15 +8,20 @@
 #                            press, HandlePowerKey=ignore): like `suspend`
 #   dock-awake idle-suspend  swayidle's idle timeout: suspend on battery only; docked on
 #                            battery it suspends with the docked-suspend warning
-#   dock-awake status        docked, AC, locks, grace timer
+#   dock-awake status        docked, AC, locks (sleep, handle-lid-switch), grace timer
 #
 # Why (D61, 2026-10-23): resuming while external monitors are active can black out the
 # externals or wedge NVIDIA's display engine (flip timeouts; a replug froze the whole
 # display stack). Undocked resumes are fine. So a suspend while docked happens only as a
 # battery last resort, and every such path warns loudly.
 #
-# Lock (systemd-inhibit --mode=block): sleep while docked on AC, which refuses every
-# suspend request from the session, swayidle's and stray ones alike (`systemctl suspend -i` needs admin: polkit suspend-ignore-inhibit). AC lost while
+# Locks (systemd-inhibit --mode=block): handle-lid-switch whenever docked, whatever the
+# power (D64): logind counts an external screen only while its connector is "enabled", and
+# DPMS off (swayidle's screens-off step) disables them all, so with the lid closed logind
+# saw "undocked" and suspended, and its lid path ignores sleep locks. Docked means a
+# connected output (sysfs status, which DPMS leaves alone). And sleep while docked on AC,
+# which refuses every suspend request from the session, swayidle's and stray ones alike
+# (`systemctl suspend -i` needs admin: polkit suspend-ignore-inhibit). AC lost while
 # docked: the sleep lock goes at once with a critical notification; if the screen is
 # locked (nobody there), suspend after $DOCK_AWAKE_AC_GRACE seconds unless AC returns or
 # the screen is unlocked. Each resume while docked leaves a persistent notice and a
@@ -58,8 +63,10 @@ on_ac() {
   systemd-ac-power # no adapter in sysfs
 }
 locked() { pgrep -u "$UID" -x swaylock >/dev/null; }
-# lock_held WHAT: does dock-awake hold logind's WHAT lock (sleep, handle-power-key)?
-lock_held() { systemd-inhibit --list --no-pager 2>/dev/null | grep -qE "^dock-awake .* $1 "; }
+# lock_held WHAT: does dock-awake hold logind's WHAT lock (sleep, handle-lid-switch)?
+# grep reads all of the list: with -q it can quit early, and under pipefail the SIGPIPE
+# to systemd-inhibit made a held lock look missing.
+lock_held() { systemd-inhibit --list --no-pager 2>/dev/null | grep -E "^dock-awake .* $1 " >/dev/null; }
 
 # notify [TAG] ARGS...: dunst replaces a notification with the same stack tag. The AC
 # lifecycle (AC lost, grace, back on AC) shares the default tag, so only "Back on AC"
@@ -102,6 +109,7 @@ case ${1:-} in
     on_ac && echo "AC:        online" || echo "AC:        offline"
     locks=()
     lock_held sleep && locks+=(sleep)
+    lock_held handle-lid-switch && locks+=(handle-lid-switch)
     echo "locks:     ${locks[*]:-none}"
     [[ -e $grace_file ]] && echo "grace:     suspend at $(date -d "@$(<"$grace_file")" +%T) unless AC returns"
     systemctl --user --quiet is-active "$unit" || echo "service:   $unit not running"
@@ -117,7 +125,7 @@ grace=${DOCK_AWAKE_AC_GRACE:-60}
 mkdir -p "$state_dir"
 rm -f "$grace_file"
 
-declare -A lock_pid=() # lock (sleep) -> systemd-inhibit PID
+declare -A lock_pid=() # lock (sleep, handle-lid-switch) -> systemd-inhibit PID
 events_pid=
 grace_until=0
 ac_lost_notified=0 # the critical "AC lost" notification is up
@@ -158,6 +166,11 @@ evaluate() {
     ((grace_until)) && body="The pending suspend is cancelled. $body"
     notify -u normal -i battery-full-charging "Back on AC" "$body"
   fi
+  if docked; then
+    hold handle-lid-switch "Docked: no lid suspend while the screens are off (D64)"
+  else
+    release handle-lid-switch
+  fi
   if docked && on_ac; then
     end_grace "back on AC"
     hold sleep "Docked on AC: no suspend while docked (D61)"
@@ -196,6 +209,7 @@ evaluate() {
 
 cleanup() {
   release sleep
+  release handle-lid-switch
   rm -f "$grace_file"
   # Kill the event readers (the process substitution's subshell and its children).
   [[ -n $events_pid ]] || return 0
