@@ -108,6 +108,7 @@ packagesWayland:
     - grim
     - slurp
     - wtype
+    - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
     # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
     - meson
     - scdoc
