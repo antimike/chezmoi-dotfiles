@@ -18,6 +18,7 @@
         "clock"
     ],
     "modules-right": [
+        "custom/recording",
         "custom/idle",
         "custom/dunst"
     ]
