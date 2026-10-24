@@ -376,9 +376,9 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       kitty, `$mod+o` fuzzel, `$mod+Shift+q`, hjkl focus/move, workspaces, `$mod+Escape` lock, `$mod+Shift+Ctrl+e`
       `uwsm stop`, volume/brightness/Print). It starts `wm-helpers-wayland.target` after `uwsm finalize`;
       `kanshi.service` skips Hyprland (`ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland`, negation tested).
-      GPU order comes from `~/.config/uwsm/env` (D59: NVIDIA first when docked); `touch
-      ~/.local/state/hyprland-intel-first` before login gives the Intel-first control (`env-hyprland`, tested both
-      ways). `sway-perf` now measures `Hyprland` too (sway path re-run under SwayFX: 17.6% / 18.3%); its cursor-plane
+      GPU order: Intel first, docked too (D60; `~/.config/uwsm/env-hyprland`, host key `hyprland_render_gpu`,
+      `nvidia` for re-tests); during the trial it came from `~/.config/uwsm/env` (D59) with a
+      `~/.local/state/hyprland-intel-first` switch for the Intel-first control (both ways tested; switch retired). `sway-perf` now measures `Hyprland` too (sway path re-run under SwayFX: 17.6% / 18.3%); its cursor-plane
       and tray counters are sway log lines, so 0 under Hyprland: judge the cursor by eye. `screens-power` uses the
       Lua dpms dispatcher (stub-tested only). Checked: `Hyprland --verify-config` passes, and it catches unknown keys,
       unknown dispatchers and bad arguments (red test). **Not tested: any Hyprland login.**
