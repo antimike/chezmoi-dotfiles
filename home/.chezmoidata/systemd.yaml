@@ -1,25 +1,13 @@
+# Packages for these units: packages.yaml, target x11 (was an install: list per unit).
 systemd:
   user:
     xsettingsd:
-      install:
-        - dnf: polybar
-        - dnf: xrandr
-        - dnf: xrdb
-        - dnf: xsettingsd
     dimmer:
       use: false
     wallpaper:
-      install:
-        - pipx: pywal
-          exec: wal
-        - dnf: feh
-        - dnf: hsetroot
       timer:
         period: 2h
     redshift:
-      install:
-        - dnf: redshift
-        - dnf: redshift-gtk
       TODO:
         - write script to configure geoclue
         - write init script to obtain and cache coordinates

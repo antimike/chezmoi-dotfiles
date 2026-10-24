@@ -5,9 +5,6 @@ rofi:
     - ssh
     - drun
     - keys
-  install:
-    - dnf: rofi
-    - dnf: rofi-themes
   theme: fancy
   # Other values: murz, Arc-Dark, docu, onedark...
   # can also specify "pywal" for wal-generated colors

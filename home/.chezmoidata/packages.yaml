@@ -12,12 +12,17 @@ packageManagers:
 # what they `include`, minus any whose `when` conditions (host data keys) fail.
 #
 # An entry is a logical name, which is also the package name for every manager,
-# or a map: {name: <logical>, <manager>: <package name> | false, copr: <repo>}.
-# A manager key overrides the name where it differs; `false` means "not packaged
-# for this manager" (the installer lists it as skipped). `copr` (dnf only) names a
-# repository from the `coprs` block, enabled only when one of its packages is
-# about to be installed (D32 item 6). Names that mean different programs on
-# different distros (e.g. yq) need an explicit entry per manager.
+# or a map with these keys:
+#   name       the logical name
+#   <manager>  the package name for that manager where it differs, or `false`:
+#              "not packaged for this manager" (the installer lists it as skipped)
+#   copr       (dnf only) a repository from the `coprs` block, enabled only when
+#              one of its packages is about to be installed (D32 item 6)
+#   pipx       install with pipx instead of the distro manager (D32 item 3):
+#              `true` for the PyPI name = `name`, or a pip spec; a manager key wins
+#   verify     a shell check run after installing; failing it fails the install
+#              (D32 item 4: for names that mean different programs on different
+#              distros, such as yq, which also needs an explicit entry per manager)
 packageTargets:
   base:
     description: CLI, secrets, desktop helpers, dev toolchain
@@ -33,6 +38,9 @@ packageTargets:
       - git-crypt
       - { name: delta, dnf: git-delta }
       - jq
+      - name: yq             # mikefarah's Go yq (comment-preserving YAML edits); not the Python jq wrapper
+        dnf: yq
+        verify: yq --version | grep -q mikefarah
       - lsd
       - ranger
       - ripgrep
@@ -61,6 +69,7 @@ packageTargets:
       - passmenu
       - pavucontrol          # graphical mixer (per-app volume)
       - rofi
+      - rofi-themes
       - wiremix              # terminal mixer for PipeWire
       - wl-clipboard
       - xclip
@@ -83,6 +92,43 @@ packageTargets:
       - xz-devel
       # Misc
       - logrotate
+
+  python-tools:
+    description: Python CLI tools, installed with pipx (pipx itself is in base)
+    includes:
+      - base
+    packages:
+      - { name: argcomplete, pipx: true }
+      - { name: conda-lock, pipx: true }
+      - { name: conda-pack, pipx: true }
+      - { name: docformatter, pipx: true }
+      - { name: dvc, pipx: true }
+      - { name: hererocks, pipx: true }      # Lua builds for luarocks (nvim's lazy.nvim rocks)
+      - { name: mypy, pipx: true }
+      - { name: nbdime, pipx: true }         # ~/.gitconfig renders its diff/merge drivers when present
+      - { name: neovim-remote, pipx: true }
+      - { name: pdm, pipx: true }
+      - { name: poetry, pipx: true }
+      - { name: pre-commit, pipx: true }     # the repos' gitleaks hooks (D35)
+      - { name: reno, pipx: true }
+      - { name: tox, pipx: true }
+      - { name: ufmt, pipx: true }
+      # Not here on purpose: bd-track (run_onchange_install-bd-track.sh: the project's own
+      # installer at a pinned tag), apyanki (chess-trainer's tooling installs it).
+
+  x11:
+    description: X11 session helpers for i3 (the MacBook, D49); was systemd.yaml's install lists
+    when:
+      display_server: x11
+    packages:
+      - polybar
+      - xrandr
+      - xrdb
+      - xsettingsd
+      - feh
+      - hsetroot
+      - redshift
+      - redshift-gtk
 
   wayland:
     description: Wayland desktop (docs/plans/wayland-desktop.md)
