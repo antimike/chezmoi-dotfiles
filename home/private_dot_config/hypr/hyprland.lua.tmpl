@@ -319,4 +319,7 @@ hl.window_rule({ name = "pavucontrol", match = { class = "org.pulseaudio.pavucon
 -- module, left click; a Chromium --app window, which gets its own class) likewise.
 hl.window_rule({ name = "blueman-manager", match = { class = "blueman-manager" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
 hl.window_rule({ name = "weather-forecast", match = { class = "chrome-www.meteoblue.com__.*" }, float = true, size = { 1280, 860 }, center = true, opacity = 0.92 })
+-- Chromium's "<site> is sharing your screen" bar: a toplevel with no class that lands mid-screen, and
+-- its Hide button minimizes, which Hyprland ignores. Bottom-left corner, no focus.
+hl.window_rule({ name = "screen-share-bar", match = { class = "^$", title = ".* is sharing (your screen|a window|this tab).*" }, float = true, move = "20 monitor_h-window_h-20", no_initial_focus = true })
 {{- end }}
