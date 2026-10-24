@@ -1,6 +1,6 @@
 {{ if eq (dig "display_server" "x11" .) "wayland" -}}
 [Unit]
-Description=No suspend while docked on AC (dock-awake)
+Description=No suspend while docked (dock-awake, D61)
 Documentation=file://%h/.local/share/chezmoi/docs/open-items.md
 PartOf=wm-helpers-wayland.target
 After=graphical-session.target

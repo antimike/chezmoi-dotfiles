@@ -10,8 +10,9 @@ timeout 300 'brightnessctl -q -s set 10%' resume 'brightnessctl -q -r'
 timeout 360 'loginctl lock-session'
 # 7 min: all screens off
 timeout 420 'screens-power off' resume 'screens-power on'
-# 20 min: suspend, on battery only (builds and downloads run on AC)
-timeout 1200 'systemd-ac-power || systemctl suspend'
+# 20 min: suspend, on battery only (builds and downloads run on AC); docked on battery it
+# warns first (dock-awake idle-suspend, D61)
+timeout 1200 'dock-awake idle-suspend'
 after-resume 'screens-power on'
 
 lock 'lock-screen'
