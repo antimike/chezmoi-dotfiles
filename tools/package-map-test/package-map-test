@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# package-map-test — test the package installer's resolution (D32) without installing.
+#
+#   tools/package-map-test/package-map-test
+#
+# Renders run_onchange_install-packages.sh.tmpl with `chezmoi execute-template
+# --override-data` for each case and checks the resolved list (`--list`): target
+# selection and `when`, `includes`, `false` entries, per-manager names, COPRs only for
+# dnf, pipx entries (and a manager key winning over them), `verify` checks, release
+# (inventory) entries, and render failures for unknown targets and missing installers. Uses the live packages.yaml, so counts
+# are derived from it, not hard-coded. Prints one line per case; exits 1 if any fails.
+# Needs chezmoi and python3 (PyYAML, for the expected counts).
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+tmpl=$repo/home/run_onchange_install-packages.sh.tmpl
+data=$repo/home/.chezmoidata/packages.yaml
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+# Entries per target in packages.yaml.
+count() { python3 -c 'import sys, yaml; print(len(yaml.safe_load(open(sys.argv[1]))["packageTargets"][sys.argv[2]]["packages"]))' "$data" "$1"; }
+base=$(count base)
+wayland=$(count wayland)
+
+# resolve DATA: rendered --list output in $tmp/list, or exit status 1 if the render fails.
+resolve() {
+  chezmoi execute-template --override-data "$1" <"$tmpl" >"$tmp/installer" 2>"$tmp/err" || return 1
+  bash "$tmp/installer" --list >"$tmp/list"
+}
+check() { # NAME CONDITION...
+  local name=$1
+  shift
+  if "$@"; then echo "pass  $name"; else echo "FAIL  $name"; failed=1; fi
+}
+lines() { wc -l <"$tmp/list"; }
+coprs() { grep -c $'^native\t[^\t]*\t.' "$tmp/list" || true; }
+pipxs() { grep -c '^pipx' "$tmp/list" || true; }
+
+resolve '{"display_server":"wayland","package_targets":["base","wayland"]}'
+check "wayland host: base + wayland ($((base + wayland)))" test "$(lines)" = $((base + wayland))
+check "wayland host: COPR packages present" test "$(coprs)" -gt 0
+check "dnf: per-manager name (git-delta, not delta)" bash -c "grep -q \$'^native\tgit-delta\t' '$tmp/list' && ! grep -q \$'\tdelta\t' '$tmp/list'"
+resolve '{"display_server":"x11","package_targets":["base","wayland"]}'
+check "x11 host: the wayland target's when fails ($base)" test "$(lines)" = "$base"
+x11=$(count x11)
+resolve '{"display_server":"x11","package_targets":["base","wayland","x11"]}'
+check "x11 host: base + x11, no wayland ($((base + x11)))" test "$(lines)" = $((base + x11))
+resolve '{"display_server":"wayland","package_targets":["base"]}'
+check "package_targets [base] ($base)" test "$(lines)" = "$base"
+check "unknown target fails the render" bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"nope\"]}' <'$tmpl' >/dev/null 2>&1"
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"includes":["base"],"packages":["bat","pmt-new"]}}}'
+check "includes: base + one new, duplicate once ($((base + 1)))" test "$(lines)" = $((base + 1))
+check "unknown include fails the render" \
+  bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"t\"],\"packageTargets\":{\"t\":{\"includes\":[\"nope\"],\"packages\":[]}}}' <'$tmpl' >/dev/null 2>&1"
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-absent","dnf":false},"pmt-new"]}}}'
+check "false entry: skipped, listed as such" bash -c "test \"\$(cat '$tmp/list')\" = \$'native\tpmt-new\t' && grep -q 'skipped=( \"pmt-absent\" )' '$tmp/installer'"
+resolve '{"packageManagers":{"fedora":"apt"},"display_server":"wayland","package_targets":["base","wayland"]}'
+check "other manager: logical names (delta, not git-delta)" bash -c "grep -q \$'^native\tdelta\t' '$tmp/list' && ! grep -q 'git-delta' '$tmp/list'"
+check "other manager: no COPRs" test "$(coprs)" = 0
+check "other manager: installer refuses it" bash -c "bash '$tmp/installer' 2>&1 | grep -q \"no installer for manager 'apt'\""
+pyt=$(count python-tools)
+resolve '{"display_server":"wayland","package_targets":["python-tools"]}'
+check "python-tools: $pyt pipx tools, base included ($base native)" test "$(pipxs)/$(lines)" = "$pyt/$((base + pyt))"
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-a","pipx":true},{"name":"pmt-b","pipx":"pmt-b[extra]>=2"},{"name":"pmt-c","pipx":true,"dnf":"pmt-c-rpm"}]}}}'
+check "pipx: true, a pip spec, and a manager key winning" \
+  test "$(cat "$tmp/list")" = $'native\tpmt-c-rpm\t\npipx\tpmt-a\t\npipx\tpmt-b[extra]>=2\t'
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-v","verify":"false"}]}}}'
+check "verify: a failing check fails the run" bash -c "! MANAGER= bash '$tmp/installer' >/dev/null 2>&1 && bash '$tmp/installer' 2>&1 | grep -q 'check failed for pmt-v'"
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"fzf","release":"fzf"}]}}}'
+check "release: listed with its installer id, nothing installed" test "$(cat "$tmp/list")" = $'release\tfzf\tfzf'
+check "release: a missing installer fails the render" \
+  bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"t\"],\"packageTargets\":{\"t\":{\"packages\":[{\"name\":\"x\",\"release\":\"no-such\"}]}}}' <'$tmpl' >/dev/null 2>&1"
+resolve '{"work_tooling":false,"package_targets":["work"]}'
+check "work target: skipped without work_tooling" test "$(lines)" = 0
+resolve '{"work_tooling":true,"package_targets":["work"]}'
+check "work target: rano with work_tooling" grep -q $'^release\trano\trano$' "$tmp/list"
+exit "$failed"

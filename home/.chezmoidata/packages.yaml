@@ -1,124 +1,217 @@
-# Distro packages the dotfiles and tooling depend on, keyed by os-release ID.
+# Packages the dotfiles and tooling depend on (D32: a logical-name package map).
 # Consumed by run_onchange_install-packages.sh.tmpl. Curated: base-system,
 # firmware, font and desktop-default packages are deliberately left out.
-packages:
-  fedora:
-    # CLI essentials
-    - bat
-    - bc
-    - curl
-    - direnv
-    - fd-find
-    - fzf
-    - git
-    - git-crypt
-    - git-delta
-    - jq
-    - lsd
-    - ranger
-    - ripgrep
-    - rlwrap
-    - socat
-    - tmux
-    - vim-enhanced
-    - wget2-wget
-    - zsh
-    # Secrets, signing, VPN
-    - gh
-    - gitleaks
-    - gnupg2
-    - openvpn
-    - pass
-    - pass-otp
-    - restic
-    # Desktop helpers (i3 / notifications / clipboard)
-    - cliphist
-    - dmenu
-    - dmenu-wayland
-    - dunst
-    - ImageMagick
-    - kitty
-    - libnotify
-    - passmenu
-    - pavucontrol          # graphical mixer (per-app volume)
-    - rofi
-    - wiremix              # terminal mixer for PipeWire
-    - wl-clipboard
-    - xclip
-    - xdotool
-    - ydotool
-    # Dev toolchain and python build deps (for mise-built interpreters)
-    - bzip2-devel
-    - cargo
-    - gcc
-    - libffi-devel
-    - luarocks
-    - make
-    - openssl-devel
-    - pipx
-    - podman
-    - python3-pip
-    - readline-devel
-    - sqlite
-    - sqlite-devel
-    - xz-devel
-    # Misc
-    - logrotate
+#
+# Package manager per os-release ID. Adding a distro: one line here, one install
+# branch in the installer, and overrides below only where its names differ.
+packageManagers:
+  fedora: dnf
 
-# Wayland desktop (docs/plans/wayland-desktop.md), keyed by os-release ID.
-# Installed only where the `display_server` host key is "wayland". An entry is
-# a package name, or {name, copr} for a package from a COPR listed in `coprs`
-# below; the installer enables a COPR only when a package that needs it is
-# about to be installed. Interim shape until the D32 package-map refactor.
-packagesWayland:
-  fedora:
-    # Compositors (SwayFX is the daily driver; the rest are trial candidates)
-    - name: swayfx         # conflicts with Fedora's `sway`: it ships /usr/bin/sway
-      copr: swayfx
-    - name: hyprland
-      copr: hyprland
-    - niri
-    - xwayland-satellite   # XWayland for niri
-    - wayfire
-    # Portals and polkit agent
-    - xdg-desktop-portal-wlr
-    - xdg-desktop-portal-gnome   # niri's portal backend
-    - name: xdg-desktop-portal-hyprland
-      copr: hyprland
-    - mate-polkit
-    # Lock, idle, wallpaper, bar
-    - swaylock
-    - swayidle
-    - swaybg
-    - waybar
-    - NetworkManager-tui   # nmtui: the bar's network fallback
-    - calcurse             # calendar, from the bar's clock
-    - blueman              # Bluetooth agent (pairing prompts) and manager, from the bar
-    # Output profiles (monitor layouts per set of connected screens)
-    - kanshi
-    # Hyprland-only tools for roles SwayFX covers otherwise or not at all (D63)
-    - name: hyprsunset       # colour temperature (CTM protocol); schedule in ~/.config/hypr/hyprsunset.conf
-      copr: hyprland
-    - name: hyprlock         # lock screen (to be adopted: lock-screen still runs swaylock)
-      copr: hyprland
-    - name: hyprpaper        # wallpaper daemon (for the wallpaper picker)
-      copr: hyprland
-    - name: hyprpolkitagent  # polkit agent (none ran in the uwsm sessions before)
-      copr: hyprland
-    - name: hyprpicker       # colour picker
-      copr: hyprland
-    # Screenshots and typing
-    - grim
-    - slurp
-    - wtype
-    - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
-    # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
-    - meson
-    - scdoc
-    - python3-dbus
-    - python3-pyxdg
-    - newt                 # whiptail, for uwsm's selection menu
-    - inotify-tools
+# Targets: named package sets (D32 item 7). A host installs the targets named by
+# its `package_targets` key (.chezmoi.yml.tmpl; every target when unset), plus
+# what they `include`, minus any whose `when` conditions (host data keys) fail.
+#
+# An entry is a logical name, which is also the package name for every manager,
+# or a map with these keys:
+#   name       the logical name
+#   <manager>  the package name for that manager where it differs, or `false`:
+#              "not packaged for this manager" (the installer lists it as skipped)
+#   copr       (dnf only) a repository from the `coprs` block, enabled only when
+#              one of its packages is about to be installed (D32 item 6)
+#   pipx       install with pipx instead of the distro manager (D32 item 3):
+#              `true` for the PyPI name = `name`, or a pip spec; a manager key wins
+#   release    the id of the repo's own installer, run_onchange_install-<id>.sh.tmpl
+#              (pinned release, its pins in .chezmoidata/<tool>.yaml): listed here
+#              for the inventory, installed by that script, not by this one. Not
+#              for installers that set up no package (sysrq, logind-power, udev rules).
+# mise tools are pinned in ~/.config/mise/config.toml (private_dot_config/mise), the
+# one source for those versions; use `mise:` here only as a per-distro fallback.
+#   verify     a shell check run after installing; failing it fails the install
+#              (D32 item 4: for names that mean different programs on different
+#              distros, such as yq, which also needs an explicit entry per manager)
+packageTargets:
+  base:
+    description: CLI, secrets, desktop helpers, dev toolchain
+    packages:
+      # CLI essentials
+      - bat
+      - bc
+      - curl
+      - direnv
+      - { name: fd, dnf: fd-find }
+      - { name: fzf, release: fzf }   # ~/.local/bin; zsh's integration is generated from it
+      - git
+      - git-crypt
+      - { name: delta, dnf: git-delta }
+      - jq
+      - name: yq             # mikefarah's Go yq (comment-preserving YAML edits); not the Python jq wrapper
+        dnf: yq
+        verify: yq --version | grep -q mikefarah
+      - lsd
+      - ranger
+      - ripgrep
+      - rlwrap
+      - socat
+      - tmux
+      - { name: vim, dnf: vim-enhanced }
+      - { name: wget, dnf: wget2-wget }
+      - zsh
+      # Secrets, signing, VPN
+      - gh
+      - gitleaks
+      - gnupg2
+      - openvpn
+      - pass
+      - pass-otp
+      - restic
+      # Desktop helpers (i3 / notifications / clipboard)
+      - cliphist
+      - dmenu
+      - dmenu-wayland
+      - dunst
+      - ImageMagick
+      - kitty
+      - libnotify
+      - passmenu
+      - pavucontrol          # graphical mixer (per-app volume)
+      - rofi
+      - rofi-themes
+      - wiremix              # terminal mixer for PipeWire
+      - wl-clipboard
+      - xclip
+      - xdotool
+      - ydotool
+      # Dev toolchain and python build deps (for mise-built interpreters)
+      - bzip2-devel
+      - cargo
+      - gcc
+      - libffi-devel
+      - luarocks
+      - make
+      - openssl-devel
+      - pipx
+      - podman
+      - python3-pip
+      - readline-devel
+      - sqlite
+      - sqlite-devel
+      - xz-devel
+      # Misc
+      - logrotate
+      # Pinned-release tools (own installers; inventory entries)
+      - { name: appimagelauncher, release: appimagelauncher }
+      - { name: bd-track, release: bd-track }     # the project's `just install-dev` at a pinned tag
+      - { name: bd, release: beads }
+      - { name: bv, release: beads_viewer }
+      - { name: cheat, release: cheat }
+      - { name: cht.sh, release: cht-sh }
+      - { name: clipse, release: clipse }
+      - { name: d2, release: d2 }
+      - { name: dnote, release: dnote }
+      - { name: dolt, release: dolt }
+      - { name: dstask, release: dstask }
+      - { name: nb, release: nb }
+      - { name: the-way, release: the-way }
+
+  python-tools:
+    description: Python CLI tools, installed with pipx (pipx itself is in base)
+    includes:
+      - base
+    packages:
+      - { name: argcomplete, pipx: true }
+      - { name: conda-lock, pipx: true }
+      - { name: conda-pack, pipx: true }
+      - { name: docformatter, pipx: true }
+      - { name: dvc, pipx: true }
+      - { name: hererocks, pipx: true }      # Lua builds for luarocks (nvim's lazy.nvim rocks)
+      - { name: mypy, pipx: true }
+      - { name: nbdime, pipx: true }         # ~/.gitconfig renders its diff/merge drivers when present
+      - { name: neovim-remote, pipx: true }
+      - { name: pdm, pipx: true }
+      - { name: poetry, pipx: true }
+      - { name: pre-commit, pipx: true }     # the repos' gitleaks hooks (D35)
+      - { name: reno, pipx: true }
+      - { name: tox, pipx: true }
+      - { name: ufmt, pipx: true }
+      # Not here on purpose: bd-track (run_onchange_install-bd-track.sh: the project's own
+      # installer at a pinned tag), apyanki (chess-trainer's tooling installs it).
+
+  x11:
+    description: X11 session helpers for i3 (the MacBook, D49); was systemd.yaml's install lists
+    when:
+      display_server: x11
+    packages:
+      - polybar
+      - xrandr
+      - xrdb
+      - xsettingsd
+      - feh
+      - hsetroot
+      - redshift
+      - redshift-gtk
+
+  wayland:
+    description: Wayland desktop (docs/plans/wayland-desktop.md)
+    when:
+      display_server: wayland
+    packages:
+      # Compositors (Hyprland is the daily driver, D62; SwayFX the fallback; the rest are trial candidates)
+      - name: swayfx         # conflicts with Fedora's `sway`: it ships /usr/bin/sway
+        copr: swayfx
+      - name: hyprland
+        copr: hyprland
+      - niri
+      - xwayland-satellite   # XWayland for niri
+      - wayfire
+      # Portals and polkit agent
+      - xdg-desktop-portal-wlr
+      - xdg-desktop-portal-gnome   # niri's portal backend
+      - name: xdg-desktop-portal-hyprland
+        copr: hyprland
+      - mate-polkit
+      # Lock, idle, wallpaper, bar
+      - swaylock
+      - swayidle
+      - swaybg
+      - waybar
+      - NetworkManager-tui   # nmtui: the bar's network fallback
+      - calcurse             # calendar, from the bar's clock
+      - blueman              # Bluetooth agent (pairing prompts) and manager, from the bar
+      # Output profiles (monitor layouts per set of connected screens)
+      - kanshi
+      # Hyprland-only tools for roles SwayFX covers otherwise or not at all (D63)
+      - name: hyprsunset       # colour temperature (CTM protocol); schedule in ~/.config/hypr/hyprsunset.conf
+        copr: hyprland
+      - name: hyprlock         # lock screen under Hyprland (lock-screen picks it)
+        copr: hyprland
+      - name: hyprpaper        # wallpaper daemon (for the wallpaper picker)
+        copr: hyprland
+      - name: hyprpolkitagent  # polkit agent (none ran in the uwsm sessions before)
+        copr: hyprland
+      - name: hyprpicker       # colour picker
+        copr: hyprland
+      # Screenshots and typing
+      - grim
+      - slurp
+      - wtype
+      - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
+      # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
+      - meson
+      - scdoc
+      - python3-dbus
+      - python3-pyxdg
+      - newt                 # whiptail, for uwsm's selection menu
+      - inotify-tools
+      # Pinned-release tools (own installers; inventory entries)
+      - { name: uwsm, release: uwsm }
+      - { name: wl-clip-persist, release: wl-clip-persist }
+
+  work:
+    description: Employer-only tooling (work_tooling host key)
+    when:
+      work_tooling: true
+    packages:
+      - { name: rano, release: rano }
 
 # COPR repositories, referenced by `copr:` in the package lists. `project` is
 # the owner/name passed to `dnf copr enable`; that name is the pin. Checked

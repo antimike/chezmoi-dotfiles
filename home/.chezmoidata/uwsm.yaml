@@ -9,7 +9,7 @@
 #
 # Pin rule: exact tag, at least 14 days old. v0.27.0 = 2026-09-15 (v0.27.1 of
 # 2026-10-15 was too new on 2026-10-17). Build deps (packages.yaml,
-# packagesWayland): meson, scdoc, python3-dbus, python3-pyxdg; optional newt
+# the wayland target): meson, scdoc, python3-dbus, python3-pyxdg; optional newt
 # (whiptail) and waitpid (util-linux).
 #
 # To bump:

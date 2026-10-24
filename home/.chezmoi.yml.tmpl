@@ -82,6 +82,14 @@ data:
   # Gates employer-only tooling (VPN stack, rano). False here; true on a future
   # work laptop. Use as {{ "{{ if .work_tooling }}" }} inline guards.
   work_tooling: false
+  # Package targets to install (packages.yaml, packageTargets; D32). A target's
+  # `when` conditions still apply: `wayland` and `x11` follow display_server.
+  package_targets:
+    - base
+    - python-tools
+    - wayland
+    - x11
+    - work
   wallpaper:
     cache: {{ joinPath $filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
     library: {{ joinPath $filesystem.appData "wallpaper" }}
