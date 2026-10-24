@@ -1,5 +1,5 @@
-// The main bar: every module and the tray. waybar-launch puts it on the ASUS, else the
-// laptop panel, else the leftmost monitor. Module settings: ../modules.jsonc.
+// The main bar: every module and the tray. waybar-launch puts it on the only monitor,
+// the left one of two, or the middle one of three or more. Module settings: ../modules.jsonc.
 {
     "layer": "top",
     "position": "top",
