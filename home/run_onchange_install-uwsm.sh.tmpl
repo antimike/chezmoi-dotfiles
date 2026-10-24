@@ -39,7 +39,7 @@ if [ "$ENABLED" != 1 ]; then
 fi
 for tool in git meson python3 scdoc; do
   if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "uwsm installer: '$tool' not found; install it (packages.yaml, packagesWayland) and re-run; skipping" >&2
+    echo "uwsm installer: '$tool' not found; install it (packages.yaml, the wayland target) and re-run; skipping" >&2
     exit 0
   fi
 done
