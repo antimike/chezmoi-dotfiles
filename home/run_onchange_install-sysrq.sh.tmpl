@@ -1,0 +1,69 @@
+#!/bin/sh
+# run_onchange_install-sysrq.sh.tmpl — allow the SysRq keys needed for a clean
+# emergency reboot (MH, 2026-10-23; docs/runbooks/display-session-recovery.md).
+#
+#   kernel.sysrq = 244 = 4 (keyboard: R unraw, SAK) + 16 (S sync) + 32 (U remount
+#   read-only) + 64 (E/I/F signal processes) + 128 (B reboot, O power off)
+#
+# Left out: 2 (console log level), 8 (debugging dumps: registers, tasks, memory,
+# which leak information to whoever is at the keyboard), 256 (nicing real-time
+# tasks). Fedora's default is 16 (sync only). SysRq works below the compositor, so
+# REISUB (hold Alt+SysRq, press R E I S U B a second apart) reboots cleanly when
+# the display stack is wedged: on 2026-10-23 the kernel kept running after one,
+# and the power key only cuts power on zbook. The built-in keyboard's SysRq is
+# Fn+Home. Only physical keyboard access can use it; it unlocks nothing.
+#
+# /etc is outside chezmoi's scope. Same pattern as run_onchange_install-logind-power.sh:
+# staged under ~/.local/state/chezmoi-system/, installed with sudo (asks for the
+# password in a terminal; otherwise prints the commands and exits 1 so the next
+# apply retries), then applied with sysctl (no reboot).
+#
+# Only runs on Linux, non-WSL hosts.
+{{- $run := and (eq .chezmoi.os "linux") (ne (includeTemplate "is-wsl" .) "true") }}
+set -eu
+
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+CONF_NAME=90-sysrq.conf
+TARGET_DIR=/etc/sysctl.d
+TARGET=$TARGET_DIR/$CONF_NAME
+STAGE_DIR={{ joinPath .chezmoi.homeDir ".local" "state" "chezmoi-system" | quote }}
+STAGED=$STAGE_DIR/$CONF_NAME
+
+if [ "$ENABLED" != 1 ]; then
+  echo "sysrq: needs non-WSL Linux (this host: {{ .chezmoi.os }}); skipping" >&2
+  exit 0
+fi
+
+mkdir -p "$STAGE_DIR"
+cat > "$STAGED" <<'CONF'
+# Installed by chezmoi (run_onchange_install-sysrq.sh.tmpl).
+# 4 keyboard + 16 sync + 32 remount ro + 64 signals + 128 reboot: REISUB, no dumps.
+kernel.sysrq = 244
+CONF
+
+if cmp -s "$STAGED" "$TARGET" && [ "$(cat /proc/sys/kernel/sysrq)" = 244 ]; then
+  echo "sysrq: $TARGET is up to date" >&2
+  exit 0
+fi
+
+install_conf() {
+  "$@" install -d -m 0755 "$TARGET_DIR"
+  "$@" install -m 0644 "$STAGED" "$TARGET"
+  "$@" sysctl -q -p "$TARGET"
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  install_conf
+elif sudo -n true 2>/dev/null; then
+  install_conf sudo
+elif [ -t 0 ]; then
+  echo "sysrq: installing $TARGET with sudo" >&2
+  install_conf sudo
+else
+  echo "sysrq: need root. Run:" >&2
+  echo "  sudo install -d -m 0755 $TARGET_DIR" >&2
+  echo "  sudo install -m 0644 '$STAGED' $TARGET" >&2
+  echo "  sudo sysctl -p $TARGET" >&2
+  exit 1
+fi
+echo "sysrq: installed $TARGET (kernel.sysrq = $(cat /proc/sys/kernel/sysrq))" >&2
