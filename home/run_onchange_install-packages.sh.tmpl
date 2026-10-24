@@ -6,13 +6,17 @@
 # package manager (jq, say, is itself on the list):
 #   targets   `package_targets` (host key; every target when unset), plus their
 #             `includes`, minus targets whose `when` host keys do not match
-#   names     an entry's own key for this host's manager, else its logical name;
-#             `false` skips it here; one package is installed once
+#   names     an entry's own key for this host's manager, else `pipx` (a pipx
+#             install), else its logical name; `false` skips it here; one package
+#             is installed once
 #   repos     a `copr` entry's repository is enabled only when needed
+#   verify    an entry's `verify` check runs after installing; a failure fails the run
 #
-#   bash <(chezmoi execute-template < THIS) --list   print "package<TAB>copr" lines and exit
+#   bash <(chezmoi execute-template < THIS) --list   print "<method><TAB>package<TAB>copr"
+#                                                    lines (method: native or pipx) and exit
 #
-# Only dnf is handled. Needs root: without cached credentials, sudo asks for the
+# Order: native packages (one transaction), then pipx tools, then the checks. Only dnf
+# is handled. Native installs need root: without cached credentials, sudo asks for the
 # password when `chezmoi apply` runs in a terminal; otherwise the script prints the
 # commands and exits 1, so the next `chezmoi apply` retries.
 {{- $distro := .chezmoi.osRelease.id }}
@@ -36,7 +40,9 @@
 {{- end }}
 {{- $wanted := list }}
 {{- $coprOf := dict }}
+{{- $pipx := list }}
 {{- $skipped := list }}
+{{- $verify := list }}
 {{- range $t := $selected }}
 {{-   $target := index $all $t }}
 {{-   $on := true }}
@@ -48,17 +54,26 @@
 {{-       $name := . }}
 {{-       $pkg := . }}
 {{-       $copr := "" }}
+{{-       $method := "native" }}
 {{-       if not (kindIs "string" .) }}
 {{-         $name = .name }}
 {{-         $pkg = .name }}
-{{-         if hasKey . $mgr }}{{ $pkg = index . $mgr }}{{ end }}
-{{-         if and (eq $mgr "dnf") (hasKey . "copr") }}
+{{-         if hasKey . $mgr }}
+{{-           $pkg = index . $mgr }}
+{{-         else if hasKey . "pipx" }}
+{{-           $method = "pipx" }}
+{{-           if ne (toString .pipx) "true" }}{{ $pkg = .pipx }}{{ end }}
+{{-         end }}
+{{-         if and (eq $method "native") (eq $mgr "dnf") (hasKey . "copr") }}
 {{-           if not (hasKey $coprs .copr) }}{{ fail (printf "packages.yaml: %s names copr %q, which is not in the coprs block" $name .copr) }}{{ end }}
 {{-           $copr = (index $coprs .copr).project }}
 {{-         end }}
+{{-         if hasKey . "verify" }}{{ $verify = append $verify (list $name .verify) }}{{ end }}
 {{-       end }}
 {{-       if eq (toString $pkg) "false" }}
 {{-         $skipped = append $skipped $name }}
+{{-       else if eq $method "pipx" }}
+{{-         if not (has $pkg $pipx) }}{{ $pipx = append $pipx $pkg }}{{ end }}
 {{-       else if not (has $pkg $wanted) }}
 {{-         $wanted = append $wanted $pkg }}
 {{-         $_ := set $coprOf $pkg $copr }}
@@ -66,7 +81,7 @@
 {{-     end }}
 {{-   end }}
 {{- end }}
-# hash: {{ list $mgr $wanted $coprOf | toJson | sha256sum }}
+# hash: {{ list $mgr $wanted $coprOf $pipx $verify | toJson | sha256sum }}
 set -euo pipefail
 
 DISTRO={{ $distro | quote }}
@@ -82,71 +97,127 @@ wanted_copr=(
   {{ index $coprOf . | quote }}
 {{- end }}
 )
+# pip specs for pipx.
+pipx_wanted=(
+{{- range $pipx }}
+  {{ . | quote }}
+{{- end }}
+)
+# Parallel arrays: entry name, and its check.
+verify_name=(
+{{- range $verify }}
+  {{ index . 0 | quote }}
+{{- end }}
+)
+verify_cmd=(
+{{- range $verify }}
+  {{ index . 1 | quote }}
+{{- end }}
+)
 skipped=({{ range $skipped }} {{ . | quote }}{{ end }} )
 
 if [[ ${1:-} == --list ]]; then
-  for i in "${!wanted[@]}"; do printf '%s\t%s\n' "${wanted[$i]}" "${wanted_copr[$i]}"; done
+  for i in "${!wanted[@]}"; do printf 'native\t%s\t%s\n' "${wanted[$i]}" "${wanted_copr[$i]}"; done
+  for p in "${pipx_wanted[@]}"; do printf 'pipx\t%s\t\n' "$p"; done
   exit 0
 fi
 if [[ ${#skipped[@]} -gt 0 ]]; then
   echo "install-packages: not packaged for ${MANAGER:-this distro}, skipped: ${skipped[*]}" >&2
 fi
 
-if [[ -z $MANAGER ]]; then
-  echo "install-packages: no package manager for distro '${DISTRO}' in packages.yaml (packageManagers); skipping" >&2
-  exit 0
-fi
-if [[ ${#wanted[@]} -eq 0 ]]; then
-  echo "install-packages: no packages selected for this host; skipping" >&2
-  exit 0
-fi
-if [[ $MANAGER != dnf ]] || ! command -v dnf >/dev/null 2>&1; then
-  echo "install-packages: no installer for manager '${MANAGER}'; add one here" >&2
-  exit 1
-fi
-
-to_install=()
-needed_coprs=()
-for i in "${!wanted[@]}"; do
-  p=${wanted[$i]}
-  rpm -q --whatprovides "$p" >/dev/null 2>&1 && continue
-  to_install+=("$p")
-  c=${wanted_copr[$i]}
-  if [[ -n "$c" && " ${needed_coprs[*]} " != *" $c "* ]]; then
-    needed_coprs+=("$c")
+# --- native packages ---------------------------------------------------------------------
+install_native() {
+  if [[ -z $MANAGER ]]; then
+    echo "install-packages: no package manager for distro '${DISTRO}' in packages.yaml (packageManagers); skipping native packages" >&2
+    return 0
   fi
-done
-
-if [[ ${#to_install[@]} -eq 0 ]]; then
-  echo "install-packages: all ${#wanted[@]} packages already installed" >&2
-  exit 0
-fi
-
-# COPRs not yet enabled; dnf5 names their repos copr:copr.fedorainfracloud.org:<owner>:<project>.
-enabled_repos=$(dnf repolist --enabled 2>/dev/null | awk 'NR > 1 { print $1 }')
-to_enable=()
-for c in "${needed_coprs[@]}"; do
-  grep -qxF "copr:copr.fedorainfracloud.org:${c%%/*}:${c#*/}" <<<"$enabled_repos" || to_enable+=("$c")
-done
-
-cmds=()
-for c in "${to_enable[@]}"; do
-  cmds+=("dnf copr enable -y $c")
-done
-cmds+=("dnf install -y ${to_install[*]}")
-
-sudo=()
-if [[ $EUID -ne 0 ]]; then
-  if ! sudo -n true 2>/dev/null && [[ ! -t 0 ]]; then
-    echo "install-packages: need root. Run:" >&2
-    printf '  sudo %s\n' "${cmds[@]}" >&2
-    exit 1
+  if [[ ${#wanted[@]} -eq 0 ]]; then
+    return 0
   fi
-  sudo=(sudo)
-fi
-for c in "${to_enable[@]}"; do
-  echo "install-packages: enabling COPR $c" >&2
-  "${sudo[@]}" dnf copr enable -y "$c"
-done
-echo "install-packages: installing ${#to_install[@]} package(s): ${to_install[*]}" >&2
-"${sudo[@]}" dnf install -y "${to_install[@]}"
+  if [[ $MANAGER != dnf ]] || ! command -v dnf >/dev/null 2>&1; then
+    echo "install-packages: no installer for manager '${MANAGER}'; add one here" >&2
+    return 1
+  fi
+
+  local to_install=() needed_coprs=() i p c
+  for i in "${!wanted[@]}"; do
+    p=${wanted[$i]}
+    rpm -q --whatprovides "$p" >/dev/null 2>&1 && continue
+    to_install+=("$p")
+    c=${wanted_copr[$i]}
+    if [[ -n "$c" && " ${needed_coprs[*]} " != *" $c "* ]]; then
+      needed_coprs+=("$c")
+    fi
+  done
+  if [[ ${#to_install[@]} -eq 0 ]]; then
+    echo "install-packages: all ${#wanted[@]} packages already installed" >&2
+    return 0
+  fi
+
+  # COPRs not yet enabled; dnf5 names their repos copr:copr.fedorainfracloud.org:<owner>:<project>.
+  local enabled_repos to_enable=() cmds=() sudo=()
+  enabled_repos=$(dnf repolist --enabled 2>/dev/null | awk 'NR > 1 { print $1 }')
+  for c in "${needed_coprs[@]}"; do
+    grep -qxF "copr:copr.fedorainfracloud.org:${c%%/*}:${c#*/}" <<<"$enabled_repos" || to_enable+=("$c")
+  done
+  for c in "${to_enable[@]}"; do
+    cmds+=("dnf copr enable -y $c")
+  done
+  cmds+=("dnf install -y ${to_install[*]}")
+
+  if [[ $EUID -ne 0 ]]; then
+    if ! sudo -n true 2>/dev/null && [[ ! -t 0 ]]; then
+      echo "install-packages: need root. Run:" >&2
+      printf '  sudo %s\n' "${cmds[@]}" >&2
+      return 1
+    fi
+    sudo=(sudo)
+  fi
+  for c in "${to_enable[@]}"; do
+    echo "install-packages: enabling COPR $c" >&2
+    "${sudo[@]}" dnf copr enable -y "$c"
+  done
+  echo "install-packages: installing ${#to_install[@]} package(s): ${to_install[*]}" >&2
+  "${sudo[@]}" dnf install -y "${to_install[@]}"
+}
+
+# --- pipx tools --------------------------------------------------------------------------
+install_pipx() {
+  [[ ${#pipx_wanted[@]} -gt 0 ]] || return 0
+  if ! command -v pipx >/dev/null 2>&1; then
+    echo "install-packages: pipx not found (it is a native package); skipping ${#pipx_wanted[@]} pipx tool(s)" >&2
+    return 1
+  fi
+  local have spec missing=()
+  have=$(pipx list --short 2>/dev/null | awk '{ print $1 }')
+  for spec in "${pipx_wanted[@]}"; do
+    # The installed venv is named after the distribution: strip extras and version specifiers.
+    grep -qxF "${spec%%[[<>=!~; ]*}" <<<"$have" || missing+=("$spec")
+  done
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    echo "install-packages: all ${#pipx_wanted[@]} pipx tools already installed" >&2
+    return 0
+  fi
+  for spec in "${missing[@]}"; do
+    echo "install-packages: pipx install $spec" >&2
+    pipx install "$spec"
+  done
+}
+
+# --- checks ------------------------------------------------------------------------------
+run_checks() {
+  local i bad=0
+  for i in "${!verify_name[@]}"; do
+    if ! bash -c "${verify_cmd[$i]}" >/dev/null 2>&1; then
+      echo "install-packages: check failed for ${verify_name[$i]}: ${verify_cmd[$i]}" >&2
+      bad=1
+    fi
+  done
+  return "$bad"
+}
+
+status=0
+install_native || status=1
+install_pipx || status=1
+run_checks || status=1
+exit "$status"
