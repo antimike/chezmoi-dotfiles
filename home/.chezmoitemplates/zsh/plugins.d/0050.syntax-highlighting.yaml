@@ -10,6 +10,7 @@ plugins:
       - url: zdharma-continuum/fast-syntax-highlighting
         ice:
           - atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay"
+          - atload"source ~/.config/zsh/fsh-styles.zsh"
       - url: zsh-users/zsh-completions
         ice:
           - blockf

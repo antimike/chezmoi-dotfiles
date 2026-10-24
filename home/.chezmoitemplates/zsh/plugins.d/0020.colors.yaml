@@ -5,7 +5,7 @@ plugins:
     ice:
       - atclone"dircolors -b LS_COLORS > clrs.zsh"
       - atpull"%atclone"
-      - atload'zstyle ":completion:*" list-colors “${(s.:.)LS_COLORS}”'
+      - atload'zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"'
     comment: |
       From https://zdharma-continuum.github.io/zinit/wiki/LS_COLORS-explanation/
   - args: ["wait", "lucid", "light-mode"]
