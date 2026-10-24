@@ -1,133 +1,69 @@
 // waybar for Hyprland (daily-driver checklist 2.7; plans/wayland-desktop.md). Run by
 // waybar.service from wm-helpers-wayland.target, Hyprland sessions only (SwayFX keeps
-// swaybar). Icons are Nerd Font glyphs (FiraCode Nerd Font, fallback in style.css).
-// custom/* modules: ~/.local/bin/waybar-module; signals 8 (idle) and 9 (dunst).
-{
-    "layer": "top",
-    "position": "top",
-    "height": 26,
-    "spacing": 4,
-    "modules-left": [
-        "hyprland/workspaces",
-        "hyprland/submap",
-        "hyprland/window"
-    ],
-    "modules-center": [
-        "clock"
-    ],
-    "modules-right": [
-        "custom/idle",
-        "custom/dunst",
-        "pulseaudio",
-        "network",
-        "bluetooth",
-        "battery",
-        "tray"
-    ],
-    "hyprland/workspaces": {
-        "format": "{id}",
-        "all-outputs": false,
-        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
-        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
-    },
-    "hyprland/submap": {
-        "format": "{icon} {submap}",
-        "icons": {
-            "resize": "󰩨",
-            "passthrough": "󰌌"
-        },
-        "tooltip": false
-    },
-    "hyprland/window": {
-        "max-length": 60,
-        "separate-outputs": true
-    },
-    "clock": {
-        "format": "{:%a %d %b  %H:%M}",
-        "tooltip-format": "<tt>{calendar}</tt>",
-        "on-click": "kitty --class bar-popup -e calcurse",
-        "calendar": {
-            "mode": "month",
-            "weeks-pos": "left",
-            "on-scroll": 1
-        },
-        "actions": {
-            "on-scroll-up": "shift_down",
-            "on-scroll-down": "shift_up"
-        }
-    },
-    "custom/idle": {
-        "exec": "waybar-module idle",
-        "return-type": "json",
-        "interval": 30,
-        "signal": 8,
-        "on-click": "idle-toggle"
-    },
-    "custom/dunst": {
-        "exec": "waybar-module dunst",
-        "return-type": "json",
-        "interval": 5,
-        "signal": 9,
-        "on-click": "dunstctl set-paused toggle && pkill -RTMIN+9 -x waybar",
-        "on-click-right": "dunstctl history-pop"
-    },
-    "pulseaudio": {
-        "format": "{icon} {volume}%  {format_source}",
-        "format-muted": "󰝟 muted  {format_source}",
-        "format-source": "󰍬 {volume}%",
-        "format-source-muted": "󰍭",
-        "format-icons": {
-            "default": [
-                "󰕿",
-                "󰖀",
-                "󰕾"
-            ]
-        },
-        "scroll-step": 5,
-        "on-click": "volume mute",
-        "on-click-middle": "volume mic-mute",
-        "on-click-right": "pavucontrol",
-        "on-scroll-up": "volume up",
-        "on-scroll-down": "volume down"
-    },
-    "network": {
-        "format-ethernet": "󰈀 wired",
-        "format-wifi": "󰤨 {essid}",
-        "format-disconnected": "󰤭 offline",
-        "format-linked": "󰈀 no IP",
-        "tooltip-format-ethernet": "{ifname} {ipaddr}/{cidr} via {gwaddr}",
-        "tooltip-format-wifi": "{ifname} {essid} {signalStrength}% {frequency} GHz\n{ipaddr}/{cidr}",
-        "on-click": "kitty --class bar-popup -e nmtui"
-    },
-    "bluetooth": {
-        "format": "󰂯",
-        "format-disabled": "󰂲",
-        "format-off": "󰂲",
-        "format-connected": "󰂱 {device_alias}",
-        "format-connected-battery": "󰂱 {device_alias} {device_battery_percentage}%",
-        "tooltip-format-connected": "{device_enumerate}",
-        "tooltip-format-enumerate-connected": "{device_alias} {device_address}",
-        "on-click": "kitty --class bar-popup -e bluetoothctl"
-    },
-    "battery": {
-        "states": {
-            "warning": 20,
-            "critical": 10
-        },
-        "format": "{icon} {capacity}%",
-        "format-charging": "󰂄 {capacity}%",
-        "format-plugged": "󰚥 {capacity}%",
-        "format-icons": [
-            "󰁺",
-            "󰁼",
-            "󰁾",
-            "󰂀",
-            "󰁹"
+// swaybar). Two bars: "main" (the ASUS while docked, the panel undocked; every module
+// and the tray) and "extra" (other monitors: workspaces, clock, state indicators).
+// Monitors are matched by description (kanshi's names), so ports do not matter.
+// Module settings: modules.jsonc. Drawers (group/*) show their first module and
+// reveal the rest on hover.
+[
+    {
+        "layer": "top",
+        "position": "top",
+        "height": 26,
+        "spacing": 4,
+        "include": [
+            "~/.config/waybar/modules.jsonc"
         ],
-        "tooltip-format": "{timeTo}, {power:.1f} W"
+        "name": "main",
+        "output": [
+            "Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
+            "eDP-1"
+        ],
+        "modules-left": [
+            "hyprland/workspaces",
+            "hyprland/submap",
+            "hyprland/window"
+        ],
+        "modules-center": [
+            "clock",
+            "custom/weather"
+        ],
+        "modules-right": [
+            "custom/idle",
+            "custom/dunst",
+            "group/system",
+            "group/audio",
+            "network",
+            "bluetooth",
+            "battery",
+            "tray"
+        ]
     },
-    "tray": {
-        "icon-size": 16,
-        "spacing": 8
+    {
+        "layer": "top",
+        "position": "top",
+        "height": 26,
+        "spacing": 4,
+        "include": [
+            "~/.config/waybar/modules.jsonc"
+        ],
+        "name": "extra",
+        "output": [
+            "!Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
+            "!eDP-1",
+            "*"
+        ],
+        "modules-left": [
+            "hyprland/workspaces",
+            "hyprland/submap",
+            "hyprland/window"
+        ],
+        "modules-center": [
+            "clock"
+        ],
+        "modules-right": [
+            "custom/idle",
+            "custom/dunst"
+        ]
     }
-}
+]

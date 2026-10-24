@@ -1,0 +1,170 @@
+// Module settings shared by the bars in config.jsonc. Icons are Nerd Font glyphs
+// (FiraCode Nerd Font, the fallback in style.css). custom/* modules run
+// ~/.local/bin/waybar-module; signals 8 (idle), 9 (dunst), 10 (weather).
+{
+    "hyprland/workspaces": {
+        "format": "{id}",
+        "all-outputs": false,
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+    },
+    "hyprland/submap": {
+        "format": "{icon} {submap}",
+        "icons": {
+            "resize": "󰩨",
+            "passthrough": "󰌌"
+        },
+        "tooltip": false
+    },
+    "hyprland/window": {
+        "max-length": 60,
+        "separate-outputs": true
+    },
+    "clock": {
+        "format": "{:%a %d %b  %H:%M}",
+        "tooltip-format": "<tt>{calendar}</tt>",
+        "on-click": "kitty --class bar-popup -e calcurse",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "left",
+            "on-scroll": 1
+        },
+        "actions": {
+            "on-scroll-up": "shift_down",
+            "on-scroll-down": "shift_up"
+        }
+    },
+    "custom/idle": {
+        "exec": "waybar-module idle",
+        "return-type": "json",
+        "interval": 30,
+        "signal": 8,
+        "on-click": "idle-toggle"
+    },
+    "custom/dunst": {
+        "exec": "waybar-module dunst",
+        "return-type": "json",
+        "interval": 5,
+        "signal": 9,
+        "on-click": "dunstctl set-paused toggle && pkill -RTMIN+9 -x waybar",
+        "on-click-right": "dunstctl history-pop"
+    },
+    "pulseaudio": {
+        "format": "{icon} {volume}%  {format_source}",
+        "format-muted": "󰝟 muted  {format_source}",
+        "format-source": "󰍬 {volume}%",
+        "format-source-muted": "󰍭",
+        "format-icons": {
+            "default": [
+                "󰕿",
+                "󰖀",
+                "󰕾"
+            ]
+        },
+        "scroll-step": 5,
+        "on-click": "volume mute",
+        "on-click-middle": "volume mic-mute",
+        "on-click-right": "pavucontrol",
+        "on-scroll-up": "volume up",
+        "on-scroll-down": "volume down"
+    },
+    "network": {
+        "format-ethernet": "󰈀 wired",
+        "format-wifi": "󰤨 {essid}",
+        "format-disconnected": "󰤭 offline",
+        "format-linked": "󰈀 no IP",
+        "tooltip-format-ethernet": "{ifname} {ipaddr}/{cidr} via {gwaddr}",
+        "tooltip-format-wifi": "{ifname} {essid} {signalStrength}% {frequency} GHz\n{ipaddr}/{cidr}",
+        "on-click": "networkmanager_dmenu",
+        "on-click-right": "kitty --class bar-popup -e nmtui"
+    },
+    "bluetooth": {
+        "format": "󰂯",
+        "format-disabled": "󰂲",
+        "format-off": "󰂲",
+        "format-connected": "󰂱 {device_alias}",
+        "format-connected-battery": "󰂱 {device_alias} {device_battery_percentage}%",
+        "tooltip-format-connected": "{device_enumerate}",
+        "tooltip-format-enumerate-connected": "{device_alias} {device_address}",
+        "on-click": "rofi-bluetooth -theme bar-menu",
+        "on-click-right": "blueman-manager",
+        "on-click-middle": "kitty --class bar-popup -e bluetoothctl"
+    },
+    "battery": {
+        "states": {
+            "warning": 20,
+            "critical": 10
+        },
+        "format": "{icon} {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-plugged": "󰚥 {capacity}%",
+        "format-icons": [
+            "󰁺",
+            "󰁼",
+            "󰁾",
+            "󰂀",
+            "󰁹"
+        ],
+        "tooltip-format": "{timeTo}, {power:.1f} W"
+    },
+    "tray": {
+        "icon-size": 16,
+        "spacing": 8
+    },
+    "group/system": {
+        "orientation": "inherit",
+        "modules": [
+            "cpu",
+            "memory",
+            "disk"
+        ],
+        "drawer": {
+            "transition-duration": 250,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        }
+    },
+    "cpu": {
+        "format": "󰍛 {usage}%",
+        "interval": 5,
+        "tooltip": true
+    },
+    "memory": {
+        "format": "󰘚 {percentage}%",
+        "interval": 10,
+        "tooltip-format": "{used:.1f} / {total:.1f} GiB used, swap {swapUsed:.1f} GiB"
+    },
+    "disk": {
+        "format": "󰋊 {percentage_used}%",
+        
+        "interval": 60,
+        "tooltip-format": "{path}: {used} of {total} used, {free} free"
+    },
+    "group/audio": {
+        "orientation": "inherit",
+        "modules": [
+            "pulseaudio",
+            "backlight"
+        ],
+        "drawer": {
+            "transition-duration": 250,
+            "children-class": "drawer-child",
+            "transition-left-to-right": false
+        }
+    },
+    "backlight": {
+        "device": "intel_backlight",
+        "format": "󰃠 {percent}%",
+        "tooltip-format": "Laptop panel brightness (scroll to change)",
+        "on-scroll-up": "brightness up",
+        "on-scroll-down": "brightness down"
+    },
+    "custom/weather": {
+        "exec": "waybar-module weather",
+        "return-type": "json",
+        "interval": 900,
+        "signal": 10,
+        "on-click": "xdg-open https://www.meteoblue.com/en/weather/week",
+        "on-click-right": "pkill -RTMIN+10 -x waybar"
+    }
+}

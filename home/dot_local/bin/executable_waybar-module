@@ -1,14 +1,46 @@
 #!/usr/bin/env bash
-# waybar-module — JSON for waybar's custom modules (~/.config/waybar/config.jsonc).
+# waybar-module — JSON for waybar's custom modules (~/.config/waybar/modules.jsonc).
 #
-#   waybar-module idle    shown while the idle chain is paused (idle-toggle); click resumes
-#   waybar-module dunst   shown while notifications are paused, with the waiting count
+#   waybar-module idle      shown while the idle chain is paused (idle-toggle); click resumes
+#   waybar-module dunst     shown while notifications are paused, with the waiting count
+#   waybar-module weather   current conditions from wttr.in (location by IP, no API key)
 #
-# Empty text hides a module, so both show only the unusual state. Refreshed on an
-# interval and by signal: `pkill -RTMIN+8 -x waybar` (idle), `-RTMIN+9` (dunst).
+# Empty text hides a module, so idle and dunst show only the unusual state, and weather
+# hides when offline with no recent cache. Refreshed on an interval and by signal:
+# `pkill -RTMIN+8 -x waybar` (idle), `-RTMIN+9` (dunst), `-RTMIN+10` (weather).
 set -euo pipefail
 
 out() { jq -cn --arg text "$1" --arg class "$2" --arg tooltip "$3" '{$text, $class, $tooltip}'; }
+
+# wttr.in's current conditions as module JSON. Units follow LC_MEASUREMENT (US: °F).
+# A failed fetch reuses the last answer for up to 3 hours, marked stale.
+weather() {
+  local cache=${XDG_CACHE_HOME:-$HOME/.cache}/waybar-weather.json f=C speed=Kmph unit=km/h
+  [[ ${LC_MEASUREMENT:-${LANG:-}} == en_US* ]] && f=F speed=Miles unit=mph
+  local class=""
+  if curl -fsS -m 10 'https://wttr.in/?format=j1' -o "$cache.new" 2>/dev/null && jq -e .current_condition "$cache.new" >/dev/null; then
+    mv "$cache.new" "$cache"
+  else
+    rm -f "$cache.new"
+    if [[ ! -s $cache ]] || (($(date +%s) - $(stat -c %Y "$cache") > 10800)); then
+      out '' '' ''
+      return
+    fi
+    class=stale
+  fi
+  jq -c --arg f "$f" --arg speed "$speed" --arg unit "$unit" --arg class "$class" '
+    .current_condition[0] as $c | ($c.weatherCode | tonumber) as $code |
+    (if $code == 113 then "󰖙"
+     elif $code == 116 then "󰖕"
+     elif $code == 119 or $code == 122 then "󰖐"
+     elif [143, 248, 260] | index($code) then "󰖑"
+     elif [200, 386, 389, 392, 395] | index($code) then "󰖓"
+     elif [179, 182, 185, 227, 230, 317, 320, 323, 326, 329, 332, 335, 338, 350, 362, 365, 368, 371, 374, 377] | index($code) then "󰖘"
+     else "󰖗" end) as $icon |
+    {text: "\($icon) \($c["temp_" + $f])°\($f)",
+     class: $class,
+     tooltip: "\($c.weatherDesc[0].value | sub(" +$"; "")), feels like \($c["FeelsLike" + $f])°\($f)\nwind \($c["windspeed" + $speed]) \($unit), humidity \($c.humidity)%\(if $class == "stale" then "\n(offline: last update \($c.localObsDateTime))" else "" end)\nclick: forecast; right click: refresh"}' "$cache"
+}
 
 case ${1:-} in
   idle)
@@ -25,8 +57,11 @@ case ${1:-} in
       out '' '' ''
     fi
     ;;
+  weather)
+    weather
+    ;;
   *)
-    echo "usage: waybar-module idle|dunst" >&2
+    echo "usage: waybar-module idle|dunst|weather" >&2
     exit 2
     ;;
 esac
