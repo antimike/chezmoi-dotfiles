@@ -34,6 +34,7 @@ updated: 2026-10-23
 - A private doc (keys, findings, client terms) is committed in `~/Source/chezmoi-boco` but **not pushed** (waiting for MH's OK).
 
 ## Next actions (in order; reprioritized by MH 2026-10-18, D50)
+**Tonight (2026-10-23, MH):** start the Hyprland checklist with 2.6 (port the i3/SwayFX keys); the NVIDIA upgrade (3) and the docked resume test after it move to 2026-10-24.
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
 2. **Functional daily-driver checklist, Hyprland since D62** (the 2026-10-20 deadline passed; still first priority) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"), in order:
    1. **Screenshots: done, merged and pushed 2026-10-22** (`3a38c79`): `~/.local/bin/screenshot` + shared `pick-path` (D54); keys for Print, the MX Keys and keyboards without Print, all checked by MH.

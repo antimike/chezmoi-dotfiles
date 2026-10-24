@@ -36,6 +36,16 @@ Chromium keep the card open, so an exclusive connect fails with `sharing violati
 in which pcscd was socket-activated. Restart scdaemon after changing it: `gpgconf --kill scdaemon`. Debug with
 `gpg-connect-agent 'SCD GETINFO reader_list' /bye` (empty = no reader) and a `debug-level guru` + `log-file` run.
 
+**PIN asked on every SSH use (2026-10-23, open).** The card's policy is not the cause (`ykman openpgp info`: PIN for
+signature "Once", touch off), nor USB autosuspend (`/sys/bus/usb/devices/1-5/power/runtime_suspended_time` stayed 0),
+nor pcscd restarts (up continuously). **Hypothesis:** Chromium loads OpenSC through p11-kit
+(`grep opensc /proc/<chromium pid>/maps`; `p11-kit list-modules` lists `opensc`), and OpenSC, sharing the card under
+`pcsc-shared`, selects other applets or resets it, which drops the OpenPGP "PIN verified" state; scdaemon then showed
+`Card error` until `gpgconf --kill scdaemon`. **Test:** quit Chromium fully, `ssh -T git@antimike.github.com` twice a
+minute or two apart: one PIN prompt confirms it. **Fix if confirmed:** a per-user p11-kit override,
+`~/.config/pkcs11/modules/opensc.module` with `disable-in: chromium-browser` (managed by chezmoi, no sudo), or removing
+`opensc` if nothing else needs it.
+
 A "system keyring" unlock prompt on GPG/SSH use is gnome-keyring, not GPG: see D51 and the keyring item in
 [../plans/wayland-desktop.md](../plans/wayland-desktop.md), "Functional daily driver"; diagnose with `keyring-check`. After a `gpg-agent.conf`
 change: `gpg-connect-agent reloadagent /bye`; check with `gpgconf --list-options gpg-agent | grep external-cache`.
