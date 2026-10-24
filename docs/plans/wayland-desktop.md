@@ -493,8 +493,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       blueman-manager), battery, tray (blueman's icon hidden). Floating, centred, 0.9 opacity: pavucontrol, blueman-manager,
       the forecast; terminal popups (`bar-popup` class) float. blueman supplies the Bluetooth agent uwsm sessions lacked.
       Submap notices: passthrough only (fullscreen hides the bar), shown over fullscreen and while paused (dunst rule).
-      Chromium became the default browser (`run_onchange_after_default-browser.sh`). **Not tested live:** a real monitor
-      plug/unplug, the undocked brightness drawer. Styling waits for theming. Original item:
+      Chromium became the default browser (`run_onchange_after_default-browser.sh`). **Hotplug test passed 2026-10-24 (MH):** unplugging
+      the ASUS moved the main bar to the panel and back on replug; panel alone (lid open) got the main bar and the brightness drawer works. Styling waits for theming. Original item:
       battery, network, volume, clock, tray (**waybar, for Hyprland** since D62: `hyprland/workspaces`;
       the trial bar (retired 2026-10-24) was the starting point; no styling; step 7 later). **Submap indicator** (`hyprland/submap`, MH 2026-10-24), with a distinct icon for passthrough; it replaces the dunst submap notices.
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
