@@ -262,10 +262,11 @@ user, so matching its look to the desktop theme needs a small root-side sync. Sh
 - Guards: Wayland-only files key off the `display_server` host data (as the clipboard stack does) and installed tools
   (`lookPath`); no WSL guard needed.
 
-## Functional daily driver (D50, 2026-10-18)
+## Functional daily driver (D50, 2026-10-18; retargeted to Hyprland by D62, 2026-10-23)
 
-MH needs a working desktop for a job search soon, so this checklist comes before the numbered steps below. Only what
-makes SwayFX usable every day; anything not done by the deadline, **Tuesday 2026-10-20** (MH), moves to the backlog. Each item takes the
+MH needs a working desktop for a job search soon, so this checklist comes before the numbered steps below. Since D62
+the daily driver is **Hyprland** (SwayFX stays installed and working as the fallback; its done items below stay done).
+Open items target Hyprland first. Only what makes the daily driver usable every day; anything not done by the deadline, **Tuesday 2026-10-20** (MH), moves to the backlog. Each item takes the
 functional part of its step, not the whole step; scripts from `i3-config-mbp` are ported only when an item needs them.
 
 - [ ] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a
@@ -367,7 +368,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
 - [x] **NVIDIA renders docked sessions** (D59, 2026-10-23): `sway-perf` measurements, nm-applet dropped (D58), kanshi `config-nvidia`, lid notice. **MH's docked login passed 2026-10-23 15:50**: kanshi ran `config-nvidia` (`docked-asus-dell`: ASUS 0,0 scale 1.5, Dell 2560,0, panel off), lid open showed the notice and left the layout alone; `sway-perf` nvidia-d59: hands off 11%, mouse 22.7% (max 29%), 0 cursor-plane errors, NVIDIA P5 10.5 W.
-- [ ] **Hyprland trial: smooth *and* the panel?** (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
+- [x] **Hyprland trial: smooth *and* the panel?** (**answered 2026-10-23: yes; Hyprland became the daily driver, D62**) (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
       **Built 2026-10-23** (branch `wayland/hyprland-trial`, not merged): correction to the start note: GDM already
       lists **"Hyprland (uwsm-managed)"** (`/usr/share/wayland-sessions/hyprland-uwsm.desktop` from the COPR's
       `hyprland-uwsm`; `uwsm.yaml` says so), so no new entry. Hyprland is 0.56.2 and its config is **Lua** (hyprlang
@@ -446,7 +447,16 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       unnecessary; does an undocked-equivalent state (heads off, cable in) resume cleanly; does Hyprland/aquamarine
       release the NVIDIA card's heads fully when outputs are disabled; how to re-enable without a replug; is
       suspend-then-replug safer than a modeset. Until then: D61.
-- [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
+- [ ] **Port the i3/SwayFX keys to Hyprland** (MH, 2026-10-23): as many of the shared body's bindings
+      (`home/.chezmoitemplates/wm/common`) and the SwayFX-only ones as Hyprland can do, in
+      `home/private_dot_config/hypr/hyprland.lua.tmpl`; i3-style tiling control (splits, tabbed/stacked
+      containers, `hy3`) is **not** a priority. Already there: launcher, terminal, close, fullscreen, floating toggle
+      (`$mod+Shift+Space`), focus/move by direction, workspaces 1-10, mouse move/resize, lock, suspend, power key,
+      volume/brightness, Print, lid. Left: the rest of the screenshot keys, `idle-toggle`, resize mode, scratchpad,
+      move workspace to output, layout keys that map to dwindle, exit confirmation, clipboard history, and the
+      Keychron/MX Keys device-specific binds. Keep one source of truth in mind for the parked keybinding manifest.
+- [ ] **Minimal bar:** battery, network, volume, clock, tray (**waybar, for Hyprland** since D62: `hyprland/workspaces`;
+      the trial bar `tools/hypr-trial-bar/` is the starting point; no styling; step 7 later).
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for
       SwayFX lag). If nm-applet is cleared: `nm-applet --indicator` in the tray (Wi-Fi list, passwords, VPN; no own
@@ -467,7 +477,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       `~/.config/kitty/` were fast-forwarded to upstream (`e115f36`, `992c1f3`); open item to manage them. Checked with
       kitty's config parser (no bad lines; the wal include read when present, skipped when absent) and the kittens'
       imports; **MH confirmed 2026-10-19** in a new window: no error screen, `Alt+Shift+c`, `kitten choose-fonts`.
-- [ ] **Keybinding cheat sheet:** `swaymsg -t get_config` → fuzzel/rofi, comment convention for descriptions
+- [ ] **Keybinding cheat sheet:** from Hyprland since D62 (`hyprctl binds -j`, which carries each bind's `description`) → fuzzel/rofi; was `swaymsg -t get_config`, comment convention for descriptions
       ([keybinding-manifest.md](keybinding-manifest.md), "Interim").
 - [x] **Keyring unlock prompts** (D51; merged 2026-10-18; **both login paths verified**: the fresh-daemon path on
       2026-10-21 21:33, see below). Symptom:

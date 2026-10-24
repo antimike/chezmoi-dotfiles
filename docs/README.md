@@ -14,7 +14,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 |---|---|---|
 | [STATUS.md](STATUS.md) | Current focus, next actions, blockers, start prompt | every session start; update at session end |
 | [conventions.md](conventions.md) | Commit, branch, scan, push, chezmoi and shell rules | before committing or pushing |
-| [decisions.md](decisions.md) | Decision log D1–D61 | before changing a design; append new decisions |
+| [decisions.md](decisions.md) | Decision log D1–D62 | before changing a design; append new decisions |
 | [open-items.md](open-items.md) | All open items with owner and pointer | choosing what to do next |
 | [bootstrap-debt.md](bootstrap-debt.md) | Hand-installed tools and known gaps chezmoi should own | touching installers or packages |
 | [zsh-plugins.md](zsh-plugins.md) | zsh plugins dropped, abandoned or worth investigating, with what each provided | dropping or adding a zsh plugin; missing a shell feature |
