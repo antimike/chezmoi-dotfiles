@@ -21,13 +21,16 @@ boot) is the way back if the graphical session does not start.
   skip themselves (exec condition) on this driver.
 - **Known bug:** intermittent `nvidia-drm … Failed to register auto-value-update on pre-wait value for sync FD
   semaphore surface` on resume; NVIDIA-rendered clients then break (black text in kitty under SwayFX, kitty hung
-  under Hyprland). Detail and counts: [../open-items.md](../open-items.md), "black text in kitty".
+  under Hyprland), and with Intel rendering the **externals stay black** after a docked resume; a replug then
+  timed out NVIDIA's flips (`Flip event timeout on head 1`) and froze the display stack (2026-10-23). So D61: no
+  suspend while docked. Detail and counts: [../open-items.md](../open-items.md), "black text in kitty".
 - Available: **615.78.08** in `rpmfusion-nonfree-updates` (a new branch, not a point release). 595.80 is no longer
   in the repos; the only older build left is **595.58.03** (`rpmfusion-nonfree`, the Fedora 44 release repo).
 
 ## Plan: upgrade 595.80 -> 615.x (deferred, MH 2026-10-23)
-**When:** after the compositor questions are settled (Intel-first Hyprland suspend series, then the trial's
-winner), as a change of its own, so a fix or regression can be put on the right cause. At a quiet time, not before
+**When:** deferred by MH (2026-10-23): the last NVIDIA upgrade on this machine was very disruptive and had to be
+rolled back, and D61 (no suspend while docked) is acceptable meanwhile. Not urgent unless a security fix applies:
+check NVIDIA's security bulletins for the 595 branch before deciding (not checked yet). Do it as a change of its own, so a fix or regression can be put on the right cause. At a quiet time, not before
 something important.
 
 **Trade-offs** (Claude, 2026-10-23):

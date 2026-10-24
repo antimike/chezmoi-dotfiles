@@ -425,6 +425,27 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       scratchpad was used); kitty text clipped by the rounded corners, fixed for both compositors
       (`window_padding_width 4`); `follow_mouse = 1` here vs `focus_follows_mouse no` (shared i3/SwayFX data):
       MH likes it, decides after using it; then both configs follow one setting.
+
+      **Intel-first suspend series (2026-10-23, failed):** the NVIDIA resume bug hits Intel-first Hyprland too
+      (externals black after every resume, a display freeze on replug; detail in the open item). Outcome: D61 (no
+      suspend while docked); D60 kept for other reasons (NVIDIA free for compute, no measured CPU cost, MH prefers
+      Hyprland). The trial's main question is answered for Hyprland: smooth and the panel works. Before merging the
+      branch: D60's default (open item). Later, ricing: an effects CPU test (open item).
+
+- [ ] **Docked suspend workaround** (after the NVIDIA driver upgrade; MH + Claude, 2026-10-23). Scope: before any
+      suspend while docked, disable the external outputs (Hyprland: monitor rules or `hyprctl`; SwayFX: `swaymsg
+      output … disable`; kanshi must not re-enable them), so no NVIDIA head is active during sleep; after resume,
+      enable them again, either automatically after unlock or by asking MH to replug. It has to cover every path that
+      can suspend docked: `dock-awake` (which would then stop refusing), logind (lid with `HandleLidSwitchDocked`,
+      power key), swayidle's idle suspend, and the AC-loss grace; likely a logind/systemd sleep hook
+      (`/usr/lib/systemd/system-sleep/` or a `Before=sleep.target` user unit), since PrepareForSleep only delays
+      with a delay inhibitor. **Risks:** the `semsurf` error is logged inside the kernel's resume, before any
+      compositor action, so the bug may hit even with no active heads; re-enabling outputs is a modeset on the same
+      NVIDIA path that timed out on replug, so it could trigger the freeze itself; testing it means more wedged
+      sessions (have SSH or SysRq ready first, open item). **Open questions:** does the driver upgrade make it
+      unnecessary; does an undocked-equivalent state (heads off, cable in) resume cleanly; does Hyprland/aquamarine
+      release the NVIDIA card's heads fully when outputs are disabled; how to re-enable without a replug; is
+      suspend-then-replug safer than a modeset. Until then: D61.
 - [ ] **Minimal bar:** battery, network, volume, clock, tray (waybar or swaybar, no styling; step 7 later).
       **Network picker** (MH, 2026-10-22: the current swaybar is not interactive). **nm-applet test done: dropped (D58, provisional)**; so the picker is `networkmanager_dmenu` (below), unless the GPU experiments bring nm-applet back. Earlier note:
       (open item; router session 2026-10-23: nm-applet's tray animation during reconnects is the prime suspect for

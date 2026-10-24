@@ -64,7 +64,9 @@ nvidia-drm sync-FD error behind the black/hung kitty after resume; [../docs/open
 suspend whose window, from `PM: suspend entry` to 10 s after `PM: suspend exit`, contains it: the kernel writes its
 resume messages before the exit line (checked on the 2026-10-23 resumes). The rendering GPU is printed for the current
 session only, since the journal does not record it per resume; note it yourself when you compare sessions. Kernel
-messages are per boot, so `--since` before the last boot shows nothing earlier.
+messages are per boot, so `--since` before the last boot shows nothing earlier (use `journalctl -b -1 -k` after a
+reboot). **It does not see black external screens:** on 2026-10-23 two resumes logged no error but left the
+externals black, so look at the screens too.
 
 ## public-scan
 
