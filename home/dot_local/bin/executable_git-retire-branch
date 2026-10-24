@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# git-retire-branch — archive or delete finished branches, locally and on the remote (D65).
+#
+#   git retire-branch --archive [-n] [--remote R] [--into B] BRANCH...   keep as refs/archive/BRANCH, drop the branch
+#   git retire-branch --delete  [-n] [--remote R] [--into B] BRANCH...   drop the branch (must be merged into B)
+#
+#   -n, --dry-run   print the plan and the commands, change nothing
+#   --remote R      remote to update (default origin)
+#   --into B        branch the work was merged into (default main)
+#
+# Archive refs live outside refs/heads, so `git branch`, completion and GitHub's branch list do not
+# show them; they keep the commits reachable and can be fetched. List: git for-each-ref refs/archive
+# Restore: git branch NAME refs/archive/NAME. A clone fetches them only with the refspec this script
+# adds to the repo's config (remote.R.fetch +refs/archive/*:refs/archive/*).
+#
+# Rule (docs/conventions.md): archive merged branches tied to a D-number or an important bugfix, and
+# abandoned unmerged ones; delete routine merged ones. --delete refuses an unmerged branch.
+# All remote changes go in one atomic push (one YubiKey touch); local branches are deleted only
+# after it succeeds.
+set -euo pipefail
+
+usage() {
+  echo "usage: git retire-branch --archive|--delete [-n] [--remote R] [--into B] BRANCH..." >&2
+  exit 2
+}
+
+mode='' dry=false remote=origin into=main
+branches=()
+while (($#)); do
+  case $1 in
+    --archive) mode=archive ;;
+    --delete) mode=delete ;;
+    -n | --dry-run) dry=true ;;
+    --remote) remote=${2:?}; shift ;;
+    --into) into=${2:?}; shift ;;
+    -h | --help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) usage ;;
+    *) branches+=("$1") ;;
+  esac
+  shift
+done
+[[ -n $mode && ${#branches[@]} -gt 0 ]] || usage
+
+die() { echo "git-retire-branch: $*" >&2; exit 1; }
+run() {
+  printf '  %s\n' "$*"
+  $dry || "$@"
+}
+
+git rev-parse --git-dir >/dev/null 2>&1 || die "not in a git repository"
+git rev-parse --verify -q "refs/heads/$into" >/dev/null || die "no local branch '$into'"
+current=$(git symbolic-ref -q --short HEAD || true)
+
+# One network call for the remote's branch tips.
+heads=$(git ls-remote --heads "$remote") || die "cannot reach remote '$remote'"
+declare -A remote_tip=()
+while read -r sha ref; do
+  if [[ -n $ref ]]; then remote_tip[${ref#refs/heads/}]=$sha; fi
+done <<<"$heads"
+yn() { [[ -n $1 ]] && echo yes || echo no; }
+
+refspecs=() local_delete=() archive_new=()
+for b in "${branches[@]}"; do
+  [[ $b != "$into" ]] || die "refusing to retire '$into' itself"
+  [[ $b != "$current" ]] || die "'$b' is checked out; switch away first"
+  local_tip=$(git rev-parse --verify -q "refs/heads/$b" || true)
+  rtip=${remote_tip[$b]:-}
+  [[ -n $local_tip || -n $rtip ]] || die "no branch '$b' here or on $remote"
+  if [[ -n $local_tip && -n $rtip && $local_tip != "$rtip" ]]; then
+    die "'$b' differs here ($local_tip) and on $remote ($rtip); sync it first"
+  fi
+  tip=${local_tip:-$rtip}
+  git cat-file -e "$tip^{commit}" 2>/dev/null || die "'$b' on $remote ($rtip) is not fetched; git fetch $remote first"
+
+  if git merge-base --is-ancestor "$tip" "refs/heads/$into"; then merged=yes; else merged=no; fi
+  [[ $mode == archive || $merged == yes ]] || die "'$b' is not merged into $into; use --archive to keep it"
+
+  printf '%s: %s %s (merged into %s: %s; local: %s, %s: %s)\n' "$b" "$mode" "${tip:0:7}" "$into" "$merged" \
+    "$(yn "$local_tip")" "$remote" "$(yn "$rtip")"
+
+  if [[ $mode == archive ]]; then
+    existing=$(git rev-parse --verify -q "refs/archive/$b" || true)
+    [[ -z $existing || $existing == "$tip" ]] || die "refs/archive/$b already exists at ${existing:0:7}"
+    [[ -n $existing ]] || archive_new+=("$b:$tip")
+    refspecs+=("refs/archive/$b:refs/archive/$b")
+  fi
+  [[ -z $rtip ]] || refspecs+=(":refs/heads/$b")
+  [[ -z $local_tip ]] || local_delete+=("$b")
+done
+
+$dry && echo "dry run; would run:"
+for entry in ${archive_new[@]+"${archive_new[@]}"}; do
+  # The empty old value makes update-ref fail if the ref appeared meanwhile.
+  run git update-ref "refs/archive/${entry%%:*}" "${entry#*:}" ""
+done
+if [[ $mode == archive ]] && ! git config --get-all "remote.$remote.fetch" | grep -qxF '+refs/archive/*:refs/archive/*'; then
+  run git config --add "remote.$remote.fetch" '+refs/archive/*:refs/archive/*'
+fi
+((${#refspecs[@]} == 0)) || run git push --atomic "$remote" "${refspecs[@]}"
+for b in ${local_delete[@]+"${local_delete[@]}"}; do
+  # -D: merged state was checked against $into above, and archived tips are on the remote now.
+  run git branch -D "$b"
+done

@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# git-retire-branch-test — test git-retire-branch (D65) against a throwaway bare remote.
+#
+#   tools/git-retire-branch-test/git-retire-branch-test
+#
+# Builds a scratch repo with a local bare "origin" in a temp dir: merged branches (local only,
+# pushed, both), an unmerged one, one that differs from its remote copy. Checks dry runs change
+# nothing; --archive creates and pushes refs/archive/*, adds the fetch refspec, deletes the branch
+# on both sides; --delete refuses unmerged branches; the checked-out branch, a diverged branch and
+# an existing archive ref at another commit are refused; restoring from the archive works.
+# Uses the source copy of the script, not the deployed one. Prints one line per case; exits 1 if
+# any fails.
+# check() evals its condition string, so the single-quoted conditions and helpers are intended.
+# shellcheck disable=SC2016,SC2329
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+script=$repo/home/dot_local/bin/executable_git-retire-branch
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
+
+fail=0
+ok() { printf 'ok    %s\n' "$1"; }
+bad() { printf 'FAIL  %s\n' "$1"; fail=1; }
+check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
+retire() { (cd "$tmp/w" && bash "$script" "$@") >"$tmp/out" 2>&1; }
+has_remote() { git -C "$tmp/w" ls-remote --exit-code origin "$1" >/dev/null 2>&1; }
+has_local() { git -C "$tmp/w" rev-parse --verify -q "$1" >/dev/null; }
+
+git init -q --bare -b main "$tmp/origin.git"
+git init -q -b main "$tmp/w"
+cd "$tmp/w"
+git remote add origin "$tmp/origin.git"
+git commit -q --allow-empty -m root
+for b in merged-pushed merged-local merged-routine unmerged diverged; do
+  git switch -q -c "$b" main
+  git commit -q --allow-empty -m "$b work"
+  git switch -q main
+  case $b in merged-*) git merge -q --no-ff -m "merge $b" "$b" ;; esac
+done
+git push -q origin main merged-pushed merged-routine unmerged diverged
+git switch -q diverged && git commit -q --allow-empty -m "local only" && git switch -q main
+cd "$repo"
+
+retire --archive -n merged-pushed
+check "dry run changes nothing" '! has_local refs/archive/merged-pushed && has_local refs/heads/merged-pushed && has_remote refs/heads/merged-pushed && grep -q "would run" "$tmp/out"'
+
+retire --archive merged-pushed merged-local
+check "archive: refs created locally" 'has_local refs/archive/merged-pushed && has_local refs/archive/merged-local'
+check "archive: refs pushed" 'has_remote refs/archive/merged-pushed && has_remote refs/archive/merged-local'
+check "archive: branches deleted locally" '! has_local refs/heads/merged-pushed && ! has_local refs/heads/merged-local'
+check "archive: pushed branch deleted on origin" '! has_remote refs/heads/merged-pushed'
+check "archive: fetch refspec added once" '[[ $(git -C "$tmp/w" config --get-all remote.origin.fetch | grep -cxF "+refs/archive/*:refs/archive/*") == 1 ]]'
+
+retire --delete merged-routine
+check "delete: merged branch gone on both sides" '! has_local refs/heads/merged-routine && ! has_remote refs/heads/merged-routine && ! has_local refs/archive/merged-routine'
+
+if retire --delete unmerged; then bad "delete refuses unmerged"; else check "delete refuses unmerged" 'has_local refs/heads/unmerged && has_remote refs/heads/unmerged'; fi
+if retire --archive diverged; then bad "refuses a branch that differs from origin"; else ok "refuses a branch that differs from origin"; fi
+if retire --archive main; then bad "refuses the target branch"; else ok "refuses the target branch"; fi
+git -C "$tmp/w" switch -q unmerged
+if retire --archive unmerged; then bad "refuses the checked-out branch"; else ok "refuses the checked-out branch"; fi
+git -C "$tmp/w" switch -q main
+
+git -C "$tmp/w" update-ref refs/archive/unmerged main
+if retire --archive unmerged; then bad "refuses an archive ref at another commit"; else ok "refuses an archive ref at another commit"; fi
+git -C "$tmp/w" update-ref -d refs/archive/unmerged
+
+retire --archive unmerged
+check "archive takes an unmerged branch" 'has_remote refs/archive/unmerged && ! has_remote refs/heads/unmerged && ! has_local refs/heads/unmerged'
+
+git clone -q "$tmp/origin.git" "$tmp/clone"
+git -C "$tmp/clone" fetch -q origin '+refs/archive/*:refs/archive/*'
+git -C "$tmp/clone" branch -q restored refs/archive/merged-pushed
+check "a fresh clone can fetch and restore an archive" '[[ $(git -C "$tmp/clone" log -1 --format=%s restored) == "merged-pushed work" ]]'
+
+exit $fail
