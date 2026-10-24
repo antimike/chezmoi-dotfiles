@@ -121,8 +121,8 @@ hl.bind("XF86AudioMute",         hl.dsp.exec_cmd(bin .. "volume mute"), { locked
 hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(bin .. "brightness up"),   { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(bin .. "brightness down"), { locked = true, repeating = true })
 hl.bind("Print",                 hl.dsp.exec_cmd(bin .. "screenshot window"))
--- Suspend, docked or not; the power key suspends through dock-awake while docked on AC
--- (logind handles it otherwise; see ~/.config/sway/config).
+-- Suspend ($mod+Ctrl+Escape) and the power key's short press (logind ignores it) both go
+-- through dock-awake: suspend undocked, refuse docked (D61). A 5 s press is logind's power off.
 hl.bind(mod .. " + CTRL + Escape", hl.dsp.exec_cmd(bin .. "dock-awake suspend"))
 hl.bind("XF86PowerOff",          hl.dsp.exec_cmd(bin .. "dock-awake power-key"), { locked = true })
 {{- end }}

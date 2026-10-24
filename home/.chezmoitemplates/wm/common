@@ -276,6 +276,11 @@ bindsym $mod+Shift+r restart
 bindsym $mod+Escape exec "loginctl lock-session"
 # Suspend, docked or not (~/.local/bin/dock-awake: the one suspend path)
 bindsym $mod+Ctrl+Escape exec --no-startup-id exec ~/.local/bin/dock-awake suspend
+{{- if eq (dig "display_server" "x11" .) "wayland" }}
+# Power key, short press: logind ignores it here (run_onchange_install-logind-power.sh),
+# so the same path as above; a 5 s press is logind's clean power off.
+bindsym {{ if eq .wm "sway" }}--locked {{ end }}XF86PowerOff exec --no-startup-id exec ~/.local/bin/dock-awake power-key
+{{- end }}
 
 # Screenshots (~/.local/bin/screenshot; Print is also the Keychron's screenshot key)
 bindsym Print exec --no-startup-id exec ~/.local/bin/screenshot window

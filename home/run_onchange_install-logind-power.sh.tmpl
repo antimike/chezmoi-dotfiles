@@ -5,7 +5,13 @@
 #   lid closed, no external monitor  → suspend (on battery and on AC)
 #   lid closed, external monitor     → keep running ("docked"; SwayFX turns the
 #                                      panel off through bindswitch)
-#   power key                        → suspend; long press → power off
+#   power key, short press           → nothing here: the compositor's XF86PowerOff
+#                                      binding runs `dock-awake power-key` (suspend
+#                                      undocked, refuse docked: D61); GNOME and the GDM
+#                                      greeter handle the key themselves
+#   power key, long press (5 s)      → clean power off, always: no session lock holds
+#                                      handle-power-key, so it works even when the
+#                                      display stack is wedged (2026-10-23)
 #
 # swayidle locks before every sleep (GNOME locks by itself). This applies to GNOME
 # sessions too: GNOME blocks logind's lid handling only while an external monitor
@@ -44,7 +50,7 @@ cat > "$STAGED" <<'EOF'
 HandleLidSwitch=suspend
 HandleLidSwitchExternalPower=suspend
 HandleLidSwitchDocked=ignore
-HandlePowerKey=suspend
+HandlePowerKey=ignore
 HandlePowerKeyLongPress=poweroff
 EOF
 

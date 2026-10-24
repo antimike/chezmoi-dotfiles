@@ -39,9 +39,6 @@ bindswitch --reload --locked lid:off exec ~/.local/bin/lid-panel-sync --opened
 # for calls ($mod+Escape locks: shared body).
 for_window [all] inhibit_idle fullscreen
 bindsym $mod+Shift+Escape exec ~/.local/bin/idle-toggle
-# Power key: logind suspends, except docked on AC, where dock-awake.service holds
-# logind's power-key inhibitor and this binding suspends instead (no-op otherwise).
-bindsym --locked XF86PowerOff exec ~/.local/bin/dock-awake power-key
 
 # Placeholder until waybar (step 7).
 bar {
