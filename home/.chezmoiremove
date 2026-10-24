@@ -16,3 +16,5 @@
 .config/kitty/kittens/themes
 # waybar config generated at run time since 2026-10-24 (waybar-launch; bars/ are the sources).
 .config/waybar/config.jsonc
+# Help page for the Python yq, replaced by mikefarah's yq (man yq) on 2026-10-24.
+.local/share/man/man1h/yq.1h
