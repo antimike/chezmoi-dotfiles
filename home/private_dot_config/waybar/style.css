@@ -1,0 +1,40 @@
+/* waybar: Blazer colours (kitty/current-theme.conf) until theming generates them
+   (docs/plans/theming.md). Function first: state colours (submap, battery, paused)
+   are the only styling beyond the base. */
+* {
+    font-family: "Source Code Pro", "FiraCode Nerd Font";
+    font-size: 13px;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: rgba(13, 25, 37, 0.92);
+    color: #d9e5f1;
+}
+
+tooltip {
+    background: #0d1925;
+    border: 1px solid #7979b8;
+}
+
+#workspaces button {
+    padding: 0 7px;
+    color: #9aa7b4;
+    background: transparent;
+}
+#workspaces button.active { color: #0d1925; background: #7979b8; }
+#workspaces button.urgent { color: #0d1925; background: #b87979; }
+#workspaces button:hover { background: rgba(121, 121, 184, 0.35); }
+
+#submap { padding: 0 10px; color: #0d1925; background: #b8b879; }
+#submap.passthrough { background: #b87979; }
+
+#window, #clock, #pulseaudio, #network, #bluetooth, #battery, #tray,
+#custom-idle, #custom-dunst { padding: 0 8px; }
+
+#pulseaudio.muted, #network.disconnected, #bluetooth.off, #bluetooth.disabled { color: #647384; }
+#battery.warning:not(.charging) { color: #b8b879; }
+#battery.critical:not(.charging) { color: #0d1925; background: #b87979; }
+#custom-idle.paused, #custom-dunst.paused { color: #0d1925; background: #b8b879; }

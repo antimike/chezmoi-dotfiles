@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# waybar-module — JSON for waybar's custom modules (~/.config/waybar/config.jsonc).
+#
+#   waybar-module idle    shown while the idle chain is paused (idle-toggle); click resumes
+#   waybar-module dunst   shown while notifications are paused, with the waiting count
+#
+# Empty text hides a module, so both show only the unusual state. Refreshed on an
+# interval and by signal: `pkill -RTMIN+8 -x waybar` (idle), `-RTMIN+9` (dunst).
+set -euo pipefail
+
+out() { jq -cn --arg text "$1" --arg class "$2" --arg tooltip "$3" '{$text, $class, $tooltip}'; }
+
+case ${1:-} in
+  idle)
+    if systemctl --user --quiet is-active swayidle-locking.service; then
+      out $'\U000f0176 idle paused' paused 'No dim, lock, screens off or suspend on timeout. Click to resume.'
+    else
+      out '' '' ''
+    fi
+    ;;
+  dunst)
+    if [[ $(dunstctl is-paused) == true ]]; then
+      out $'\U000f009b '"$(dunstctl count waiting)" paused 'Notifications paused (count: waiting). Click to resume.'
+    else
+      out '' '' ''
+    fi
+    ;;
+  *)
+    echo "usage: waybar-module idle|dunst" >&2
+    exit 2
+    ;;
+esac

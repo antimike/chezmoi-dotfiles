@@ -1,5 +1,0 @@
-* { font-family: monospace; font-size: 13px; min-height: 0; }
-window#waybar { background: rgba(20, 20, 20, 0.9); color: #ddd; }
-#workspaces button { padding: 0 6px; color: #aaa; border-radius: 0; }
-#workspaces button.active { color: #fff; background: #444; }
-#window, #battery, #clock { padding: 0 8px; }
