@@ -82,6 +82,11 @@ data:
   # Gates employer-only tooling (VPN stack, rano). False here; true on a future
   # work laptop. Use as {{ "{{ if .work_tooling }}" }} inline guards.
   work_tooling: false
+  # Package targets to install (packages.yaml, packageTargets; D32). A target's
+  # `when` conditions still apply, so `wayland` is skipped on non-Wayland hosts.
+  package_targets:
+    - base
+    - wayland
   wallpaper:
     cache: {{ joinPath $filesystem.cacheDir "wallpaper" "current-wallpaper.png" }}
     library: {{ joinPath $filesystem.appData "wallpaper" }}
