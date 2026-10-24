@@ -1,0 +1,31 @@
+// The main bar: every module and the tray. waybar-launch puts it on the ASUS, else the
+// laptop panel, else the leftmost monitor. Module settings: ../modules.jsonc.
+{
+    "layer": "top",
+    "position": "top",
+    "height": 26,
+    "spacing": 4,
+    "include": [
+        "~/.config/waybar/modules.jsonc"
+    ],
+    "name": "main",
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/submap",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "clock",
+        "custom/weather"
+    ],
+    "modules-right": [
+        "custom/idle",
+        "custom/dunst",
+        "group/system",
+        "group/audio",
+        "network",
+        "bluetooth",
+        "battery",
+        "tray"
+    ]
+}

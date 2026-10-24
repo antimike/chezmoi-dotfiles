@@ -13,7 +13,8 @@ ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
 [Service]
 # Click actions and custom modules call helpers in ~/.local/bin.
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
-ExecStart=/usr/bin/waybar
+# waybar-launch writes the bar config (main bar on the main monitor) and execs waybar.
+ExecStart=%h/.local/bin/waybar-launch run
 ExecReload=/usr/bin/kill -SIGUSR2 $MAINPID
 Slice=session.slice
 Restart=on-failure
