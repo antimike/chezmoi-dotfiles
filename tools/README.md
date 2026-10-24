@@ -12,6 +12,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 | [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
 | [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
+| [waybar-launch-test/](waybar-launch-test/) | Which monitor `waybar-launch` gives the main bar, for each dock/lid layout (stubbed `hyprctl`): `tools/waybar-launch-test/waybar-launch-test` |
 
 ## zsh-probe
 
