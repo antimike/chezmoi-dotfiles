@@ -288,15 +288,11 @@ bindsym Print exec --no-startup-id exec ~/.local/bin/screenshot window
 bindsym $mod+Ctrl+s exec --no-startup-id exec ~/.local/bin/screenshot window
 bindsym $mod+Ctrl+Shift+s exec --no-startup-id exec ~/.local/bin/screenshot window --ask
 bindsym $mod+Ctrl+Alt+s exec --no-startup-id exec ~/.local/bin/screenshot desktop --ask
-{{- if eq .wm "sway" }}
 # The MX Keys S has no Print; its screenshot key sends Super+Shift+S (a firmware macro), and
 # held modifiers add to it: Ctrl+key arrives as $mod+Ctrl+Shift+s (window --ask, above), Alt+key
-# as $mod+Shift+Alt+s. Bound for that keyboard only: $mod+Shift+s stays "sticky toggle" on the
-# others (i3 has no per-device keys).
-set $mx_keys --input-device=1133:45944:MX_KEYS_S_Keyboard
-bindsym $mx_keys $mod+Shift+s exec ~/.local/bin/screenshot window
-bindsym $mx_keys $mod+Shift+Alt+s exec ~/.local/bin/screenshot desktop --ask
-{{- end }}
+# as $mod+Shift+Alt+s. Screenshot keys on every keyboard (MH, 2026-10-23; sticky moved to $mod+Shift+t).
+bindsym $mod+Shift+s exec --no-startup-id exec ~/.local/bin/screenshot window
+bindsym $mod+Shift+Alt+s exec --no-startup-id exec ~/.local/bin/screenshot desktop --ask
 bindsym $mod+Print exec --no-startup-id exec ~/.local/bin/screenshot window --ask
 bindsym $mod+Shift+Print exec --no-startup-id exec ~/.local/bin/screenshot desktop --ask
 {{- if eq .wm "i3" }}
@@ -348,8 +344,8 @@ bindsym $mod+Ctrl+x move window scratchpad
 # Toggle scratchpad visibility
 bindsym $mod+Ctrl+Shift+x scratchpad show
 
-# Toggle sticky mode (floating)
-bindsym $mod+Shift+s sticky toggle
+# Toggle sticky mode (floating; Hyprland calls it pin)
+bindsym $mod+Shift+t sticky toggle
 
 # Center (floating) window
 bindsym $mod+Mod1+c move position center
