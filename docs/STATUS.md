@@ -48,7 +48,7 @@ updated: 2026-10-23
    7. **Bar: done 2026-10-24** (waybar, Hyprland only; MH reviewed it live). Untested: a real monitor plug/unplug re-placing the main bar, the undocked brightness drawer.
    8. Keybinding cheat sheet: **V1 done 2026-10-24** (`keys-cheatsheet`, `$mod+slash`; Enter replays the key).
    9. i3 off zbook (D50 amends D49).
-3. **NVIDIA driver 595.80 -> 615 upgrade: planned for 2026-10-24** (MH; the September 2026 bulletin affects 595.80; 615.78.08 is fixed): [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md). After it: a docked resume series, then maybe lift D61, and the docked suspend workaround (open item).
+3. **NVIDIA driver 595.80 -> 615 upgrade: in progress 2026-10-24** (MH; the September 2026 bulletin affects 595.80; 615.78.08 is fixed): [runbooks/nvidia-driver.md](runbooks/nvidia-driver.md). **615.78.08 installed** (dnf 29), module built and signed; 595.80 backed up locally (rpmrebuild); **next: reboot (procedure step 5) and the post-reboot checks**. Recovery card and new-session prompt: `~/.local/state/nvidia-rollback/RECOVERY.md`. After it: a docked resume series, then maybe lift D61, and the docked suspend workaround (open item).
 4. **Home network follow-ups** (open items): DNS pinning, Wi-Fi profile cleanup, router move + re-measure, router hardening/backup; MH's router projects.
 5. **Keychron mic key → F20** (low priority, MH when convenient): [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md).
 6. Atlassian/Jira review pass when MH schedules it.
