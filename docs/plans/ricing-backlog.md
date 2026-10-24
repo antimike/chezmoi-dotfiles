@@ -57,8 +57,14 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   `element-icon` large in the theme. fuzzel knows the same protocol but sizes icons to the text line. After the rofi theme
   is settled (theming). About 30 lines in `clipboard-history`.
 - [ ] **hyprshutdown**: check that it works under uwsm before using it for `$mod+Shift+e` (D63).
-- [ ] **hyprlock** as the Hyprland lock screen (blurred screenshot background), with `lock-screen` choosing by compositor;
-  **hyprpaper** for the wallpaper picker (D63; both installed, not configured).
+- [x] **hyprlock: built 2026-10-24** (branch `wayland/hyprlock`; **MH's live lock/unlock test pending**). `lock-screen`
+  picks hyprlock under Hyprland (`XDG_CURRENT_DESKTOP`), swaylock elsewhere; it returns on hyprlock's `onLockLocked` log
+  line (so `swayidle -w` still holds suspend until locked) and falls back to swaylock if hyprlock dies first. Guards from
+  testing: `flock` (two concurrent locks raced), and a hyprlock left over after an unlock is killed (0.9.6 hangs on a
+  futex after "Unlocked, exiting!" on a headless sway; **watch whether real Hyprland does it too**). Config: blurred
+  screenshot, clock, date, Blazer colours. `tools/lock-screen-test` covers it; recovery in
+  [../runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md).
+- [ ] **hyprpaper** for the wallpaper picker (D63; installed, not configured).
 - [ ] Nix config derivations (exploration notes exist in the reference clone's `docs/`)
 
 ## Hardware checks

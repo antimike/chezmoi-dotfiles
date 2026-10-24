@@ -12,6 +12,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 | [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
+| [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
 
 ## zsh-probe
 
@@ -95,3 +96,12 @@ tools/term-contrast/term-contrast.py --conf ~/.config/kitty/current-theme.conf -
 ```
 
 Resolves the palette through kitty itself (`kitty +runpy`, so includes and defaults count as kitty sees them; `--theme` dumps one of kitty's built-in themes), collects the colour styles the shell and CLI tools use, and lists every foreground/background pair below `--min` (WCAG ratio, default 3.0). Exits 1 on any failure. The rule it enforces for a dark theme: colour 8 must be legible on the background (comments and autosuggestions use it), and no text style may use colour 0. Needs `uv`, `kitty` and `zsh`; the `fsh` source sources the plugin from your zinit tree plus `~/.config/zsh/fsh-styles.zsh`. Known noise: trapd00r's `LS_COLORS` uses fixed 256-colour dims that fail on any dark background (`--sources` without `ls` to hide them).
+
+## lock-screen-test
+
+```sh
+tools/lock-screen-test/lock-screen-test                 # the source copy of lock-screen
+tools/lock-screen-test/lock-screen-test ~/.local/bin/lock-screen
+```
+
+Each case starts its own headless sway (new Wayland socket, checked with `grim` before any locker runs, so the real session is never locked), runs `lock-screen` with `XDG_CURRENT_DESKTOP` set, and reads "locked" off the screen (a `grim` shot differs from the empty desktop's). Cases: Hyprland lock returns only once confirmed; a second lock is a no-op; `SIGUSR1` unlocks (the recovery path); a hyprlock left over after an unlock does not block the next lock (a stand-in process plays the leftover when hyprlock 0.9.6's exit hang does not happen on its own); two concurrent locks share one hyprlock; other desktops get swaylock. Takes about 15 s. Needs sway, grim, ImageMagick, hyprlock and swaylock.

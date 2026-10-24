@@ -1,16 +1,68 @@
 #!/usr/bin/env bash
-# lock-screen — lock the Wayland session with swaylock; returns once it is locked.
+# lock-screen — lock the Wayland session; returns once it is locked.
 #
 #   lock-screen        what swayidle runs on logind's lock event and before sleep
 #
 # Lock through `loginctl lock-session` (bound to $mod+Escape) rather than calling
-# this directly, so every lock goes through one path. swaylock -f forks only after
-# the lock surface is up, so `swayidle -w` holds suspend until the screen is locked.
-# Settings: ~/.config/swaylock/config.
+# this directly, so every lock goes through one path. Returning only once the lock
+# surface is up lets `swayidle -w` hold suspend until the screen is locked.
+#
+# The locker follows the compositor (XDG_CURRENT_DESKTOP, set by uwsm; D63):
+#   Hyprland   hyprlock (~/.config/hypr/hyprlock.conf). It has no fork-after-lock
+#              option, so it runs in the background and this waits for its
+#              "locked" log line; if it exits first, swaylock locks instead.
+#   otherwise  swaylock -f, which forks once locked (~/.config/swaylock/config).
+# Stuck behind a hyprlock that takes no password: from a text console,
+# `pkill -USR1 hyprlock` unlocks.
 set -euo pipefail
+
+log=${XDG_RUNTIME_DIR:-/tmp}/lock-screen-hyprlock.log
+
+# One run at a time: logind's lock event and before-sleep can arrive together.
+# The lockers must not inherit fd 9, or the long-lived hyprlock would hold it.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/lock-screen.lock"
+flock 9
+
+# Wait for hyprlock (pid $1) to report the lock; fall back to swaylock if it dies.
+wait_locked() {
+  local _
+  # Hyprland confirms the lock within a frame or two; allow 10 s for a slow resume.
+  for _ in $(seq 100); do
+    if grep -q 'onLockLocked' "$log"; then
+      return 0
+    fi
+    if ! kill -0 "$1" 2>/dev/null; then
+      echo "lock-screen: hyprlock exited before locking (log: $log); using swaylock" >&2
+      exec swaylock -f 9>&-
+    fi
+    sleep 0.1
+  done
+  echo "lock-screen: hyprlock gave no lock confirmation in 10 s (log: $log)" >&2
+  return 1
+}
 
 # A second locker would fail anyway (one ext-session-lock per session); skip it.
 if pgrep -u "$UID" -x swaylock >/dev/null; then
   exit 0
 fi
-exec swaylock -f
+if pid=$(pgrep -u "$UID" -x -n hyprlock); then
+  # hyprlock can hang after unlocking (logs "Unlocked, exiting!", then waits on a
+  # futex; seen 2026-10-24 with 0.9.6). A leftover would make every later lock a
+  # no-op, so kill it and lock again. Otherwise it is locked or still starting.
+  if grep -q 'Unlocked, exiting' "$log" 2>/dev/null; then
+    echo "lock-screen: killing hyprlock $pid, left over after an unlock" >&2
+    kill -KILL "$pid"
+  else
+    wait_locked "$pid"
+    exit
+  fi
+fi
+
+if [[ ${XDG_CURRENT_DESKTOP:-} != Hyprland ]] || ! command -v hyprlock >/dev/null; then
+  exec swaylock -f 9>&-
+fi
+
+hyprlock --immediate-render --no-fade-in >"$log" 2>&1 9>&- &
+pid=$!
+disown
+wait_locked "$pid"

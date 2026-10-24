@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# lock-screen-test — test ~/.local/bin/lock-screen against a throwaway headless sway.
+#
+#   tools/lock-screen-test/lock-screen-test [SCRIPT]
+#
+# SCRIPT defaults to the source copy (home/dot_local/bin/executable_lock-screen).
+# Each case starts its own headless sway (a new Wayland socket; the real session is
+# never touched: the socket is checked with grim before any locker runs), runs the
+# script with XDG_CURRENT_DESKTOP set, checks the result, and kills everything.
+# "Locked" is read off the screen: a grim shot of the headless output differs from
+# the empty desktop's (the baseline shot taken when the sway starts). hyprlock reads the source
+# hyprlock.conf; logs go to a temp dir. Prints one line per case and exits 1 if any
+# fails. Needs sway, grim, ImageMagick (magick), hyprlock and swaylock.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+script=${1:-$repo/home/dot_local/bin/executable_lock-screen}
+tmp=$(mktemp -d)
+mkdir -p "$tmp/cfg/hypr" "$tmp/rt"
+chmod 700 "$tmp/rt"
+cp "$repo/home/private_dot_config/hypr/hyprlock.conf" "$tmp/cfg/hypr/"
+printf 'output HEADLESS-1 resolution 1920x1080\n' >"$tmp/sway.conf"
+log=$tmp/rt/lock-screen-hyprlock.log
+sway_pid=
+socket=
+failed=0
+
+# Lockers that were running before the test (none, normally) are never touched.
+before=$(pgrep -u "$UID" -x 'hyprlock|swaylock' | tr '\n' ' ' || true)
+mine() { comm -13 <(tr ' ' '\n' <<<"$before" | sort) <(pgrep -u "$UID" -x "$1" | sort) || true; }
+
+start_sway() {
+  local old
+  old=$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -name 'wayland-*' ! -name '*.lock' | sort)
+  env -u SWAYSOCK -u HYPRLAND_INSTANCE_SIGNATURE WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 \
+    sway -c "$tmp/sway.conf" >"$tmp/sway.log" 2>&1 &
+  sway_pid=$!
+  for _ in $(seq 50); do
+    socket=$(comm -13 <(echo "$old") <(find "$XDG_RUNTIME_DIR" -maxdepth 1 -name 'wayland-*' ! -name '*.lock' | sort) | head -1)
+    [[ -n $socket ]] && break
+    sleep 0.1
+  done
+  if [[ -z $socket ]] || ! WAYLAND_DISPLAY=$socket grim -o HEADLESS-1 /dev/null 2>/dev/null; then
+    echo "abort: no headless sway socket" >&2
+    exit 2
+  fi
+  WAYLAND_DISPLAY=$socket grim -o HEADLESS-1 "$tmp/base.png"
+}
+
+stop_all() {
+  local p
+  for p in $(mine hyprlock) $(mine swaylock); do kill -KILL "$p" 2>/dev/null || true; done
+  [[ -n $sway_pid ]] && kill "$sway_pid" 2>/dev/null && wait "$sway_pid" 2>/dev/null || true
+  sway_pid=
+  rm -f "$log"
+  sleep 0.3
+}
+trap 'stop_all; rm -rf "$tmp"' EXIT
+
+run_lock() { # DESKTOP
+  env -u HYPRLAND_INSTANCE_SIGNATURE XDG_CONFIG_HOME="$tmp/cfg" XDG_RUNTIME_DIR="$tmp/rt" \
+    WAYLAND_DISPLAY="$socket" XDG_CURRENT_DESKTOP="$1" bash "$script" 2>>"$tmp/stderr"
+}
+
+check() { # NAME CONDITION...
+  local name=$1
+  shift
+  if "$@"; then echo "pass  $name"; else echo "FAIL  $name"; failed=1; fi
+}
+count() { mine "$1" | grep -c . || true; }
+mean() { magick "$1" -format '%[fx:mean]' info:; }
+locked() {
+  sleep 0.3
+  WAYLAND_DISPLAY=$socket grim -o HEADLESS-1 "$tmp/shot.png" &&
+    [[ $(mean "$tmp/shot.png") != "$(mean "$tmp/base.png")" ]]
+}
+unlocked() { ! locked; }
+
+# 1. Hyprland: locks with hyprlock and returns only after the lock is confirmed.
+start_sway
+run_lock Hyprland && rc=0 || rc=$?
+check "hyprland: returns 0 once locked" test "$rc" = 0 -a "$(count hyprlock)" = 1
+check "hyprland: lock confirmed before return" grep -q onLockLocked "$log"
+check "hyprland: screen shows the lock" locked
+# 2. A second lock while locked is a no-op.
+run_lock Hyprland && rc=0 || rc=$?
+check "hyprland: second lock is a no-op" test "$rc" = 0 -a "$(count hyprlock)" = 1
+# 3. SIGUSR1 unlocks (the documented recovery).
+pkill -USR1 -x -n hyprlock
+for _ in $(seq 30); do grep -q 'Unlocked, exiting' "$log" && break; sleep 0.1; done
+check "hyprland: SIGUSR1 unlocks" unlocked
+# 4. After an unlock, a leftover hyprlock (the exit hang) must not block the next lock.
+# The hang is intermittent; without one, a stand-in (a copy of sleep named hyprlock)
+# plays the leftover.
+sleep 1
+leftover=$(count hyprlock)
+if ((leftover == 0)); then
+  mkdir -p "$tmp/bin"
+  cp "$(command -v sleep)" "$tmp/bin/hyprlock"
+  "$tmp/bin/hyprlock" 60 &
+  disown
+fi
+run_lock Hyprland && rc=0 || rc=$?
+check "hyprland: relock after unlock (real leftover: $leftover)" \
+  test "$rc" = 0 -a "$(count hyprlock)" = 1
+check "hyprland: screen shows the lock again" locked
+stop_all
+
+# 5. Two locks at once (logind's lock event and before-sleep): one hyprlock, both return 0.
+start_sway
+run_lock Hyprland & p1=$!
+run_lock Hyprland & p2=$!
+wait "$p1" && r1=0 || r1=$?
+wait "$p2" && r2=0 || r2=$?
+check "hyprland: concurrent locks share one hyprlock" test "$r1$r2" = 00 -a "$(count hyprlock)" = 1
+check "hyprland: screen shows the lock (concurrent)" locked
+stop_all
+
+# 6. Any other desktop: swaylock -f.
+start_sway
+run_lock sway && rc=0 || rc=$?
+sleep 0.3
+# swaylock runs as two processes (it forks a PAM helper).
+check "sway: swaylock runs" test "$rc" = 0 -a "$(count swaylock)" -ge 1 -a "$(count hyprlock)" = 0
+check "sway: screen shows the lock" locked
+stop_all
+
+[[ -s $tmp/stderr ]] && { echo "--- lock-screen stderr:"; cat "$tmp/stderr"; }
+exit "$failed"
