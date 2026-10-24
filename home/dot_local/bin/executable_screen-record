@@ -11,7 +11,10 @@
 # "$(xdg-user-dir VIDEOS)/screencasts") under a timestamp name. Stopping sends SIGINT,
 # so wf-recorder finishes the MP4 (a killed one can be unplayable), then pick-path asks
 # for a name, prefilled with the timestamp: Enter keeps it, a name or path moves it,
-# Escape (or a refused path) keeps it where it is. No audio. State: a file in
+# Escape (or a refused path) keeps it where it is. No audio. Encoding: H.264 on the
+# Intel (or AMD) GPU through VAAPI when there is one; wf-recorder's default is VP9 on the
+# CPU, which cannot keep up with a 4K monitor (2 cores, and frames queue up in memory at
+# ~190 MB/s; VAAPI: ~11% CPU, flat memory; measured 2026-10-24). State: a file in
 # $XDG_RUNTIME_DIR; waybar's custom/recording module (waybar-module recording, signal
 # 11) shows the elapsed time and stops the recording on click.
 set -euo pipefail
@@ -57,9 +60,21 @@ output_at() {
   fi
 }
 
+# wf-recorder's codec options: VAAPI on the first Intel or AMD render node, else none.
+encoder() {
+  local node driver
+  for node in /dev/dri/renderD*; do
+    [[ -e $node ]] || continue
+    driver=$(readlink -f "/sys/class/drm/${node##*/}/device/driver")
+    case ${driver##*/} in
+      i915 | xe | amdgpu) echo "-c h264_vaapi -d $node"; return ;;
+    esac
+  done
+}
+
 start() {
   need slurp; need wf-recorder; need jq
-  local geometry dir stamp file pid output
+  local geometry dir stamp file pid output codec
   # -o: each output is a box, so a click takes a whole monitor; a drag takes a region.
   geometry=$(slurp -o -b '#00000066' -c '#cc3333ff' -w 2) || exit 1
   dir=${SCREENCAST_DIR:-$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Videos")/screencasts}
@@ -67,7 +82,8 @@ start() {
   stamp=$(date +%Y-%m-%dT%H-%M-%S)
   file=$dir/$stamp.mp4
   # 9>&-: the toggle's lock must not outlive this run.
-  wf-recorder -g "$geometry" -f "$file" </dev/null >"$log" 2>&1 9>&- &
+  read -ra codec <<<"$(encoder)"
+  wf-recorder "${codec[@]}" -g "$geometry" -f "$file" </dev/null >"$log" 2>&1 9>&- &
   pid=$!
   disown
   sleep 0.5
