@@ -301,4 +301,6 @@ end)
 -- Not `idle_inhibit = "fullscreen"`: that also counts maximized windows ($mod+Shift+f;
 -- inhibitingIdle in `hyprctl clients -j`), so a maximized terminal would never lock.
 hl.window_rule({ name = "idle-inhibit-fullscreen", match = { fullscreen_state_internal = 2 }, idle_inhibit = "always" })
+-- Terminal popups from waybar clicks (nmtui, bluetoothctl): floating and centred.
+hl.window_rule({ name = "bar-popup", match = { class = "bar-popup" }, float = true, size = { 1000, 640 }, center = true })
 {{- end }}
