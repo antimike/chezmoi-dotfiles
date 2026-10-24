@@ -54,7 +54,7 @@ Side quests (spare time, D50): keybinding manifest, package map refactor, `swind
 Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-state` and of one `dstask` repo (all in [open-items.md](open-items.md)).
 
 ## Blockers / watch
-- **No suspend while docked (D61)**: unplug the monitors first. A wedged display: hold the power key 5-7 s (clean power off); SysRq 244 (Alt+Fn+Home) once installed.
+- **No suspend while docked (D61)**: unplug the monitors first. A wedged display: SysRq REISUB (hold Alt+Fn+Home, press R E I S U B; needs `kernel.sysrq=244`); holding the power key is a hard power cut.
 - **A plain `sudo dnf upgrade` installs NVIDIA 615** (deferred): exclude it or version-lock it until the planned upgrade ([runbooks/nvidia-driver.md](runbooks/nvidia-driver.md)).
 - `gitleaks dir .` reports **no leaks**: the 2 accepted findings (D30) are in `.gitleaksignore` by `file:rule:line` fingerprint. If one of those files changes so the finding moves line, it reappears: re-review, then refresh the fingerprint. Anything else is a stop.
 - The YubiKey must be plugged in for pushes, signing tags, `pass`, and the backup/sync timers.
