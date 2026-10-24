@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# screen-record — start or stop a screen recording (Wayland: slurp + wf-recorder).
+#
+#   screen-record          idle: pick a monitor (click) or a region (drag) and start;
+#                          recording: stop it and ask where to keep it
+#   screen-record status   prints "PID START_EPOCH OUTPUT FILE" and exits 0 while recording, else
+#                          non-zero (OUTPUT is "-" when unknown)
+#
+# One recording at a time: while one runs, the toggle only ever stops it. The file is
+# written straight to the screencast folder ($SCREENCAST_DIR, default
+# "$(xdg-user-dir VIDEOS)/screencasts") under a timestamp name. Stopping sends SIGINT,
+# so wf-recorder finishes the MP4 (a killed one can be unplayable), then pick-path asks
+# for a name, prefilled with the timestamp: Enter keeps it, a name or path moves it,
+# Escape (or a refused path) keeps it where it is. No audio. State: a file in
+# $XDG_RUNTIME_DIR; waybar's custom/recording module (waybar-module recording, signal
+# 11) shows the elapsed time and stops the recording on click.
+set -euo pipefail
+
+state=${XDG_RUNTIME_DIR:-/tmp}/screen-record.state
+log=${XDG_RUNTIME_DIR:-/tmp}/screen-record.log
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "screen-record: '$1' not found" >&2; exit 127; }
+}
+
+notify() { notify-send -a screen-record -i "$1" "$2" "$3" || true; }
+bar() { pkill -RTMIN+11 -x waybar || true; }
+
+# The state line of the running recording; a state file whose wf-recorder is gone is
+# reported (the file may be cut short) and removed.
+running() {
+  [[ -s $state ]] || return 1
+  local pid file
+  read -r pid _ _ file <"$state"
+  if [[ $(cat "/proc/$pid/comm" 2>/dev/null) == wf-recorder ]]; then
+    cat "$state"
+    return 0
+  fi
+  rm -f "$state"
+  bar
+  notify dialog-warning "Recording ended on its own" "${file/#"$HOME"/\~}"$'\n'"$(tail -n 3 "$log" 2>/dev/null)"
+  return 2
+}
+
+# The output holding the geometry's top-left corner ("x,y wxh"), for the save prompt.
+output_at() {
+  local x=${1%%,*} y=${1#*,}
+  y=${y%% *}
+  if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    hyprctl monitors -j | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+      | select(.x <= $x and $x < .x + .width / .scale
+               and .y <= $y and $y < .y + .height / .scale) | .name) // empty' || true
+  elif [[ -n ${SWAYSOCK:-} ]]; then
+    swaymsg -t get_outputs | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+      | select(.active and .rect.x <= $x and $x < .rect.x + .rect.width
+               and .rect.y <= $y and $y < .rect.y + .rect.height) | .name) // empty' || true
+  fi
+}
+
+start() {
+  need slurp; need wf-recorder; need jq
+  local geometry dir stamp file pid output
+  # -o: each output is a box, so a click takes a whole monitor; a drag takes a region.
+  geometry=$(slurp -o -b '#00000066' -c '#cc3333ff' -w 2) || exit 1
+  dir=${SCREENCAST_DIR:-$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Videos")/screencasts}
+  mkdir -p "$dir"
+  stamp=$(date +%Y-%m-%dT%H-%M-%S)
+  file=$dir/$stamp.mp4
+  # 9>&-: the toggle's lock must not outlive this run.
+  wf-recorder -g "$geometry" -f "$file" </dev/null >"$log" 2>&1 9>&- &
+  pid=$!
+  disown
+  sleep 0.5
+  if ! kill -0 "$pid" 2>/dev/null; then
+    notify dialog-error "Recording failed to start" "$(tail -n 3 "$log")"
+    exit 1
+  fi
+  output=$(output_at "$geometry")
+  echo "$pid $(date +%s) ${output:--} $file" >"$state"
+  bar
+  notify media-record "Recording" "Stop: the record key again, or click the bar's red dot"
+}
+
+stop() {
+  local pid=$1 output=$2 file=$3 target
+  [[ $output == - ]] && output=''
+  kill -INT "$pid"
+  # wf-recorder is not our child (another run started it): wait on /proc.
+  timeout 20 tail --pid="$pid" -f /dev/null || {
+    notify dialog-warning "Recording did not stop in 20 s" "wf-recorder $pid is still running"
+    exit 1
+  }
+  rm -f "$state"
+  bar
+  need pick-path
+  local name=${file##*/}
+  target=$(pick-path --base "${file%/*}" --default "${name%.mp4}" --ext mp4 \
+    --prompt 'Save recording as' --output "$output") || target=''   # 1 = cancelled, 3 = refused
+  if [[ -n $target && $target != "$file" ]]; then
+    # pick-path has asked before overwriting. On failure the recording stays put.
+    if mv -f "$file" "$target"; then
+      file=$target
+    else
+      notify dialog-warning "Recording not moved" "Could not move it to ${target/#"$HOME"/\~}"
+    fi
+  fi
+  notify video-x-generic "Recording saved" "${file/#"$HOME"/\~}"
+}
+
+case ${1:-} in
+  '')
+    exec 9>"$state.lock"
+    flock -n 9 || exit 0   # a toggle is already starting or stopping one
+    rc=0
+    current=$(running) || rc=$?
+    case $rc in
+      0) read -r pid _ output file <<<"$current"; stop "$pid" "$output" "$file" ;;
+      1) start ;;
+      *) exit 1 ;;   # it had ended on its own: reported, never start a second
+    esac
+    ;;
+  status)
+    running 2>/dev/null
+    ;;
+  *)
+    echo "usage: screen-record [status]" >&2
+    exit 2
+    ;;
+esac
