@@ -41,18 +41,24 @@ local function other_monitor()
     end
     return false
 end
+-- waybar's main bar follows the monitors (waybar-launch: the ASUS, else the panel, else
+-- the leftmost); it restarts waybar only when the main monitor changes.
+local function bar_reconcile()
+    hl.exec_cmd("{{ joinPath .chezmoi.homeDir ".local" "bin" "waybar-launch" }} reconcile")
+end
 local panel_off -- last state applied; nil until the first sync
 local function sync_panel(lid)
     local off = lid and other_monitor()
     if off == panel_off then return end -- enabling the panel fires monitor.added again
     panel_off = off
     hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x360", scale = 1, disabled = off })
+    bar_reconcile()
 end
 sync_panel(lid_closed())
 hl.bind("switch:on:Lid Switch",  function() sync_panel(true) end,  { locked = true, description = "Lid closed: panel off while docked" })
 hl.bind("switch:off:Lid Switch", function() sync_panel(false) end, { locked = true, description = "Lid opened: panel on" })
-hl.on("monitor.added",   function() sync_panel(lid_closed()) end)
-hl.on("monitor.removed", function() sync_panel(lid_closed()) end)
+hl.on("monitor.added",   function() sync_panel(lid_closed()); bar_reconcile() end)
+hl.on("monitor.removed", function() sync_panel(lid_closed()); bar_reconcile() end)
 hl.monitor({
     output   = "desc:Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
     mode     = "3840x2160@60",
@@ -254,11 +260,11 @@ bind(mod .. " + ALT + n", run(bin .. "hypr-mark swap"), "Swap with a marked wind
 bind(mod .. " + CTRL + m", run(bin .. "hypr-mark move"), "Move window to a marked window's workspace")
 
 -- Submaps (i3's modes). `hyprctl submap` prints the active one ("default" when none);
--- waybar's hyprland/submap module will show it too. Until then a dunst notice (one stack
--- tag, so each replaces the last): resize stays up until it is left; passthrough times out,
--- as the dunst keys do not reach dunst there.
+-- waybar's hyprland/submap module shows it. Passthrough also gets a dunst notice (one
+-- stack tag, so leaving replaces entering), as it is mostly used with fullscreen windows,
+-- which hide the bar; it times out, as the dunst keys do not reach dunst there. The dunst
+-- rule [hyprland-passthrough] shows it over fullscreen windows and while paused.
 local submap_notices = {
-    resize      = { title = "Resize mode", body = "hjkl or arrows; Return, Escape or Super+r leaves", ms = 0 },
     passthrough = { title = "Passthrough mode", body = "All keys go to the window; Super+Ctrl+Shift+p leaves", ms = 3000 },
 }
 local current_notice
@@ -301,4 +307,12 @@ end)
 -- Not `idle_inhibit = "fullscreen"`: that also counts maximized windows ($mod+Shift+f;
 -- inhibitingIdle in `hyprctl clients -j`), so a maximized terminal would never lock.
 hl.window_rule({ name = "idle-inhibit-fullscreen", match = { fullscreen_state_internal = 2 }, idle_inhibit = "always" })
+-- Terminal popups from waybar clicks (calcurse, nmtui, bluetoothctl): floating and centred.
+hl.window_rule({ name = "bar-popup", match = { class = "bar-popup" }, float = true, size = { 1000, 640 }, center = true })
+-- pavucontrol (waybar's volume module, right click): floating, centred, see-through.
+hl.window_rule({ name = "pavucontrol", match = { class = "org.pulseaudio.pavucontrol" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
+-- blueman-manager (Bluetooth module, right click) and the meteoblue forecast (weather
+-- module, left click; a Chromium --app window, which gets its own class) likewise.
+hl.window_rule({ name = "blueman-manager", match = { class = "blueman-manager" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
+hl.window_rule({ name = "weather-forecast", match = { class = "chrome-www.meteoblue.com__.*" }, float = true, size = { 1280, 860 }, center = true, opacity = 0.92 })
 {{- end }}

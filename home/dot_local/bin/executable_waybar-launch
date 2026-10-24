@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# waybar-launch — start waybar with the "main" bar on the right monitor (Hyprland).
+#
+#   waybar-launch run         write the bar config, then exec waybar (waybar.service)
+#   waybar-launch reconcile   after a monitor change: restart waybar if the main monitor moved
+#   waybar-launch main        print the monitor that gets the main bar
+#
+# waybar matches bars to outputs only statically, so this picks the main monitor at
+# start, by position among the enabled monitors (left to right; MH, 2026-10-24): the
+# only one; of two, the left one; of three or more, the middle one (of an even number,
+# the left of the two middle ones). On zbook that is the ASUS when docked (lid open or
+# closed) and the panel undocked, and any monitor works without naming it. The main
+# bar (~/.config/waybar/bars/main.jsonc: every module, the tray) goes there; every
+# other monitor gets bars/extra.jsonc. The generated config
+# is $XDG_RUNTIME_DIR/waybar/config.jsonc. Hyprland runs `reconcile` on monitor events
+# (hyprland.lua); it restarts the service only when the main monitor changes.
+set -euo pipefail
+
+panel=eDP-1   # fallback name if hyprctl lists no enabled monitor
+conf_dir=${XDG_CONFIG_HOME:-$HOME/.config}/waybar
+out_dir=${XDG_RUNTIME_DIR:?}/waybar
+out=$out_dir/config.jsonc
+
+main_monitor() {
+  hyprctl monitors -j | jq -r '
+    [.[] | select(.disabled | not)] | sort_by(.x, .y) |
+    if length <= 2 then .[0] else .[(length - 1) / 2 | floor] end | .name // empty'
+}
+
+render() { # MAIN
+  jq -n --arg main "$1" --arg dir "$conf_dir" '[
+    {output: $main, include: ["\($dir)/bars/main.jsonc"]},
+    {output: ["!\($main)", "*"], include: ["\($dir)/bars/extra.jsonc"]}
+  ]'
+}
+
+case ${1:-} in
+  run)
+    main=$(main_monitor)
+    mkdir -p "$out_dir"
+    render "${main:-$panel}" >"$out"
+    exec waybar -c "$out" -s "$conf_dir/style.css"
+    ;;
+  reconcile)
+    # Monitor events arrive before the new layout settles.
+    sleep 1
+    main=$(main_monitor)
+    [[ -n $main ]] || exit 0
+    if [[ ! -f $out ]] || [[ $(render "$main") != "$(cat "$out")" ]]; then
+      systemctl --user try-restart waybar.service
+    fi
+    ;;
+  main)
+    main_monitor
+    ;;
+  *)
+    echo "usage: waybar-launch run|reconcile|main" >&2
+    exit 2
+    ;;
+esac

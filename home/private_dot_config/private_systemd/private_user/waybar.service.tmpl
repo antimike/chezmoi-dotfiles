@@ -1,0 +1,22 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+# Shadows the package's /usr/lib/systemd/user/waybar.service, to tie it to the
+# compositor-started helper target instead of graphical-session.target (GNOME, SwayFX).
+Description=Status bar (waybar)
+Documentation=man:waybar(5) file://%h/.local/share/chezmoi/docs/plans/wayland-desktop.md
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# The config uses hyprland/* modules; SwayFX keeps swaybar.
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+
+[Service]
+# Click actions and custom modules call helpers in ~/.local/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+# waybar-launch writes the bar config (main bar on the main monitor) and execs waybar.
+ExecStart=%h/.local/bin/waybar-launch run
+ExecReload=/usr/bin/kill -SIGUSR2 $MAINPID
+Slice=session.slice
+Restart=on-failure
+RestartSec=2
+{{- end }}

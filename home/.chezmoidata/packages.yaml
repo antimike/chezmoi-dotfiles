@@ -91,6 +91,9 @@ packagesWayland:
     - swayidle
     - swaybg
     - waybar
+    - NetworkManager-tui   # nmtui: the bar's network fallback
+    - calcurse             # calendar, from the bar's clock
+    - blueman              # Bluetooth agent (pairing prompts) and manager, from the bar
     # Output profiles (monitor layouts per set of connected screens)
     - kanshi
     # Hyprland-only tools for roles SwayFX covers otherwise or not at all (D63)

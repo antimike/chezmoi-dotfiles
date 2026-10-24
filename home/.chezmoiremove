@@ -14,3 +14,5 @@
 .config/kitty/theme.conf
 .config/kitty/kitty-themes
 .config/kitty/kittens/themes
+# waybar config generated at run time since 2026-10-24 (waybar-launch; bars/ are the sources).
+.config/waybar/config.jsonc

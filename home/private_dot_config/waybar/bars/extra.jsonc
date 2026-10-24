@@ -1,0 +1,24 @@
+// The bar on every other monitor: workspaces, window, clock, state indicators.
+// waybar-launch assigns it. Module settings: ../modules.jsonc.
+{
+    "layer": "top",
+    "position": "top",
+    "height": 26,
+    "spacing": 4,
+    "include": [
+        "~/.config/waybar/modules.jsonc"
+    ],
+    "name": "extra",
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/submap",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "custom/idle",
+        "custom/dunst"
+    ]
+}

@@ -1,0 +1,13 @@
+# waybar's network and Bluetooth menus (rofi, theme ~/.config/rofi/bar-menu.rasi).
+# Single scripts, not packaged for Fedora; pinned to a commit (read before pinning,
+# 2026-10-24). Bump the SHA after reading the diff.
+networkmanager_dmenu:
+  dest: .local/bin/networkmanager_dmenu
+  type: file
+  url: https://raw.githubusercontent.com/firecat53/networkmanager-dmenu/246697267d0a0652fcea1a6f4d8a7deaa0b3796a/networkmanager_dmenu  # v2.7.2
+  executable: true
+rofi-bluetooth:
+  dest: .local/bin/rofi-bluetooth
+  type: file
+  url: https://raw.githubusercontent.com/nickclyde/rofi-bluetooth/0cca4d4aa1c82c9373ce5da781d73683a29484c6/rofi-bluetooth
+  executable: true

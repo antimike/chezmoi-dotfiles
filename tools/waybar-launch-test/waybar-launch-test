@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# waybar-launch-test — check which monitor waybar-launch gives the main bar, per layout.
+#
+#   tools/waybar-launch-test/waybar-launch-test [SCRIPT]
+#
+# SCRIPT defaults to the source copy (home/dot_local/bin/executable_waybar-launch). Each
+# case feeds a stubbed `hyprctl monitors -j` (names and descriptions as on zbook) to
+# `waybar-launch main` and compares the answer. Never touches the running bar.
+# Prints one line per case; exits 1 if any fails. Needs jq.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+script=${1:-$repo/home/dot_local/bin/executable_waybar-launch}
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+mon() { jq -cn --arg n "$1" --arg d "$2" --argjson x "$3" --argjson dis "$4" '{name: $n, description: $d, x: $x, disabled: $dis}'; }
+panel=$(mon eDP-1 "LG Display 0x059E" 0 false)
+panel_off=$(mon eDP-1 "LG Display 0x059E" 0 true)
+asus=$(mon DP-4 "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" 1920 false)
+asus_dp6=$(mon DP-6 "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" 1920 false)
+dell=$(mon DP-5 "Dell Inc. DELL U2717D 67YGV84PAUZS" 4480 false)
+dell_alone=$(mon DP-5 "Dell Inc. DELL U2717D 67YGV84PAUZS" 1920 false)
+asus_right=$(mon DP-4 "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" 4480 false)
+unknown=$(mon HDMI-A-1 "Some Vendor Monitor 0x0000" 1920 false)
+unknown_left=$(mon HDMI-A-1 "Some Vendor Monitor 0x0000" 0 false)
+unknown_far=$(mon HDMI-A-1 "Some Vendor Monitor 0x0000" 7040 false)
+
+case_() { # NAME EXPECTED MONITOR-JSON...
+  local name=$1 want=$2 got
+  shift 2
+  printf '#!/bin/sh\ncat <<"JSON"\n[%s]\nJSON\n' "$(IFS=,; echo "$*")" >"$tmp/hyprctl"
+  chmod +x "$tmp/hyprctl"
+  got=$(PATH=$tmp:$PATH bash "$script" main)
+  if [[ $got == "$want" ]]; then echo "pass  $name: $got"; else echo "FAIL  $name: got '$got', want '$want'"; failed=1; fi
+}
+
+case_ "docked, lid closed (2: leftmost)" DP-4 "$panel_off" "$asus" "$dell"
+case_ "docked, lid open (3: middle)" DP-4 "$panel" "$asus" "$dell"
+case_ "undocked (1)" eDP-1 "$panel"
+case_ "Dell only, lid closed (1)" DP-5 "$panel_off" "$dell_alone"
+case_ "Dell + panel, lid open (2: leftmost)" eDP-1 "$panel" "$dell_alone"
+case_ "ASUS only, lid closed (1)" DP-4 "$panel_off" "$asus"
+case_ "ASUS on another port (2)" DP-6 "$panel_off" "$asus_dp6" "$dell"
+case_ "Dell left of the ASUS, lid closed (2: leftmost)" DP-5 "$panel_off" "$dell_alone" "$asus_right"
+case_ "unknown monitor only, lid closed (1)" HDMI-A-1 "$panel_off" "$unknown"
+case_ "unknown + panel, lid open (2: leftmost)" eDP-1 "$panel" "$unknown"
+case_ "unknown + ASUS + Dell, lid closed (3: middle)" DP-4 "$panel_off" "$unknown_left" "$asus" "$dell"
+case_ "four monitors (left of the middle two)" DP-4 "$panel" "$asus" "$dell" "$unknown_far"
+# Position decides, not hyprctl's order., not from hyprctl's listing order.
+case_ "listed out of order (3: middle)" DP-4 "$dell" "$panel" "$asus"
+exit "$failed"
