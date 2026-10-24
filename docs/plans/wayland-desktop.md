@@ -269,7 +269,7 @@ the daily driver is **Hyprland** (SwayFX stays installed and working as the fall
 Open items target Hyprland first. Only what makes the daily driver usable every day; anything not done by the deadline, **Tuesday 2026-10-20** (MH), moves to the backlog. Each item takes the
 functional part of its step, not the whole step; scripts from `i3-config-mbp` are ported only when an item needs them.
 
-- [ ] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a
+- [x] **Screen sharing, camera and microphone in the browser** (Meet, Zoom, Teams): `xdg-desktop-portal-wlr`, then a
       test call. First, because it is the item most likely to fail at the worst moment. **Must also work with an
       external monitor plugged in** (MH, 2026-10-18: that is the interview setup), so this item pulls the external
       monitor item forward. Fallback MH accepts: a GNOME session for meetings and interviews. State 2026-10-18: the
@@ -278,6 +278,18 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       mics. Test page (no account needed): https://webrtc.github.io/samples/src/content/getusermedia/getdisplaymedia/.
       Side finding: `xdg-desktop-portal-hyprland` also starts under SwayFX (chosen for GlobalShortcuts and
       InputCapture via the deprecated `UseIn` key); harmless for screen sharing.
+      **Hyprland, docked clamshell (ASUS DP-4 at scale 1.5 + Dell DP-5): passed 2026-10-24 (MH)**. Test page: each
+      monitor whole (no crop at 1.5), cursor shown, smooth; a single window shares only that window. Meet: C270
+      camera and mic, Birdbox output stays A2DP, the Keychron mute key (below) mutes in Meet; presenting a screen,
+      window or region with the camera on. Found and fixed: the C270 mic was muted (not on purpose); Hyprland's share
+      picker came back 2-3 times per share (Chromium opens several portal sessions and passes each the previous
+      session's restore token, which xdph only issues when the picker's token box is ticked: `~/.config/hypr/xdph.conf`
+      `screencopy.allow_token_by_default`); Chromium's "is sharing your screen" bar opened mid-screen and its Hide
+      does nothing (a minimize; it is a toplevel with **no class**): window rule `screen-share-bar` puts it
+      bottom-left (`3e1e6b4`). **Known Chromium race, no fix:** clicking Share in Meet before its preview renders
+      opens one more session without the token, so the picker comes back; wait for the preview. Keys added the
+      same day (`c10af83`, all three WMs): `$mod+c` mutes the mic (the Keychron Q3 Pro's mic key sends a Super+C
+      macro until it is remapped to F20), `` $mod+` `` opens the rofi window switcher (all workspaces).
 - [x] **Lock, idle, power** (step 4; built 2026-10-19, **all MH tests passed 2026-10-19**, including lid close with the
       external monitor connected; merged `23e03b2`).
       MH's choices (2026-10-19): dim 5 min, lock 6, screens off 7, suspend 20 **on battery only**; lid suspends unless
@@ -367,6 +379,28 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       arrives as the former and Alt+screenshot key (`$mod+Shift+Alt+s`, MX-only) runs `desktop --ask`. Fn never
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
+- [ ] **Capture submap: annotation and screen recording** (planned and agreed with MH 2026-10-24; Hyprland only,
+      SwayFX keeps its direct screenshot keys, which still work: submap parity is a backlog item). Packages (MH
+      installs, then package map `wayland` target): `satty` (COPR `sdegler/hyprland`, the Hyprland COPR; not cargo
+      or mise: a GTK4 app, no prebuilt binary) and `wf-recorder` (Fedora).
+      - **Submap `capture`**, replacing the 8 direct screenshot binds (3 actions, one bind per keyboard's screenshot
+        key). Entered by `Print`, `$mod+Shift+s` (the MX Keys macro) and `$mod+Ctrl+s` (keyboards without Print);
+        dunst notice listing the letters (as `passthrough`), and waybar's submap module. In it: `Print`/`space`/
+        `Return` window or region → clipboard (the quick shot is now `Print Print`); `s` window or region →
+        clipboard + save (`pick-path`); `d` all screens → save; `a` window or region → annotate; `Shift+a` all
+        screens → annotate; `r` start/stop recording; `Escape` leaves. Every action leaves the submap.
+      - **`screenshot annotate`**: the capture goes to satty instead of straight out; Enter copies, Ctrl+S saves
+        (into the screenshot folder). Window rule: satty floating and centred.
+      - **`screen-record`** (new helper, `~/.local/bin`): one toggle. Idle: `slurp` picks a monitor (click) or a
+        region (drag), `wf-recorder` writes a timestamped file to `$(xdg-user-dir VIDEOS)/screencasts` (the
+        `screenshot` folder's sibling; `$SCREENCAST_DIR` overrides). Recording: SIGINT to `wf-recorder` (a clean MP4;
+        a killed one can be unplayable), then `pick-path` prefilled with the timestamp name; Enter keeps it, a name or
+        path moves it, **Escape keeps it at the default path** (no clipboard copy to fall back on). **One recording at
+        a time** (pid file in `$XDG_RUNTIME_DIR`; the key during a recording stops it, never starts a second). No
+        audio at first (a mic variant later if wanted). Notifications on start and on save (with the path).
+      - **waybar indicator**: a red dot and the elapsed time while recording; clicking it stops the recording.
+      - Order: one commit per layer (`screenshot annotate`, `screen-record`, waybar module, submap + satty rule,
+        package map), then a live test with MH. Estimate 1.5-2 h.
 - [x] **NVIDIA renders docked sessions** (D59, 2026-10-23): `sway-perf` measurements, nm-applet dropped (D58), kanshi `config-nvidia`, lid notice. **MH's docked login passed 2026-10-23 15:50**: kanshi ran `config-nvidia` (`docked-asus-dell`: ASUS 0,0 scale 1.5, Dell 2560,0, panel off), lid open showed the notice and left the layout alone; `sway-perf` nvidia-d59: hands off 11%, mouse 22.7% (max 29%), 0 cursor-plane errors, NVIDIA P5 10.5 W.
 - [x] **Hyprland trial: smooth *and* the panel?** (**answered 2026-10-23: yes; Hyprland became the daily driver, D62**) (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
       **Built 2026-10-23** (branch `wayland/hyprland-trial`, not merged): correction to the start note: GDM already
