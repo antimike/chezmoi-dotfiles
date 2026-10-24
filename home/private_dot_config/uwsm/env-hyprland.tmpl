@@ -1,0 +1,18 @@
+# Sourced by uwsm after ./env, for Hyprland sessions only. POSIX sh.
+# D60 (2026-10-23): Hyprland renders on the Intel iGPU, docked too, which leaves the
+# NVIDIA card free for compute work; NVIDIA still drives the external monitors (all
+# wired to it, D53) and aquamarine copies their frames over. ./env's NVIDIA-first rule
+# (D59) is for SwayFX: its WLR_DRM_DEVICES does not apply to Hyprland, which reads
+# AQ_DRM_DEVICES only.
+# Host key hyprland_render_gpu ("intel", the default, or "nvidia" for re-tests, e.g.
+# after a driver change). Without editing:
+#   chezmoi apply --override-data '{"hyprland_render_gpu":"nvidia"}' ~/.config/uwsm/env-hyprland
+# then log in again (the next plain apply reverts it).
+{{- $gpu := dig "hyprland_render_gpu" "intel" . }}
+if [ -e /dev/dri/igpu ] && [ -e /dev/dri/dgpu ]; then
+{{- if eq $gpu "nvidia" }}
+	export AQ_DRM_DEVICES=/dev/dri/dgpu:/dev/dri/igpu
+{{- else }}
+	export AQ_DRM_DEVICES=/dev/dri/igpu:/dev/dri/dgpu
+{{- end }}
+fi
