@@ -1,4 +1,4 @@
-// Module settings shared by the bars in config.jsonc. Icons are Nerd Font glyphs
+// Module settings shared by the bars in bars/ (included by each). Icons are Nerd Font glyphs
 // (FiraCode Nerd Font, the fallback in style.css). custom/* modules run
 // ~/.local/bin/waybar-module; signals 8 (idle), 9 (dunst), 10 (weather).
 {
@@ -109,7 +109,8 @@
     },
     "tray": {
         "icon-size": 16,
-        "spacing": 8
+        "spacing": 8,
+        "ignore-list": ["blueman"]
     },
     "group/system": {
         "orientation": "inherit",
@@ -164,7 +165,7 @@
         "return-type": "json",
         "interval": 900,
         "signal": 10,
-        "on-click": "xdg-open https://www.meteoblue.com/en/weather/week",
+        "on-click": "chromium-browser --app=https://www.meteoblue.com/en/weather/week",
         "on-click-right": "pkill -RTMIN+10 -x waybar"
     }
 }

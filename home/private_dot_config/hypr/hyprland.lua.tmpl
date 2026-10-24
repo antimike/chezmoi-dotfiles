@@ -311,4 +311,8 @@ hl.window_rule({ name = "idle-inhibit-fullscreen", match = { fullscreen_state_in
 hl.window_rule({ name = "bar-popup", match = { class = "bar-popup" }, float = true, size = { 1000, 640 }, center = true })
 -- pavucontrol (waybar's volume module, right click): floating, centred, see-through.
 hl.window_rule({ name = "pavucontrol", match = { class = "org.pulseaudio.pavucontrol" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
+-- blueman-manager (Bluetooth module, right click) and the meteoblue forecast (weather
+-- module, left click; a Chromium --app window, which gets its own class) likewise.
+hl.window_rule({ name = "blueman-manager", match = { class = "blueman-manager" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
+hl.window_rule({ name = "weather-forecast", match = { class = "chrome-www.meteoblue.com__.*" }, float = true, size = { 1280, 860 }, center = true, opacity = 0.92 })
 {{- end }}
