@@ -7,6 +7,8 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [compare-trees.py](compare-trees.py) | Path-level comparison of two chezmoi source trees (the BOCO survey) |
 | [zsh-probe/](zsh-probe/) | Render the zsh files into a scratch home, dump the resulting shell state, and diff two dumps |
 | [home-snapshot/](home-snapshot/) | Save paths under `$HOME` and restore them exactly: the escape route for a risky apply |
+| [public-scan/](public-scan/) | Pre-commit scan for this public repo: client/employer terms (pattern read from the private repo at run time) and gitleaks |
+| [hypr-trial-bar/](hypr-trial-bar/) | Throwaway waybar for the Hyprland trial (workspaces, window, battery, clock); start after each login |
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 
@@ -63,3 +65,20 @@ suspend whose window, from `PM: suspend entry` to 10 s after `PM: suspend exit`,
 resume messages before the exit line (checked on the 2026-10-23 resumes). The rendering GPU is printed for the current
 session only, since the journal does not record it per resume; note it yourself when you compare sessions. Kernel
 messages are per boot, so `--since` before the last boot shows nothing earlier.
+
+## public-scan
+
+```sh
+tools/public-scan/public-scan             # changed, staged and untracked files vs HEAD, then gitleaks dir .
+tools/public-scan/public-scan PATH...     # term grep on these paths only (gitleaks still scans the repo)
+```
+
+Run before every commit ([../docs/conventions.md](../docs/conventions.md), "Public vs private"). The term pattern
+lives only in the private repo (`~/Source/chezmoi-boco/docs/zbook-migration/client-terms.md`; override with
+`PUBLIC_SCAN_TERMS`) and is read at run time, so it never enters a public commit. Skips the untracked `ricing.md`.
+Exit 1 on a hit (term or gitleaks), 2 if the pattern file is missing. Red-tested 2026-10-23 with a planted term.
+
+## hypr-trial-bar
+
+`tools/hypr-trial-bar/hypr-trial-bar` from a Hyprland session (replaces a running copy). waybar runs under uwsm as
+its own scope, so it outlives the terminal and ends with the session. Not deployed; the real bar is next action 2.6.
