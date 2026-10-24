@@ -6,8 +6,8 @@
 # Renders run_onchange_install-packages.sh.tmpl with `chezmoi execute-template
 # --override-data` for each case and checks the resolved list (`--list`): target
 # selection and `when`, `includes`, `false` entries, per-manager names, COPRs only for
-# dnf, pipx entries (and a manager key winning over them), `verify` checks, and render
-# failures for unknown targets. Uses the live packages.yaml, so counts
+# dnf, pipx entries (and a manager key winning over them), `verify` checks, release
+# (inventory) entries, and render failures for unknown targets and missing installers. Uses the live packages.yaml, so counts
 # are derived from it, not hard-coded. Prints one line per case; exits 1 if any fails.
 # Needs chezmoi and python3 (PyYAML, for the expected counts).
 set -euo pipefail
@@ -35,7 +35,7 @@ check() { # NAME CONDITION...
   if "$@"; then echo "pass  $name"; else echo "FAIL  $name"; failed=1; fi
 }
 lines() { wc -l <"$tmp/list"; }
-coprs() { grep -c $'\t[^\t]\+$' "$tmp/list" || true; }
+coprs() { grep -c $'^native\t[^\t]*\t.' "$tmp/list" || true; }
 pipxs() { grep -c '^pipx' "$tmp/list" || true; }
 
 resolve '{"display_server":"wayland","package_targets":["base","wayland"]}'
@@ -68,4 +68,12 @@ check "pipx: true, a pip spec, and a manager key winning" \
   test "$(cat "$tmp/list")" = $'native\tpmt-c-rpm\t\npipx\tpmt-a\t\npipx\tpmt-b[extra]>=2\t'
 resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"pmt-v","verify":"false"}]}}}'
 check "verify: a failing check fails the run" bash -c "! MANAGER= bash '$tmp/installer' >/dev/null 2>&1 && bash '$tmp/installer' 2>&1 | grep -q 'check failed for pmt-v'"
+resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"fzf","release":"fzf"}]}}}'
+check "release: listed with its installer id, nothing installed" test "$(cat "$tmp/list")" = $'release\tfzf\tfzf'
+check "release: a missing installer fails the render" \
+  bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"t\"],\"packageTargets\":{\"t\":{\"packages\":[{\"name\":\"x\",\"release\":\"no-such\"}]}}}' <'$tmpl' >/dev/null 2>&1"
+resolve '{"work_tooling":false,"package_targets":["work"]}'
+check "work target: skipped without work_tooling" test "$(lines)" = 0
+resolve '{"work_tooling":true,"package_targets":["work"]}'
+check "work target: rano with work_tooling" grep -q $'^release\trano\trano$' "$tmp/list"
 exit "$failed"
