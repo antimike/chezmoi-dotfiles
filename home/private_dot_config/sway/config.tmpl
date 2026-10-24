@@ -17,6 +17,12 @@ set $refresh_i3status true
 # SwayFX effects
 corner_radius {{ .i3.gaps.corner_radius }}
 
+# Focus follows the mouse: on trial, as in Hyprland (MH, 2026-10-23; the shared body keeps
+# i3's "no" for the MacBook). With it on, keyboard focus moves warp the pointer into the
+# window, or the next nudge of the mouse would take focus back.
+focus_follows_mouse yes
+mouse_warping container
+
 # Exit (under uwsm, `uwsm stop` ends the session cleanly)
 bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit SwayFX?' -B 'Yes, exit' 'uwsm stop'
 bindsym $mod+Shift+Ctrl+e exec uwsm stop
