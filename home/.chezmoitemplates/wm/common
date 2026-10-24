@@ -94,6 +94,8 @@ bindsym Shift+XF86AudioRaiseVolume exec --no-startup-id ~/.local/bin/volume up 1
 bindsym Shift+XF86AudioLowerVolume exec --no-startup-id ~/.local/bin/volume down 1
 bindsym XF86AudioMute              exec --no-startup-id ~/.local/bin/volume mute
 bindsym XF86AudioMicMute           exec --no-startup-id ~/.local/bin/volume mic-mute
+# The Keychron Q3 Pro's mic key sends a Super+C macro until it is remapped to F20.
+bindsym $mod+c                     exec --no-startup-id ~/.local/bin/volume mic-mute
 bindsym XF86AudioPlay        exec --no-startup-id playerctl -p $mediaplayer play-pause && $refresh_i3status
 bindsym XF86AudioPause       exec --no-startup-id playerctl -p $mediaplayer pause && $refresh_i3status
 bindsym XF86AudioStop        exec --no-startup-id playerctl -p $mediaplayer stop && $refresh_i3status
@@ -128,6 +130,7 @@ set $rofi_open_opts -theme docu -modi drun -show drun
 set $rofi_find_opts -theme fancy -modi window -show window -window-thumbnail
 bindsym $mod+o      exec --no-startup-id $rofi $rofi_open_opts
 bindsym XF86LaunchA exec --no-startup-id $rofi $rofi_find_opts
+bindsym $mod+grave  exec --no-startup-id $rofi $rofi_find_opts
 
 # change focus
 bindsym $mod+$left  focus left

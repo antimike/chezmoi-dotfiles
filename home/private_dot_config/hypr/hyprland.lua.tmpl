@@ -142,7 +142,9 @@ local function app(cmd) return hl.dsp.exec_cmd("uwsm app -- " .. cmd) end
 -- Apps, session, notifications
 bind(mod .. " + Return", app(term), "Terminal")
 bind(mod .. " + o", run("fuzzel --launch-prefix='uwsm app -- '"), "App launcher")
-bind("XF86LaunchA", run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window"), "Window switcher")
+local window_switcher = run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window")
+bind("XF86LaunchA", window_switcher, "Window switcher")
+bind(mod .. " + grave", window_switcher, "Window switcher: all workspaces")
 {{- if lookPath "passmenu" }}
 -- passmenu (dmenu-wl + wtype under Wayland), as .i3.keys.programs; a fuzzel picker is D40.
 bind(mod .. " + p", run("passmenu --type"), "Password picker: type it")
@@ -174,6 +176,8 @@ bind("SHIFT + XF86AudioRaiseVolume", run(bin .. "volume up 1"), "Volume up 1%", 
 bind("SHIFT + XF86AudioLowerVolume", run(bin .. "volume down 1"), "Volume down 1%", held)
 bind("XF86AudioMute", run(bin .. "volume mute"), "Mute output", { locked = true })
 bind("XF86AudioMicMute", run(bin .. "volume mic-mute"), "Mute microphone", { locked = true })
+-- The Keychron Q3 Pro's mic key sends a Super+C macro until it is remapped to F20.
+bind(mod .. " + c", run(bin .. "volume mic-mute"), "Mute microphone (Keychron mic key)", { locked = true })
 for key, action in pairs({ Play = "play-pause", Pause = "pause", Stop = "stop", Next = "next", Prev = "previous" }) do
     bind("XF86Audio" .. key, run("playerctl -p cmus " .. action), "cmus: " .. action, { locked = true })
 end
@@ -315,4 +319,7 @@ hl.window_rule({ name = "pavucontrol", match = { class = "org.pulseaudio.pavucon
 -- module, left click; a Chromium --app window, which gets its own class) likewise.
 hl.window_rule({ name = "blueman-manager", match = { class = "blueman-manager" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
 hl.window_rule({ name = "weather-forecast", match = { class = "chrome-www.meteoblue.com__.*" }, float = true, size = { 1280, 860 }, center = true, opacity = 0.92 })
+-- Chromium's "<site> is sharing your screen" bar: a toplevel with no class that lands mid-screen, and
+-- its Hide button minimizes, which Hyprland ignores. Bottom-left corner, no focus.
+hl.window_rule({ name = "screen-share-bar", match = { class = "^$", title = ".* is sharing (your screen|a window|this tab).*" }, float = true, move = "20 monitor_h-window_h-20", no_initial_focus = true })
 {{- end }}
