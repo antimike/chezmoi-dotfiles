@@ -13,6 +13,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
 | [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
 | [waybar-launch-test/](waybar-launch-test/) | Which monitor `waybar-launch` gives the main bar, for each dock/lid layout (stubbed `hyprctl`): `tools/waybar-launch-test/waybar-launch-test` |
+| [package-map-test/](package-map-test/) | The package installer's resolution (D32: targets, `when`, includes, `false`, per-manager names, COPRs) via `--override-data`, nothing installed |
 
 ## zsh-probe
 
