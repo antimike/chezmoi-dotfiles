@@ -7,3 +7,10 @@
 .config/systemd/user/wayland-wm-session.target
 .config/systemd/user/clipboard-stack.target
 .config/systemd/user/xsession.target
+# kitty palette consolidated into current-theme.conf on 2026-10-24: the Gogh
+# colors.conf, the dangling theme.conf link into a stale dexpota/kitty-themes
+# clone (unmanaged), and a vendored copy of kitty's old Python themes kitten.
+.config/kitty/colors.conf
+.config/kitty/theme.conf
+.config/kitty/kitty-themes
+.config/kitty/kittens/themes
