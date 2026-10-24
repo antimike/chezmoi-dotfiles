@@ -33,16 +33,18 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
 - [x] Neovim config migration ([boco-merge.md](boco-merge.md), Phase 2, merged 2026-10-17)
 - [ ] Wayland-compatible i3 replacement: SwayFX plus a compositor trial ([wayland-desktop.md](wayland-desktop.md))
 - [ ] Status bar / tray, notification daemon, lock, idle: [wayland-desktop.md](wayland-desktop.md) (shared helper components)
-- [ ] Kitty config update and assessment. **Include a wider colour-scheme compatibility test** (MH, 2026-10-23):
-  zsh comments render **pure black, invisible** on kitty's dark background. Cause (confirmed by pixel sampling and
-  MH's check on both monitors): fast-syntax-highlighting's default theme has `comment = black,bold`, kitty does not
-  brighten bold, and `~/.config/kitty/colors.conf` (included last, so it wins over `current-theme.conf`) sets
-  `color0 #000000` on `background #0D1926`; `color8 #262626` is barely better. Not a GPU, monitor or resume fault.
-  The test: every highlighter style (fast-syntax-highlighting, `bat`, `less`, `git`, `ls`/`eza`, the prompt) and
-  the 16 ANSI colours against each kitty theme in use, so no style lands on colour 0 or 8 against a dark background;
-  fix via an fsh theme override (e.g. `comment = 8` with a lighter `color8`) or the theme itself. Also settle which
-  of `colors.conf` and `current-theme.conf` is the source (two palettes are included today). Belongs with
-  [theming.md](theming.md).
+- [x] **Kitty colours: done 2026-10-24** (branch `ricing/kitty-colors`). Cause of the black zsh comments, as diagnosed
+  2026-10-23: fsh's `comment = black,bold` on `#0D1926`, kitty does not brighten bold. Found by `tools/term-contrast`
+  (checks the palette, fsh, zsh-autosuggestions, `LS_COLORS`, `less`, git and p10k against a kitty palette): `color8
+  #262626` also hid autosuggestions, and the selection colours were Crayon Pony Fish's (`#140607` on `#2a1a1c`). Fixed:
+  one palette, `current-theme.conf` = kitty's built-in Blazer (what was visible) with `color8 #647384` (3.65:1) and
+  Blazer's selection; the Gogh `colors.conf`, the `theme.conf` link into a stale `dexpota/kitty-themes` clone and the
+  vendored themes kitten are removed; fsh comments use colour 8 (`~/.config/zsh/fsh-styles.zsh`); pywal's include moved
+  after the theme so a generated palette wins. Side fix: curly quotes in the `LS_COLORS` completion zstyle.
+  **Open:** (1) trapd00r `LS_COLORS` has 12 colour pairs below 3:1 on this background (fixed 256-colour dims such as
+  `ca` 17, archive parts 239, `.iso`/`.img` 124); they fail on any dark theme, so the fix is a palette-aware generator
+  (`vivid`) in [theming.md](theming.md), not a per-entry patch. (2) Run `term-contrast --theme <name>` on any theme
+  before adopting it. (3) The rest of the kitty assessment (the full merge-and-debug pass).
 - [ ] Investigate browser options
 - [ ] **hy3 and hyprbars via hyprpm, after the NVIDIA upgrade** (MH, 2026-10-23). hy3 (i3-style manual tiling) has an
   `hl0.56.0.1` tag with Lua dispatchers (`hl.plugin.hy3`); hyprbars gives per-window title bars (a window rule turns them
