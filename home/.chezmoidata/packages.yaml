@@ -168,7 +168,7 @@ packageTargets:
       - xdg-desktop-portal-gnome   # niri's portal backend
       - name: xdg-desktop-portal-hyprland
         copr: hyprland
-      - mate-polkit
+      - mate-polkit   # polkit agent outside Hyprland (polkit-mate-agent.service)
       # Lock, idle, wallpaper, bar
       - swaylock
       - swayidle
@@ -186,7 +186,7 @@ packageTargets:
         copr: hyprland
       - name: hyprpaper        # wallpaper daemon (for the wallpaper picker)
         copr: hyprland
-      - name: hyprpolkitagent  # polkit agent (none ran in the uwsm sessions before)
+      - name: hyprpolkitagent  # polkit agent, Hyprland only (hyprtoolkit)
         copr: hyprland
       - name: hyprpicker       # colour picker
         copr: hyprland

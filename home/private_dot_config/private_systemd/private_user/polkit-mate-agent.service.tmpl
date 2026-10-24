@@ -1,0 +1,18 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+# mate-polkit ships only an XDG autostart entry (OnlyShowIn=MATE), so this unit starts it
+# from the compositor-started helper target (GNOME runs its own agent).
+Description=Polkit authentication agent (mate-polkit, D63)
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# Hyprland runs hyprpolkitagent.service.
+ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland
+
+[Service]
+ExecStart=/usr/libexec/polkit-mate-authentication-agent-1
+Slice=session.slice
+TimeoutStopSec=5sec
+Restart=on-failure
+RestartSec=2
+{{- end }}
