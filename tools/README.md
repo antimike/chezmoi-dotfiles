@@ -11,6 +11,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [hypr-trial-bar/](hypr-trial-bar/) | Throwaway waybar for the Hyprland trial (workspaces, window, battery, clock); start after each login |
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
+| [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
 
 ## zsh-probe
 
@@ -84,3 +85,12 @@ Exit 1 on a hit (term or gitleaks), 2 if the pattern file is missing. Red-tested
 
 `tools/hypr-trial-bar/hypr-trial-bar` from a Hyprland session (replaces a running copy). waybar runs under uwsm as
 its own scope, so it outlives the terminal and ends with the session. Not deployed; the real bar is next action 2.6.
+
+## lock-screen-test
+
+```sh
+tools/lock-screen-test/lock-screen-test                 # the source copy of lock-screen
+tools/lock-screen-test/lock-screen-test ~/.local/bin/lock-screen
+```
+
+Each case starts its own headless sway (new Wayland socket, checked with `grim` before any locker runs, so the real session is never locked), runs `lock-screen` with `XDG_CURRENT_DESKTOP` set, and reads "locked" off the screen (a `grim` shot differs from the empty desktop's). Cases: Hyprland lock returns only once confirmed; a second lock is a no-op; `SIGUSR1` unlocks (the recovery path); a hyprlock left over after an unlock does not block the next lock (a stand-in process plays the leftover when hyprlock 0.9.6's exit hang does not happen on its own); two concurrent locks share one hyprlock; other desktops get swaylock. Takes about 15 s. Needs sway, grim, ImageMagick, hyprlock and swaylock.
