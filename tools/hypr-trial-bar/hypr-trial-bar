@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# hypr-trial-bar — start the throwaway waybar for the Hyprland trial (workspaces, window title, battery, clock).
+#
+#   tools/hypr-trial-bar/hypr-trial-bar     run from a Hyprland session; replaces a running copy
+#
+# Runs under uwsm as its own scope, so it outlives the terminal and ends with the session (start it again after
+# each login). Not deployed: the real bar is next action 2.6, built for the compositor that wins the trial.
+set -euo pipefail
+
+dir=$(dirname "$(readlink -f "$0")")
+[[ ${XDG_CURRENT_DESKTOP:-} == Hyprland ]] || { echo "hypr-trial-bar: not a Hyprland session" >&2; exit 1; }
+pkill -u "$UID" -x waybar || true
+uwsm app -- waybar -c "$dir/config.jsonc" -s "$dir/style.css" >/dev/null 2>&1 &
+disown

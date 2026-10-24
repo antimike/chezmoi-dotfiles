@@ -1,0 +1,12 @@
+// Throwaway waybar for the Hyprland trial (not deployed; the real bar is next action 2.6).
+{
+    "layer": "top",
+    "position": "top",
+    "height": 24,
+    "modules-left": ["hyprland/workspaces", "hyprland/window"],
+    "modules-right": ["battery", "clock"],
+    "hyprland/workspaces": { "format": "{id}", "all-outputs": false },
+    "hyprland/window": { "max-length": 60 },
+    "battery": { "format": "{capacity}% {status}" },
+    "clock": { "format": "{:%a %F %H:%M}" }
+}
