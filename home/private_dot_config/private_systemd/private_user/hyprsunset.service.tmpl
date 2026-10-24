@@ -1,0 +1,19 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+# Shadows the package's /usr/lib/systemd/user/hyprsunset.service, to tie it to the
+# compositor-started helper target instead of graphical-session.target (GNOME, SwayFX).
+Description=Colour temperature by time of day (hyprsunset, D63)
+Documentation=https://wiki.hyprland.org/Hypr-Ecosystem/hyprsunset/
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# Hyprland's CTM protocol only: SwayFX has none.
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+
+[Service]
+# Schedule: ~/.config/hypr/hyprsunset.conf. Live control: hyprctl hyprsunset temperature|identity|gamma
+ExecStart=/usr/bin/hyprsunset
+Slice=session.slice
+Restart=on-failure
+RestartSec=2
+{{- end }}

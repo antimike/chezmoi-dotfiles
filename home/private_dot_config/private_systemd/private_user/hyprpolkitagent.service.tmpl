@@ -1,0 +1,16 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+# Shadows the package's unit, to tie it to the compositor-started helper target instead
+# of graphical-session.target (GNOME runs its own agent). Qt, so SwayFX can use it too.
+Description=Polkit authentication agent (hyprpolkitagent, D63)
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+ExecStart=/usr/libexec/hyprpolkitagent
+Slice=session.slice
+TimeoutStopSec=5sec
+Restart=on-failure
+RestartSec=2
+{{- end }}
