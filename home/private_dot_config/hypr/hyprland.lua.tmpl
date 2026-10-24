@@ -253,7 +253,24 @@ bind(mod .. " + n", run(bin .. "hypr-mark focus"), "Focus a marked window")
 bind(mod .. " + ALT + n", run(bin .. "hypr-mark swap"), "Swap with a marked window")
 bind(mod .. " + CTRL + m", run(bin .. "hypr-mark move"), "Move window to a marked window's workspace")
 
--- Submaps (i3's modes). waybar's hyprland/submap module will show the active one.
+-- Submaps (i3's modes). `hyprctl submap` prints the active one ("default" when none);
+-- waybar's hyprland/submap module will show it too. Until then a dunst notice (one stack
+-- tag, so each replaces the last): resize stays up until it is left; passthrough times out,
+-- as the dunst keys do not reach dunst there.
+local submap_notices = {
+    resize      = { title = "Resize mode", body = "hjkl or arrows; Return, Escape or Super+r leaves", ms = 0 },
+    passthrough = { title = "Passthrough mode", body = "All keys go to the window; Super+Ctrl+Shift+p leaves", ms = 3000 },
+}
+local current_notice
+hl.on("keybinds.submap", function(name)
+    local n = submap_notices[name]
+    if not n and not current_notice then return end
+    local title, body, ms = (current_notice or "Mode") .. " off", "", 1500
+    if n then title, body, ms = n.title, n.body, n.ms end
+    current_notice = n and n.title or nil
+    -- Fixed texts without single quotes, so plain single-quoting is safe.
+    hl.exec_cmd(string.format("notify-send -a hyprland -h string:x-dunst-stack-tag:submap -t %d '%s' '%s'", ms, title, body))
+end)
 bind(mod .. " + r", hl.dsp.submap("resize"), "Resize mode")
 hl.define_submap("resize", function()
     local step = 40
@@ -281,5 +298,7 @@ end)
 ---- WINDOW RULES ----
 ----------------------
 -- As SwayFX's `inhibit_idle fullscreen`: a fullscreen window holds off the idle chain.
-hl.window_rule({ name = "idle-inhibit-fullscreen", match = { class = ".*" }, idle_inhibit = "fullscreen" })
+-- Not `idle_inhibit = "fullscreen"`: that also counts maximized windows ($mod+Shift+f;
+-- inhibitingIdle in `hyprctl clients -j`), so a maximized terminal would never lock.
+hl.window_rule({ name = "idle-inhibit-fullscreen", match = { fullscreen_state_internal = 2 }, idle_inhibit = "always" })
 {{- end }}
