@@ -379,7 +379,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       arrives as the former and Alt+screenshot key (`$mod+Shift+Alt+s`, MX-only) runs `desktop --ask`. Fn never
       reaches the OS (handled in the keyboard), so Fn+key can only be bound to whatever it sends (trace pending).
       **Left for MH:** Ctrl+ and Alt+ the MX screenshot key; the save prompt by hand.
-- [ ] **Capture submap: annotation and screen recording** (planned and agreed with MH 2026-10-24; Hyprland only,
+- [x] **Capture submap: annotation and screen recording** (**done 2026-10-24/25, merged `e007bc9`; MH's live tests
+      passed**; results after the plan below) (planned and agreed with MH 2026-10-24; Hyprland only,
       SwayFX keeps its direct screenshot keys, which still work: submap parity is a backlog item). Packages (MH
       installs, then package map `wayland` target): `satty` (COPR `sdegler/hyprland`, the Hyprland COPR; not cargo
       or mise: a GTK4 app, no prebuilt binary) and `wf-recorder` (Fedora).
@@ -401,6 +402,22 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       - **waybar indicator**: a red dot and the elapsed time while recording; clicking it stops the recording.
       - Order: one commit per layer (`screenshot annotate`, `screen-record`, waybar module, submap + satty rule,
         package map), then a live test with MH. Estimate 1.5-2 h.
+      - **Built as planned, with these changes.** The entry keys also take the quick shot inside the submap (MX
+        key twice = `Print Print`); `s` and `d` ask where to save (`--ask`, as before). The submap notice is closed
+        by id on leaving (no "Capture off"), so it is never in the shot; `d`/`Shift+a` wait 0.3 s for dunst. satty is
+        capped at 80% of the monitor. **Encoding: H.264 through VAAPI on the Intel render node**: wf-recorder's
+        default (VP9 on the CPU) took ~2 cores at 4K and queued frames in memory at ~190 MB/s; VAAPI ~11% CPU,
+        flat memory; no Intel/AMD node falls back to the default.
+      - **After MH's first test:** a click that moved a pixel became a 2x1 region and VAAPI refused it ("does not
+        support scaling to size 3x1"): under 16x16 now takes the whole monitor. "Recording ended on its own" on
+        normal stops was a false alarm (waybar's status poll saw the exiting recorder): `status` takes the toggle's
+        lock (red-green 3/3 → 0/3). satty's Ctrl+S now goes through `pick-path` (satty writes the PNG to stdout;
+        Escape at the prompt saves under the timestamp name). **Sound** (MH's keys): `Shift+r` default mic,
+        `Alt+Shift+r` system audio (default sink's `.monitor`), `Ctrl+Shift+r` a fuzzel source picker (defaults
+        first, Bluetooth mics flagged for the HFP switch); AAC through the Pulse backend (the pipewire backend
+        recorded no sound). Escape at the recording's save prompt keeps the default name, as planned.
+      - **Retest passed 2026-10-25** (MH: "everything looks good"). Not tested: recording while NVIDIA renders
+        (SwayFX docked, D59; VAAPI on the Intel node then imports NVIDIA buffers); SwayFX has no capture keys.
 - [x] **NVIDIA renders docked sessions** (D59, 2026-10-23): `sway-perf` measurements, nm-applet dropped (D58), kanshi `config-nvidia`, lid notice. **MH's docked login passed 2026-10-23 15:50**: kanshi ran `config-nvidia` (`docked-asus-dell`: ASUS 0,0 scale 1.5, Dell 2560,0, panel off), lid open showed the notice and left the layout alone; `sway-perf` nvidia-d59: hands off 11%, mouse 22.7% (max 29%), 0 cursor-plane errors, NVIDIA P5 10.5 W.
 - [x] **Hyprland trial: smooth *and* the panel?** (**answered 2026-10-23: yes; Hyprland became the daily driver, D62**) (MH, 2026-10-23). GNOME showed the hardware can drive all three screens smoothly; wlroots cannot light the panel while NVIDIA renders. Start: GDM has uwsm entries for SwayFX, niri and Wayfire only, so add a Hyprland (uwsm) entry (as step 1 did; `run_onchange_install-uwsm.sh.tmpl`); check the COPR's Hyprland is installed; read [runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md) first (GNOME is the way back). Minimal Hyprland config (COPR already enabled, D45) under uwsm, then: panel + both externals at once with NVIDIA rendering (`AQ_DRM_DEVICES` dgpu first; Intel first as the control), hardware cursor, `sway-perf`-style CPU numbers for `Hyprland`, hotplug/undock mid-session. Before the bar, so the bar targets the winner. Expect `hy3` for i3-style tiling only if it passes.
       **Built 2026-10-23** (branch `wayland/hyprland-trial`, not merged): correction to the start note: GDM already
