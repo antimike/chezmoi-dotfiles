@@ -87,6 +87,14 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("uwsm finalize && systemctl --user start --no-block wm-helpers-wayland.target")
 end)
 
+-----------------
+---- PLUGINS ----
+-----------------
+-- D66: plugins per profile ("work": the Hyprland login, "riced": Hyprland (riced)), loaded
+-- by plugins.lua, which returns the profile. Plugin settings below are guarded on
+-- hl.plugin.<name>: Hyprland reloads the config after each plugin load.
+local profile = dofile("{{ joinPath .chezmoi.homeDir ".config" "hypr" "plugins.lua" }}")
+
 -----------------------
 ---- LOOK AND FEEL ----
 -----------------------
