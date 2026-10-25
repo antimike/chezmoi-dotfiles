@@ -1,0 +1,26 @@
+{{- if and (ne (dig "display_server" "x11" .) "none") (lookPath "xdg-mime") -}}
+#!/bin/sh
+# run_onchange_after_default-apps.sh.tmpl — default viewers: swayimg for images, mpv for
+# video (MH, 2026-10-24; they were Chromium and Totem). Each app gets every type of its
+# family that its .desktop file declares, read at run time. Like the default-browser
+# script, it writes ~/.config/mimeapps.list through xdg-mime instead of managing that
+# file. An app that is not installed is skipped. Audio types are left alone (not
+# decided). Re-runs when this script changes. Idempotent.
+set -eu
+
+# default DESKTOP-FILE MIME-PREFIX
+default() {
+  file=
+  for dir in "${XDG_DATA_HOME:-$HOME/.local/share}/applications" /usr/local/share/applications /usr/share/applications; do
+    [ -f "$dir/$1" ] && { file=$dir/$1; break; }
+  done
+  [ -n "$file" ] || { echo "default-apps: $1 not installed, skipped" >&2; return 0; }
+  types=$(sed -n 's/^MimeType=//p' "$file" | tr ';' '\n' | grep "^$2/" || true)
+  # shellcheck disable=SC2086 # one argument per type
+  [ -n "$types" ] && xdg-mime default "$1" $types
+  echo "default-apps: $1 for $(echo "$types" | grep -c .) $2/* types" >&2
+}
+
+default swayimg.desktop image
+default mpv.desktop video
+{{- end }}
