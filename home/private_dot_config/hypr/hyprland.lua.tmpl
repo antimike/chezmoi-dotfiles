@@ -95,6 +95,31 @@ end)
 -- hl.plugin.<name>: Hyprland reloads the config after each plugin load.
 local profile = dofile("{{ joinPath .chezmoi.homeDir ".config" "hypr" "plugins.lua" }}")
 
+-- hyprbars: title bars on floating windows only (MH, 2026-10-25), in the i3 palette.
+-- Buttons run shell commands, so hyprctl's Lua dispatch syntax; a click focuses the window first.
+if hl.plugin.hyprbars then
+    hl.config({
+        plugin = {
+            hyprbars = {
+                bar_height                 = 22,
+                bar_color                  = "rgba({{ trimPrefix "#" .i3.colors.unfocused_bg.default }}e6)",
+                ["col.text"]               = "rgba({{ trimPrefix "#" .i3.colors.fg.default }}ff)",
+                bar_text_font              = "Iosevka Nerd Font",
+                bar_text_size              = 10,
+                bar_padding                = 8,
+                bar_button_padding         = 6,
+                bar_precedence_over_border = true,
+                on_double_click            = "hyprctl dispatch 'hl.dsp.window.float({ action = \"toggle\" })'",
+            },
+        },
+    })
+    hl.plugin.hyprbars.add_button({ bg_color = "rgb(d05050)", fg_color = "rgb(ffffff)", size = 12, icon = "󰖭",
+        action = "hyprctl dispatch 'hl.dsp.window.close()'" })
+    hl.plugin.hyprbars.add_button({ bg_color = "rgb({{ trimPrefix "#" .i3.colors.bg.default }})", fg_color = "rgb(ffffff)", size = 12, icon = "󰊓",
+        action = "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'" })
+    hl.window_rule({ name = "hyprbars-tiled-off", match = { float = false }, ["hyprbars:no_bar"] = true })
+end
+
 -----------------------
 ---- LOOK AND FEEL ----
 -----------------------
