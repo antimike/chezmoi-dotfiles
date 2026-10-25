@@ -9,9 +9,10 @@
 #   screenshot desktop --ask   same, but ask where to save it, prefilled with the timestamp
 #   screenshot annotate [window | desktop]
 #                              capture (window or region by default), then open it in satty
-#                              to draw on: Enter copies it, Ctrl+S saves it in the screenshot
-#                              folder with a timestamp name; either closes satty, Escape
-#                              discards it. Nothing goes to the clipboard before that.
+#                              to draw on: Enter copies it; Ctrl+S asks where to save it
+#                              (Escape there saves it under the timestamp name: Ctrl+S
+#                              meant save). Either closes satty; Escape in satty discards
+#                              it. Nothing goes to the clipboard before that.
 #
 # Saving goes through pick-path: a name or relative path lands in the screenshot folder
 # ($SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots"), ~/ and absolute
@@ -140,16 +141,25 @@ stamp=$(date +%Y-%m-%dT%H-%M-%S)
 dir=${SCREENSHOT_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/screenshots}
 
 if ((annotate)); then
-  # satty notifies on copy and save itself. Its output name is a strftime pattern,
-  # so a literal % in the folder has to be doubled.
-  mkdir -p "$dir"
+  # satty notifies on copy itself. Ctrl+S writes the PNG to stdout, so saving goes
+  # through pick-path like every other save.
   copy_cmd='wl-copy --type image/png'
   [[ $session == x11 ]] && copy_cmd='xclip -selection clipboard -t image/png'
-  # Not exec: the EXIT trap removes the capture once satty is closed.
-  satty --filename "$tmp" --early-exit \
-    --output-filename "${dir//%/%%}/%Y-%m-%dT%H-%M-%S.png" \
-    --actions-on-enter save-to-clipboard --copy-command "$copy_cmd"
-  exit
+  annotated=$(mktemp --tmpdir screenshot.XXXXXX.png)
+  trap 'rm -f "$tmp" "$annotated"' EXIT
+  satty --filename "$tmp" --early-exit --output-filename - \
+    --actions-on-enter save-to-clipboard --copy-command "$copy_cmd" >"$annotated"
+  [[ -s $annotated ]] || exit 0   # copied (satty said so) or discarded
+  need pick-path
+  target=$(pick-path --base "$dir" --default "$stamp" --ext png \
+    --prompt 'Save annotated screenshot as' --output "$(prompt_output)") || target=''
+  if [[ -z $target ]]; then   # Escape or a refused path: the timestamp name
+    mkdir -p "$dir"
+    target=$dir/$stamp.png
+  fi
+  cp --no-preserve=mode "$annotated" "$target"
+  notify "$target" "Annotated screenshot saved" "${target/#"$HOME"/\~}"
+  exit 0
 fi
 copy_image
 pick=(--base "$dir" --default "$stamp" --ext png --prompt 'Save screenshot as')
