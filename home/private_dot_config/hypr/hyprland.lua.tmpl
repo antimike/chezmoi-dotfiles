@@ -188,17 +188,7 @@ bind("SHIFT + XF86MonBrightnessDown", run(bin .. "brightness down 1"), "Panel br
 bind("XF86KbdBrightnessUp", run(bin .. "brightness kbd-up"), "Keyboard backlight up", held)
 bind("XF86KbdBrightnessDown", run(bin .. "brightness kbd-down"), "Keyboard backlight down", held)
 
--- Screenshots (~/.local/bin/screenshot). Print is also the Keychron's key; the MX Keys S's
--- screenshot key sends $mod+Shift+s (a firmware macro), so that is a screenshot key everywhere.
-local shot = bin .. "screenshot "
-bind("Print", run(shot .. "window"), "Screenshot: window or region, to the clipboard")
-bind(mod .. " + CTRL + s", run(shot .. "window"), "Screenshot: window or region, to the clipboard")
-bind(mod .. " + SHIFT + s", run(shot .. "window"), "Screenshot: window or region, to the clipboard")
-bind(mod .. " + CTRL + SHIFT + s", run(shot .. "window --ask"), "Screenshot: window or region, ask where to save")
-bind(mod .. " + Print", run(shot .. "window --ask"), "Screenshot: window or region, ask where to save")
-bind(mod .. " + CTRL + ALT + s", run(shot .. "desktop --ask"), "Screenshot: all screens, ask where to save")
-bind(mod .. " + SHIFT + ALT + s", run(shot .. "desktop --ask"), "Screenshot: all screens, ask where to save")
-bind(mod .. " + SHIFT + Print", run(shot .. "desktop --ask"), "Screenshot: all screens, ask where to save")
+-- Screenshots and recording: the capture submap (Submaps, below).
 
 -- Focus and move: vim keys and arrows
 for _, d in ipairs({
@@ -268,18 +258,32 @@ bind(mod .. " + CTRL + m", run(bin .. "hypr-mark move"), "Move window to a marke
 -- stack tag, so leaving replaces entering), as it is mostly used with fullscreen windows,
 -- which hide the bar; it times out, as the dunst keys do not reach dunst there. The dunst
 -- rule [hyprland-passthrough] shows it over fullscreen windows and while paused.
+-- A `close` notice is closed on leaving instead (by the id notify-send printed), with no
+-- "off" notice: capture leaves on every action, and the notice must not be in the shot.
 local submap_notices = {
     passthrough = { title = "Passthrough mode", body = "All keys go to the window; Super+Ctrl+Shift+p leaves", ms = 3000 },
+    capture = {
+        title = "Capture",
+        body = "Print, Space, Enter: copy  s: copy and save  d: all screens, save\na: annotate  Shift+a: annotate all screens  Esc: leave\nr: record  Shift+r: with mic  Alt+Shift+r: with system audio  Ctrl+Shift+r: pick the sound (any: stop)",
+        ms = 10000,
+        close = true,
+    },
 }
+local notice_id = '"${XDG_RUNTIME_DIR:-/tmp}/hypr-submap-notice.id"'
 local current_notice
 hl.on("keybinds.submap", function(name)
-    local n = submap_notices[name]
-    if not n and not current_notice then return end
-    local title, body, ms = (current_notice or "Mode") .. " off", "", 1500
+    local n, prev = submap_notices[name], current_notice
+    current_notice = n
+    if prev and prev.close then
+        hl.exec_cmd("dunstctl close \"$(cat " .. notice_id .. ")\"")
+        if not n then return end
+    end
+    if not n and not prev then return end
+    local title, body, ms = (prev and prev.title or "Mode") .. " off", "", 1500
     if n then title, body, ms = n.title, n.body, n.ms end
-    current_notice = n and n.title or nil
     -- Fixed texts without single quotes, so plain single-quoting is safe.
-    hl.exec_cmd(string.format("notify-send -a hyprland -h string:x-dunst-stack-tag:submap -t %d '%s' '%s'", ms, title, body))
+    hl.exec_cmd(string.format("notify-send -p -a hyprland -h string:x-dunst-stack-tag:submap -t %d '%s' '%s' >%s",
+        ms, title, body, notice_id))
 end)
 bind(mod .. " + r", hl.dsp.submap("resize"), "Resize mode")
 hl.define_submap("resize", function()
@@ -297,6 +301,39 @@ hl.define_submap("resize", function()
     for _, key in ipairs({ "Return", "Escape", mod .. " + r" }) do
         bind(key, hl.dsp.submap("reset"), "Leave resize mode")
     end
+end)
+-- Capture: screenshots, annotation (satty) and screen recording behind each keyboard's
+-- screenshot key: Print (also the Keychron's), $mod+Shift+s (the MX Keys S's key, a
+-- firmware macro) and $mod+Ctrl+s (keyboards without Print). Pressing the key again takes
+-- the quick shot (window or region to the clipboard). Every action leaves the submap.
+local capture_keys = { "Print", mod .. " + SHIFT + s", mod .. " + CTRL + s" }
+for _, key in ipairs(capture_keys) do
+    bind(key, hl.dsp.submap("capture"), "Capture mode: screenshot, annotate, record")
+end
+hl.define_submap("capture", function()
+    local shot = bin .. "screenshot "
+    local function act(cmd)
+        return function()
+            hl.dispatch(hl.dsp.submap("reset"))
+            hl.exec_cmd(cmd)
+        end
+    end
+    -- All-screen shots have no selection step to wait on: give dunst time to close the notice.
+    local function now(cmd) return act("sleep 0.3; " .. cmd) end
+    local quick = act(shot .. "window")
+    for _, key in ipairs({ "Print", "space", "Return", capture_keys[2], capture_keys[3] }) do
+        bind(key, quick, "Capture: window or region, to the clipboard")
+    end
+    bind("s", act(shot .. "window --ask"), "Capture: window or region, to the clipboard, ask where to save")
+    bind("d", now(shot .. "desktop --ask"), "Capture: all screens, ask where to save")
+    bind("a", act(shot .. "annotate window"), "Capture: window or region, annotate (Enter copies, Ctrl+S saves)")
+    bind("SHIFT + a", now(shot .. "annotate desktop"), "Capture: all screens, annotate (Enter copies, Ctrl+S saves)")
+    local rec = bin .. "screen-record"
+    bind("r", act(rec), "Capture: start or stop a screen recording (monitor or region)")
+    bind("SHIFT + r", act(rec .. " --audio mic"), "Capture: record with the default microphone (or stop)")
+    bind("ALT + SHIFT + r", act(rec .. " --audio system"), "Capture: record with the system audio (or stop)")
+    bind("CTRL + SHIFT + r", act(rec .. " --audio pick"), "Capture: record, pick the sound source (or stop)")
+    bind("Escape", hl.dsp.submap("reset"), "Leave capture mode")
 end)
 -- Passthrough: every other bind off, for VMs, remote desktops and games (i3's "locked" mode).
 bind(mod .. " + CTRL + SHIFT + p", hl.dsp.submap("passthrough"), "Passthrough mode: all keys to the window")
@@ -319,6 +356,9 @@ hl.window_rule({ name = "pavucontrol", match = { class = "org.pulseaudio.pavucon
 -- module, left click; a Chromium --app window, which gets its own class) likewise.
 hl.window_rule({ name = "blueman-manager", match = { class = "blueman-manager" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
 hl.window_rule({ name = "weather-forecast", match = { class = "chrome-www.meteoblue.com__.*" }, float = true, size = { 1280, 860 }, center = true, opacity = 0.92 })
+-- satty (screenshot annotate): floating and centred, at most 80% of the monitor (an
+-- all-screens capture would otherwise open as wide as all of them).
+hl.window_rule({ name = "satty", match = { class = "com.gabm.satty" }, float = true, center = true, max_size = { "monitor_w*0.8", "monitor_h*0.8" } })
 -- Chromium's "<site> is sharing your screen" bar: a toplevel with no class that lands mid-screen, and
 -- its Hide button minimizes, which Hyprland ignores. Bottom-left corner, no focus.
 hl.window_rule({ name = "screen-share-bar", match = { class = "^$", title = ".* is sharing (your screen|a window|this tab).*" }, float = true, move = "20 monitor_h-window_h-20", no_initial_focus = true })

@@ -1,6 +1,6 @@
 // Module settings shared by the bars in bars/ (included by each). Icons are Nerd Font glyphs
 // (FiraCode Nerd Font, the fallback in style.css). custom/* modules run
-// ~/.local/bin/waybar-module; signals 8 (idle), 9 (dunst), 10 (weather).
+// ~/.local/bin/waybar-module; signals 8 (idle), 9 (dunst), 10 (weather), 11 (recording).
 {
     "hyprland/workspaces": {
         "format": "{id}",
@@ -33,6 +33,13 @@
             "on-scroll-up": "shift_down",
             "on-scroll-down": "shift_up"
         }
+    },
+    "custom/recording": {
+        "exec": "waybar-module recording",
+        "return-type": "json",
+        "interval": 1,
+        "signal": 11,
+        "on-click": "screen-record"
     },
     "custom/idle": {
         "exec": "waybar-module idle",

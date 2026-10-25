@@ -7,6 +7,12 @@
 #   screenshot window --ask    same, and ask where to save it, prefilled with a timestamp
 #   screenshot desktop         every output; clipboard, and saved with a timestamp name
 #   screenshot desktop --ask   same, but ask where to save it, prefilled with the timestamp
+#   screenshot annotate [window | desktop]
+#                              capture (window or region by default), then open it in satty
+#                              to draw on: Enter copies it; Ctrl+S asks where to save it
+#                              (Escape there saves it under the timestamp name: Ctrl+S
+#                              meant save). Either closes satty; Escape in satty discards
+#                              it. Nothing goes to the clipboard before that.
 #
 # Saving goes through pick-path: a name or relative path lands in the screenshot folder
 # ($SCREENSHOT_DIR, default "$(xdg-user-dir PICTURES)/screenshots"), ~/ and absolute
@@ -19,7 +25,7 @@
 # the selection: nothing is copied or saved, and the exit status is 1.
 set -euo pipefail
 
-usage() { echo "usage: screenshot window [NAME | --ask] | desktop [--ask]" >&2; exit 2; }
+usage() { echo "usage: screenshot window [NAME | --ask] | desktop [--ask] | annotate [window | desktop]" >&2; exit 2; }
 
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "screenshot: '$1' not found" >&2; exit 127; }
@@ -27,6 +33,14 @@ need() {
 
 notify() { notify-send -a screenshot -i "$1" "$2" "$3" || true; }
 
+annotate=0
+if [[ ${1:-} == annotate ]]; then
+  annotate=1
+  shift
+  [[ $# -le 1 ]] || usage
+  set -- "${1:-window}"
+  need satty
+fi
 mode=${1:-}
 name=${2:-}
 case $mode in
@@ -122,10 +136,32 @@ case $mode in
   window) capture_window || exit 1 ;;
   desktop) capture_desktop ;;
 esac
-copy_image
 
 stamp=$(date +%Y-%m-%dT%H-%M-%S)
 dir=${SCREENSHOT_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/screenshots}
+
+if ((annotate)); then
+  # satty notifies on copy itself. Ctrl+S writes the PNG to stdout, so saving goes
+  # through pick-path like every other save.
+  copy_cmd='wl-copy --type image/png'
+  [[ $session == x11 ]] && copy_cmd='xclip -selection clipboard -t image/png'
+  annotated=$(mktemp --tmpdir screenshot.XXXXXX.png)
+  trap 'rm -f "$tmp" "$annotated"' EXIT
+  satty --filename "$tmp" --early-exit --output-filename - \
+    --actions-on-enter save-to-clipboard --copy-command "$copy_cmd" >"$annotated"
+  [[ -s $annotated ]] || exit 0   # copied (satty said so) or discarded
+  need pick-path
+  target=$(pick-path --base "$dir" --default "$stamp" --ext png \
+    --prompt 'Save annotated screenshot as' --output "$(prompt_output)") || target=''
+  if [[ -z $target ]]; then   # Escape or a refused path: the timestamp name
+    mkdir -p "$dir"
+    target=$dir/$stamp.png
+  fi
+  cp --no-preserve=mode "$annotated" "$target"
+  notify "$target" "Annotated screenshot saved" "${target/#"$HOME"/\~}"
+  exit 0
+fi
+copy_image
 pick=(--base "$dir" --default "$stamp" --ext png --prompt 'Save screenshot as')
 if ((ask)); then
   pick+=(--output "$(prompt_output)")

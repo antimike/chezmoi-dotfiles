@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# screen-record — start or stop a screen recording (Wayland: slurp + wf-recorder).
+#
+#   screen-record          idle: pick a monitor (click) or a region (drag) and start;
+#                          recording: stop it and ask where to keep it
+#   screen-record --audio mic|system|pick
+#                          the same, with sound: the default microphone, the system audio
+#                          (the default output's .monitor), or a source picked from a list
+#                          (inputs and monitors). While recording, every form just stops it.
+#   screen-record status   prints "PID START_EPOCH OUTPUT FILE" and exits 0 while recording, else
+#                          non-zero (OUTPUT is "-" when unknown)
+#
+# One recording at a time: while one runs, the toggle only ever stops it. The file is
+# written straight to the screencast folder ($SCREENCAST_DIR, default
+# "$(xdg-user-dir VIDEOS)/screencasts") under a timestamp name. Stopping sends SIGINT,
+# so wf-recorder finishes the MP4 (a killed one can be unplayable), then pick-path asks
+# for a name, prefilled with the timestamp: Enter keeps it, a name or path moves it,
+# Escape (or a refused path) keeps it where it is. Audio: PulseAudio names through
+# wf-recorder's default backend (its pipewire backend records no sound here), AAC.
+# Encoding: H.264 on the
+# Intel (or AMD) GPU through VAAPI when there is one; wf-recorder's default is VP9 on the
+# CPU, which cannot keep up with a 4K monitor (2 cores, and frames queue up in memory at
+# ~190 MB/s; VAAPI: ~11% CPU, flat memory; measured 2026-10-24). State: a file in
+# $XDG_RUNTIME_DIR; waybar's custom/recording module (waybar-module recording, signal
+# 11) shows the elapsed time and stops the recording on click. A click on a monitor that
+# moves the pointer a little is a tiny region (VAAPI refuses under 16 px): anything
+# under 16x16 takes the whole monitor instead.
+set -euo pipefail
+
+state=${XDG_RUNTIME_DIR:-/tmp}/screen-record.state
+log=${XDG_RUNTIME_DIR:-/tmp}/screen-record.log
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { echo "screen-record: '$1' not found" >&2; exit 127; }
+}
+
+notify() { notify-send -a screen-record -i "$1" "$2" "$3" || true; }
+bar() { pkill -RTMIN+11 -x waybar || true; }
+
+# The state line of the running recording; a state file whose wf-recorder is gone is
+# reported (the file may be cut short) and removed. Call it holding the lock: a stopping
+# recorder is briefly gone while its state is still there.
+running() {
+  [[ -s $state ]] || return 1
+  local pid file
+  read -r pid _ _ file <"$state"
+  if [[ $(cat "/proc/$pid/comm" 2>/dev/null) == wf-recorder ]]; then
+    cat "$state"
+    return 0
+  fi
+  rm -f "$state"
+  bar
+  notify dialog-warning "Recording ended on its own" "${file/#"$HOME"/\~}"$'\n'"$(tail -n 3 "$log" 2>/dev/null)"
+  return 2
+}
+
+# "NAME x,y wxh" (logical) of the output holding the geometry's top-left corner.
+output_at() {
+  local x=${1%%,*} y=${1#*,}
+  y=${y%% *}
+  if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    # Modes are physical pixels: divide by the scale (no rotated monitors here).
+    hyprctl monitors -j | jq -r --argjson x "$x" --argjson y "$y" 'first(.[]
+      | (.width / .scale | floor) as $w | (.height / .scale | floor) as $h
+      | select(.x <= $x and $x < .x + $w and .y <= $y and $y < .y + $h)
+      | "\(.name) \(.x),\(.y) \($w)x\($h)") // empty' || true
+  elif [[ -n ${SWAYSOCK:-} ]]; then
+    swaymsg -t get_outputs | jq -r --argjson x "$x" --argjson y "$y" 'first(.[] | .rect as $r
+      | select(.active and $r.x <= $x and $x < $r.x + $r.width
+               and $r.y <= $y and $y < $r.y + $r.height)
+      | "\(.name) \($r.x),\($r.y) \($r.width)x\($r.height)") // empty' || true
+  fi
+}
+
+# The PulseAudio source name for --audio MODE; empty when the picker was cancelled.
+audio_source() {
+  case $1 in
+    mic) pactl get-default-source ;;
+    system) echo "$(pactl get-default-sink).monitor" ;;
+    pick)
+      need fuzzel
+      local mic sys names=() labels=() name desc i
+      mic=$(pactl get-default-source) sys="$(pactl get-default-sink).monitor"
+      # The default microphone and the system audio first, then the rest in pactl's order.
+      while IFS=$'\t' read -r name desc; do
+        case $name in
+          "$mic") desc+="  (default microphone)" ;;
+          "$sys") desc+="  (system audio)" ;;
+          bluez_input.*) desc+="  (switches the headphones to call quality)" ;;
+        esac
+        names+=("$name") labels+=("$desc")
+      done < <(pactl -f json list sources | jq -r --arg mic "$mic" --arg sys "$sys" '
+        sort_by(if .name == $mic then 0 elif .name == $sys then 1 else 2 end)[]
+        | "\(.name)\t\(.description)"')
+      i=$(printf '%s\n' "${labels[@]}" | fuzzel --dmenu --index --prompt 'Record sound from: ') || return 0
+      [[ $i =~ ^[0-9]+$ ]] && echo "${names[i]}"
+      ;;
+  esac
+}
+
+# wf-recorder's codec options: VAAPI on the first Intel or AMD render node, else none.
+encoder() {
+  local node driver
+  for node in /dev/dri/renderD*; do
+    [[ -e $node ]] || continue
+    driver=$(readlink -f "/sys/class/drm/${node##*/}/device/driver")
+    case ${driver##*/} in
+      i915 | xe | amdgpu) echo "-c h264_vaapi -d $node"; return ;;
+    esac
+  done
+}
+
+start() {
+  need slurp; need wf-recorder; need jq
+  local geometry dir stamp file pid where output size codec audio=() source='' sound=''
+  if [[ -n $1 ]]; then
+    need pactl
+    source=$(audio_source "$1")
+    [[ -n $source ]] || exit 1   # picker cancelled
+    audio=(-a"$source" -C aac)
+    sound=$(pactl -f json list sources | jq -r --arg n "$source" 'first(.[] | select(.name == $n) | .description) // $n')
+  fi
+  # -o: each output is a box, so a click takes a whole monitor; a drag takes a region.
+  geometry=$(slurp -o -b '#00000066' -c '#cc3333ff' -w 2) || exit 1
+  where=$(output_at "$geometry")
+  size=${geometry#* }
+  if [[ -n $where ]] && ((${size%x*} < 16 || ${size#*x} < 16)); then
+    geometry=${where#* }
+  fi
+  output=${where%% *}
+  dir=${SCREENCAST_DIR:-$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Videos")/screencasts}
+  mkdir -p "$dir"
+  stamp=$(date +%Y-%m-%dT%H-%M-%S)
+  file=$dir/$stamp.mp4
+  # 9>&-: the toggle's lock must not outlive this run.
+  read -ra codec <<<"$(encoder)"
+  wf-recorder "${codec[@]}" "${audio[@]}" -g "$geometry" -f "$file" </dev/null >"$log" 2>&1 9>&- &
+  pid=$!
+  disown
+  sleep 0.5
+  if ! kill -0 "$pid" 2>/dev/null; then
+    notify dialog-error "Recording failed to start" "$(tail -n 3 "$log")"
+    exit 1
+  fi
+  echo "$pid $(date +%s) ${output:--} $file" >"$state"
+  bar
+  notify media-record "Recording${sound:+ with sound: $sound}" "Stop: the record key again, or click the bar's red dot"
+}
+
+stop() {
+  local pid=$1 output=$2 file=$3 target
+  [[ $output == - ]] && output=''
+  kill -INT "$pid"
+  # wf-recorder is not our child (another run started it): wait on /proc.
+  timeout 20 tail --pid="$pid" -f /dev/null || {
+    notify dialog-warning "Recording did not stop in 20 s" "wf-recorder $pid is still running"
+    exit 1
+  }
+  rm -f "$state"
+  bar
+  need pick-path
+  local name=${file##*/}
+  target=$(pick-path --base "${file%/*}" --default "${name%.mp4}" --ext mp4 \
+    --prompt 'Save recording as' --output "$output") || target=''   # 1 = cancelled, 3 = refused
+  if [[ -n $target && $target != "$file" ]]; then
+    # pick-path has asked before overwriting. On failure the recording stays put.
+    if mv -f "$file" "$target"; then
+      file=$target
+    else
+      notify dialog-warning "Recording not moved" "Could not move it to ${target/#"$HOME"/\~}"
+    fi
+  fi
+  notify video-x-generic "Recording saved" "${file/#"$HOME"/\~}"
+}
+
+usage() { echo "usage: screen-record [--audio mic|system|pick] | status" >&2; exit 2; }
+
+mode=''
+case ${1:-} in
+  '') ;;
+  --audio)
+    [[ $# -eq 2 && $2 =~ ^(mic|system|pick)$ ]] || usage
+    mode=$2
+    ;;
+  status)
+    [[ $# -eq 1 ]] || usage
+    exec 9>"$state.lock"
+    if flock -n 9; then
+      running 2>/dev/null
+    else
+      # A toggle is starting or stopping one: report the state as it stands.
+      [[ -s $state ]] && cat "$state"
+    fi
+    exit
+    ;;
+  *) usage ;;
+esac
+
+# Wait a little: waybar's status poll holds the lock for a moment every second. Longer
+# than that, another toggle is starting or stopping one (a selection or a prompt is open).
+exec 9>"$state.lock"
+flock -w 2 9 || exit 0
+rc=0
+current=$(running) || rc=$?
+case $rc in
+  0) read -r pid _ output file <<<"$current"; stop "$pid" "$output" "$file" ;;
+  1) start "$mode" ;;
+  *) exit 1 ;;   # it had ended on its own: reported, never start a second
+esac

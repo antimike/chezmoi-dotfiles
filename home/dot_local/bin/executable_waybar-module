@@ -4,10 +4,12 @@
 #   waybar-module idle      shown while the idle chain is paused (idle-toggle); click resumes
 #   waybar-module dunst     shown while notifications are paused, with the waiting count
 #   waybar-module weather   current conditions from wttr.in (location by IP, no API key)
+#   waybar-module recording a red dot and the elapsed time while screen-record runs; click stops it
 #
 # Empty text hides a module, so idle and dunst show only the unusual state, and weather
 # hides when offline with no recent cache. Refreshed on an interval and by signal:
-# `pkill -RTMIN+8 -x waybar` (idle), `-RTMIN+9` (dunst), `-RTMIN+10` (weather).
+# `pkill -RTMIN+8 -x waybar` (idle), `-RTMIN+9` (dunst), `-RTMIN+10` (weather),
+# `-RTMIN+11` (recording; screen-record sends it on start and stop).
 set -euo pipefail
 
 out() { jq -cn --arg text "$1" --arg class "$2" --arg tooltip "$3" '{$text, $class, $tooltip}'; }
@@ -60,8 +62,20 @@ case ${1:-} in
   weather)
     weather
     ;;
+  recording)
+    # Runs every second: no jq when idle, the usual case.
+    if rec=$(screen-record status 2>/dev/null); then
+      read -r _ start _ file <<<"$rec"
+      s=$(($(date +%s) - start))
+      if ((s >= 3600)); then t=$(printf '%d:%02d:%02d' $((s / 3600)) $((s % 3600 / 60)) $((s % 60)))
+      else t=$(printf '%02d:%02d' $((s / 60)) $((s % 60))); fi
+      out $'\U000f044a '"$t" recording "Recording to ${file/#"$HOME"/\~}"$'\n''Click to stop.'
+    else
+      echo '{"text":""}'
+    fi
+    ;;
   *)
-    echo "usage: waybar-module idle|dunst|weather" >&2
+    echo "usage: waybar-module idle|dunst|weather|recording" >&2
     exit 2
     ;;
 esac

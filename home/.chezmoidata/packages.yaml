@@ -190,9 +190,12 @@ packageTargets:
         copr: hyprland
       - name: hyprpicker       # colour picker
         copr: hyprland
-      # Screenshots and typing
+      # Screenshots, recording and typing
       - grim
       - slurp
+      - name: satty          # screenshot annotation (screenshot annotate); a GTK4 app, no prebuilt binary
+        copr: hyprland
+      - wf-recorder          # screen recording (screen-record)
       - wtype
       - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
       # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)

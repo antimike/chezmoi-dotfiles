@@ -32,7 +32,7 @@ tooltip {
 #submap.passthrough { background: #b87979; }
 
 #window, #clock, #pulseaudio, #network, #bluetooth, #battery, #tray, #cpu, #memory,
-#disk, #backlight, #custom-weather, #custom-idle, #custom-dunst { padding: 0 8px; }
+#disk, #backlight, #custom-weather, #custom-recording, #custom-idle, #custom-dunst { padding: 0 8px; }
 
 /* Drawer contents (group/system, group/audio), revealed on hover. */
 .drawer-child { color: #9aa7b4; }
@@ -42,3 +42,4 @@ tooltip {
 #battery.critical:not(.charging) { color: #0d1925; background: #b87979; }
 #custom-idle.paused, #custom-dunst.paused { color: #0d1925; background: #b8b879; }
 #custom-weather.stale { color: #647384; }
+#custom-recording.recording { color: #0d1925; background: #b87979; }
