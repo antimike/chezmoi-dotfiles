@@ -46,12 +46,18 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   (`vivid`) in [theming.md](theming.md), not a per-entry patch. (2) Run `term-contrast --theme <name>` on any theme
   before adopting it. (3) The rest of the kitty assessment (the full merge-and-debug pass).
 - [ ] Investigate browser options
-- [ ] **hyprpm plugins: hyprbars now, hy3 deferred** (MH, 2026-10-23; branch `wayland/hy3-hyprbars`, 2026-10-25).
-  `hyprland-devel` in the package map; `.chezmoidata/hyprland.yaml` lists the repos; `run_after_hyprpm-plugins.sh.tmpl`
-  builds and enables them (a stamp of the installed Hyprland commit + the list; builds only from a Hyprland session
-  running the installed binary, with sudo at a terminal; otherwise prints why and exits 0). hyprpm order matters: `update`
-  first (headers; `add` refuses without them), then `add` (asks [Y/n]); `update` and `enable` load plugins into the
-  running session at once. Hyprland 0.56.2 reloads the config after every plugin load and unload
+- [ ] **hyprpm plugins: hyprbars (riced profile), hy3 deferred** (MH, 2026-10-23; branch `wayland/hy3-hyprbars`,
+  2026-10-25; built and nested-tested, **MH's work and riced login tests pending**). `hyprland-devel` in the package map;
+  `.chezmoidata/hyprland.yaml` lists the repos (`hyprpm.repos`) and the plugins per profile (`hyprpm.plugins`);
+  `run_after_hyprpm-plugins.sh.tmpl` builds the repos, never `enable`s (a stamp: line 1 the Hyprland version, then the
+  commit + the repo list; builds only from a Hyprland session running the installed binary, with sudo at a terminal;
+  otherwise prints why and exits 0). `~/.config/hypr/plugins.lua` (run by `hyprland.lua`) loads the profile's plugins
+  with `hl.plugin.load` when the stamp's version is `hl.version()`, else skips them with one notification per version
+  and boot (nested-tested: work loads none; riced with no, a stale and a matching stamp). **Promote a plugin to work
+  sessions**: add `work` to its `profiles`, `chezmoi apply`, `hyprctl reload`. hyprpm order matters: `update` first
+  (headers; `add` refuses without them), then `add` (asks [Y/n]); `update` and `enable` load enabled plugins into the
+  running session at once (so nothing is enabled). hy3 was added by hand during the trial: `hyprpm remove
+  https://github.com/outfoxxed/hy3` stops its rebuilds. Hyprland 0.56.2 reloads the config after every plugin load and unload
   (`PluginSystem.cpp:135,193`), so a config guarded on `hl.plugin.<name>` follows the plugin. Tested in
   `tools/hypr-nested` (nested Hyprland in a limited systemd scope):
   - **hy3 deferred**: hyprpm maps 0.56.2 to `db28808` (one commit before the `hl0.56.0.1` tag; fine), but **any hy3
@@ -63,19 +69,21 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     of them with a window focused, plugin unloads and dwindle/hy3 swaps on a clean tree. Upstream master after the pin
     has no fix (only API chases). MH: little need for manual tiling with two large monitors. Re-test after an upstream
     fix; filing the issue upstream is MH's call.
-  - **hyprbars**: loads alongside hy3 and survives reloads; floating windows only (MH): window rule
-    `match = { float = false }, ["hyprbars:no_bar"] = true`; screenshot-checked. `bar_color` set via `hl.config` did
-    not take in the nested test: check when configuring it for real.
+  - **hyprbars**: loads alongside hy3 and survives reloads; riced profile, floating windows only (MH): window rule
+    `match = { float = false }, ["hyprbars:no_bar"] = true`; i3 palette (`unfocused_bg` at 90%, `fg`), close and
+    maximize buttons, double click tiles the window; screenshot-checked, button commands run against a nested instance.
+    (An earlier `bar_color` set by `hyprctl eval` at runtime did not take; set in the config file it does.)
 - [ ] **Hyprland effects and plugins: the riced session** (MH, 2026-10-25; evaluation by Claude from the repos'
   source and docs, nothing built yet unless marked). MH's examples (images, unmanaged, repo root): Hypr-DarkWindow's
   README screenshot, hyprliquid's desktop and power-menu shots, hyprglass dark/light, hypr-edgehover's demo video.
-  - **Two login entries (D66)**: "Hyprland" (work) and "Hyprland (riced)". The riced entry sets `HYPR_PROFILE=riced`
-    (uwsm reads an env file per desktop name; check that a second name in `XDG_CURRENT_DESKTOP` does not break helpers
-    that test for exactly `Hyprland`, e.g. `lock-screen`). `hyprland.lua` branches on it: built-in effects (blur,
-    shadows, animations, opacity; all off today), waybar/wlogout styles, and the plugins, loaded with `hl.plugin.load
-    (path)` (config-tracked: Hyprland loads and unloads them as the list changes). The work profile loads no compositor
-    plugin. hyprpm only builds. Hyprland checks only the plugin API version on load, not the build commit, so the
-    config must refuse a `.so` built for another Hyprland itself (compare the stamp's commit with the running one).
+  - **Two login entries (D66; built)**: "Hyprland" (work) and "Hyprland (riced)" (`hyprland-riced-uwsm`,
+    `.chezmoidata/uwsm.yaml`, same `Exec` as the COPR's entry). Not a second desktop name: five units
+    (`ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland`, exact match) and `lock-screen` test it exactly. GDM sets
+    `DESKTOP_SESSION` to the entry's id, which reaches Hyprland through uwsm; `~/.config/uwsm/env-hyprland` maps it to
+    `HYPR_PROFILE` (`riced`/`work`). `hyprland.lua` branches on it: built-in effects (blur, shadows, animations,
+    opacity; all off today), waybar/wlogout styles, and the plugins (`plugins.lua`, above). hyprpm only builds.
+    Hyprland checks only the plugin API version on load, so `plugins.lua` refuses builds for another version itself
+    (`hl.version()` has the version only, no commit).
   - **GPU for the riced session**: probably NVIDIA (the T1000; Intel UHD 630 renders today, D60) — MH agrees, but
     **only after perf tests**. A nested Hyprland renders on the parent session's GPU (aquamarine's Wayland backend
     opens the parent's dmabuf main device; `AQ_DRM_DEVICES` is read only by the DRM backend), so nested tests give
