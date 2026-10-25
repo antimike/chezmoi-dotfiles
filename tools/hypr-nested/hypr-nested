@@ -3,7 +3,7 @@
 # resource-limited systemd scope, for testing plugins and configs without risking
 # the session (e.g. a hyprpm plugin after a Hyprland update).
 #
-#   tools/hypr-nested/hypr-nested start --workspace WS [--config FILE]
+#   tools/hypr-nested/hypr-nested start --workspace WS [--config FILE] [--env VAR=VALUE]...
 #   tools/hypr-nested/hypr-nested ctl HYPRCTL-ARGS...   # hyprctl, aimed at the nested instance
 #   tools/hypr-nested/hypr-nested sig                   # its instance signature
 #   tools/hypr-nested/hypr-nested log                   # its stdout/stderr
@@ -11,7 +11,8 @@
 #
 # start: opens the nested Hyprland as a window on workspace WS of the session,
 # silently (focus stays where it is), so it can be kept off a monitor in use: pick a
-# workspace on another monitor (`hyprctl workspaces`). Required on purpose.
+# workspace on another monitor (`hyprctl workspaces`). Required on purpose. --env sets
+# a variable for the nested Hyprland (e.g. HYPR_PROFILE=riced, D66); repeatable.
 # The scope (hypr-nested.scope) caps memory at 2G with no swap, 2 CPUs at low
 # weight, low IO weight and 256 tasks; `stop` kills it all. It renders on the session's
 # GPU: aquamarine's Wayland backend opens the parent's dmabuf main device and ignores
@@ -48,11 +49,13 @@ EOF
 }
 
 start() {
-  local ws='' config=''
+  local ws='' config='' envs=''
   while [ $# -gt 0 ]; do
     case $1 in
       --workspace) ws=${2:?--workspace needs a value}; shift 2 ;;
       --config)    config=${2:?--config needs a file}; shift 2 ;;
+      --env)       [[ ${2:-} =~ ^[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_./:-]*$ ]] || die "--env needs VAR=VALUE (plain characters)"
+                   envs+=" $2"; shift 2 ;;
       *) die "unknown option: $1" ;;
     esac
   done
@@ -72,7 +75,7 @@ start() {
   cmd="systemd-run --user --scope --unit=$unit --quiet"
   cmd+=" -p MemoryMax=2G -p MemorySwapMax=0 -p TasksMax=256"
   cmd+=" -p CPUQuota=200% -p CPUWeight=20 -p IOWeight=20"
-  cmd+=" env -u HYPRLAND_INSTANCE_SIGNATURE"
+  cmd+=" env -u HYPRLAND_INSTANCE_SIGNATURE$envs"
   cmd+=" Hyprland -c $dir/nested.lua >$dir/log 2>&1"
   # The parent's exec rule places the window; Lua dispatch syntax (0.56 Lua config).
   hyprctl dispatch "hl.dsp.exec_cmd(\"sh -c '$cmd'\", { workspace = \"$ws silent\" })" >/dev/null
