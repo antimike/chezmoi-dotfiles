@@ -264,7 +264,7 @@ local submap_notices = {
     passthrough = { title = "Passthrough mode", body = "All keys go to the window; Super+Ctrl+Shift+p leaves", ms = 3000 },
     capture = {
         title = "Capture",
-        body = "Print, Space, Enter: copy  s: copy and save  d: all screens, save\na: annotate  Shift+a: annotate all screens  r: record (again: stop)  Esc: leave",
+        body = "Print, Space, Enter: copy  s: copy and save  d: all screens, save\na: annotate  Shift+a: annotate all screens  Esc: leave\nr: record  Shift+r: with mic  Alt+Shift+r: with system audio  Ctrl+Shift+r: pick the sound (any: stop)",
         ms = 10000,
         close = true,
     },
@@ -328,7 +328,11 @@ hl.define_submap("capture", function()
     bind("d", now(shot .. "desktop --ask"), "Capture: all screens, ask where to save")
     bind("a", act(shot .. "annotate window"), "Capture: window or region, annotate (Enter copies, Ctrl+S saves)")
     bind("SHIFT + a", now(shot .. "annotate desktop"), "Capture: all screens, annotate (Enter copies, Ctrl+S saves)")
-    bind("r", act(bin .. "screen-record"), "Capture: start or stop a screen recording (monitor or region)")
+    local rec = bin .. "screen-record"
+    bind("r", act(rec), "Capture: start or stop a screen recording (monitor or region)")
+    bind("SHIFT + r", act(rec .. " --audio mic"), "Capture: record with the default microphone (or stop)")
+    bind("ALT + SHIFT + r", act(rec .. " --audio system"), "Capture: record with the system audio (or stop)")
+    bind("CTRL + SHIFT + r", act(rec .. " --audio pick"), "Capture: record, pick the sound source (or stop)")
     bind("Escape", hl.dsp.submap("reset"), "Leave capture mode")
 end)
 -- Passthrough: every other bind off, for VMs, remote desktops and games (i3's "locked" mode).
