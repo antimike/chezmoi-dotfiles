@@ -48,6 +48,15 @@ uwsm:
       # niri-session detects it runs as a user service and execs `niri --session`.
       exec: "uwsm start -- niri.desktop"
       desktopNames: "niri"
+    # D66: Hyprland's riced profile. Same Exec as the COPR's hyprland-uwsm.desktop, so
+    # XDG_CURRENT_DESKTOP stays "Hyprland" (helpers and units test it exactly); the
+    # profile comes from DESKTOP_SESSION (GDM sets it to this entry's id), mapped to
+    # HYPR_PROFILE in ~/.config/uwsm/env-hyprland.
+    - id: hyprland-riced-uwsm
+      name: "Hyprland (riced)"
+      comment: "Hyprland under uwsm, with effects and plugins (D66)"
+      exec: "uwsm start -e -D Hyprland hyprland.desktop"
+      desktopNames: "Hyprland"
     - id: wayfire-uwsm
       name: "Wayfire (uwsm)"
       comment: "Wayfire under uwsm"
