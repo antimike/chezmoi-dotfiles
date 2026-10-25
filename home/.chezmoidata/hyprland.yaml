@@ -1,0 +1,31 @@
+# Hyprland plugins (D66): hyprpm builds the repos, the config loads the plugins per profile.
+#
+# hyprpm.repos: built by run_after_hyprpm-plugins.sh.tmpl. hyprpm clones each repository,
+# picks the plugin commit pinned for the running Hyprland commit (the repo's hyprpm.toml
+# `commit_pins`) and builds it against headers it installs under /var/cache/hyprpm (sudo).
+# Repos are deliberately not pinned here: `hyprpm add <url> <rev>` ignores the commit pins.
+# `name` is the repository name in its hyprpm.toml ([repository] name), as `hyprpm list`
+# prints it. The COPR's hyprland-plugin-* packages are not used (built for 0.53). Build
+# deps: hyprland-devel (packages.yaml, the wayland target). Nothing is `hyprpm enable`d:
+# enable loads a plugin into whatever session is running.
+#
+# hyprpm.plugins: loaded by ~/.config/hypr/plugins.lua with hl.plugin.load, only in the
+# listed profiles (`work`: the "Hyprland" login; `riced`: "Hyprland (riced)"; HYPR_PROFILE,
+# set in ~/.config/uwsm/env-hyprland). Promote a plugin to work sessions after testing it
+# in riced ones: add `work` to its profiles, `chezmoi apply`, `hyprctl reload` (Hyprland
+# loads and unloads config-listed plugins as the list changes). `file` is the .so under
+# /var/cache/hyprpm/$USER/<repo>/.
+hyprpm:
+  repos:
+    # hy3 (i3-style tiling, https://github.com/outfoxxed/hy3) is deferred (2026-10-25): at the
+    # 0.56.2 pin (db28808) any hy3 dispatcher that fails, e.g. change_group after focusing
+    # the top-level group, corrupts its tree, and the next window close aborts Hyprland
+    # (uncaught runtime_error in Hy3Node::collapseParents). Reproduced with
+    # tools/hypr-nested; repro in docs/plans/ricing-backlog.md. Re-add after an upstream fix.
+    - name: hyprland-plugins
+      url: "https://github.com/hyprwm/hyprland-plugins"
+  plugins:
+    - name: hyprbars       # title bars, floating windows only (hyprland.lua)
+      repo: hyprland-plugins
+      file: hyprbars.so
+      profiles: [riced]
