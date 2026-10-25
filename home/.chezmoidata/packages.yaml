@@ -81,6 +81,10 @@ packageTargets:
       - xclip
       - xdotool
       - ydotool
+      # Media players (defaults: run_onchange_after_default-apps.sh.tmpl)
+      - mpv                  # default video player
+      - vlc
+      - vlc-cli              # cvlc/nvlc: VLC without the Qt GUI
       # Dev toolchain and python build deps (for mise-built interpreters)
       - bzip2-devel
       - cargo
@@ -197,6 +201,7 @@ packageTargets:
         copr: hyprland
       - wf-recorder          # screen recording (screen-record)
       - wtype
+      - swayimg              # default image viewer (Wayland native; Lua config)
       - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
       # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
       - meson

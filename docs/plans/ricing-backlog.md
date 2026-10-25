@@ -65,6 +65,19 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   screenshot, clock, date, Blazer colours. `tools/lock-screen-test` covers it; recovery in
   [../runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md).
 - [ ] **hyprpaper** for the wallpaper picker (D63; installed, not configured).
+- [ ] **Media apps** (MH, 2026-10-24; defaults set by `run_onchange_after_default-apps.sh.tmpl`: swayimg for images,
+  mpv for video; all four in the package map):
+  - [ ] **mpv keybindings**: review the defaults, then a managed `~/.config/mpv/input.conf` for what should change.
+  - [ ] **swayimg keybindings**: a managed `~/.config/swayimg/init.lua` (Lua: `swayimg.viewer.on_key()`,
+    `swayimg.gallery.on_key()`, per mode; reference `/usr/share/doc/swayimg/CONFIG.md`, defaults in
+    `/usr/share/swayimg/swayimg.lua`). Ideas: vim-style navigation like vimiv, copy to the clipboard, open in satty.
+  - [ ] **vimiv keybindings**: review its defaults and edit where they clash with swayimg's or the WM's. vimiv is
+    installed but not in the package map: add it if it stays.
+  - [ ] **VLC plugins and codecs**: review what is installed (`rpm -qa 'vlc*'`: base/extra/ffmpeg/pipewire/pulseaudio
+    plugins and more, none of them in the map) and pick the ones to keep and add. Note `vlc-plugins-freeworld`
+    (patent-encumbered codecs) comes from RPM Fusion, which is enabled on zbook but not modelled in the package map
+    (only COPRs are), and was at 3.0.22 against vlc 3.0.23 on 2026-10-24; check it still loads.
+  - [ ] Default audio app: not decided (Totem for most types, VLC for FLAC today).
 - [ ] Nix config derivations (exploration notes exist in the reference clone's `docs/`)
 
 ## Hardware checks
