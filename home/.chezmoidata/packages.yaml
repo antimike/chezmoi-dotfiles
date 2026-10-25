@@ -164,6 +164,8 @@ packageTargets:
         copr: swayfx
       - name: hyprland
         copr: hyprland
+      - name: hyprland-devel   # headers and build deps for hyprpm plugins (hy3, hyprbars); same version as hyprland
+        copr: hyprland
       - niri
       - xwayland-satellite   # XWayland for niri
       - wayfire
