@@ -79,3 +79,5 @@ uwsm:
   hideSessions:
     - hyprland   # Hyprland without uwsm (/usr/bin/start-hyprland)
     - sway       # SwayFX without uwsm ("SwayFX (uwsm)" starts `sway` by command)
+    - niri       # niri without uwsm ("niri (uwsm)" starts niri.desktop by reference)
+    - wayfire    # Wayfire without uwsm ("Wayfire (uwsm)" starts wayfire.desktop by reference)
