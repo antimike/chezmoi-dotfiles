@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# sunset — manual colour temperature on top of hyprsunset's schedule (Hyprland only).
+#
+#   sunset up|down [STEP]   warmer is down: change by STEP kelvin (default 250, 1000-20000 K)
+#                           and hold the value across scheduled changes until `sunset schedule`
+#   sunset schedule         drop the held value: back to the active profile of hyprsunset.conf
+#   sunset hold             re-apply the held value if a scheduled change replaced it
+#                           (waybar-module sunset runs this every refresh); silent
+#   sunset held             print the held value in K, if any (exit 1 if none)
+#   sunset next             print the next scheduled change as "H:MM TEMPERATURE|identity"
+#
+# The held value lives in $XDG_RUNTIME_DIR, so it ends with the login session. Scroll and
+# click on the bar's custom/sunset module call this; it refreshes the module (signal 12).
+# Never run `hyprctl hyprsunset identity` without an argument: that is a setter
+# (identity mode on), not a query. Current identity cannot be queried; the profile can.
+set -euo pipefail
+
+usage() { echo "usage: sunset up|down [STEP] | schedule | hold | held | next" >&2; exit 2; }
+
+held_file=${XDG_RUNTIME_DIR:-/run/user/$UID}/sunset-held
+conf=${HYPRSUNSET_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprsunset.conf}
+
+ipc() { hyprctl hyprsunset "$@" >/dev/null; }
+refresh() { pkill -RTMIN+12 -x waybar || true; }
+# The held file is "KELVIN PROFILE-TIME": the profile active when the value was applied.
+held() { [[ -s $held_file ]] && cut -d' ' -f1 "$held_file"; }
+profile_time() { hyprctl hyprsunset profile | sed -n 's/^Time: //p'; }
+apply() {
+  ipc identity false
+  ipc temperature "$1"
+  echo "$1 $(profile_time)" >"$held_file"
+}
+
+# Minutes since midnight now, or $SUNSET_NOW (H:MM) for tests.
+now_minutes() {
+  local t=${SUNSET_NOW:-$(date +%H:%M)}
+  echo $((10#${t%%:*} * 60 + 10#${t##*:}))
+}
+
+# The profiles of hyprsunset.conf, one "MINUTES H:MM TEMPERATURE|identity" line each, by time.
+profiles() {
+  local line time="" value="" key val
+  [[ -r $conf ]] || return 0
+  while IFS= read -r line; do
+    line=${line%%#*}
+    if [[ $line =~ ^[[:space:]]*profile[[:space:]]*\{ ]]; then
+      time="" value=""
+    elif [[ $line =~ ^[[:space:]]*([a-z_]+)[[:space:]]*=[[:space:]]*([^[:space:]]+) ]]; then
+      key=${BASH_REMATCH[1]} val=${BASH_REMATCH[2]}
+      case $key in
+        time) time=$val ;;
+        temperature) [[ $value == identity ]] || value=$val ;;
+        identity) [[ $val == true ]] && value=identity ;;
+      esac
+    elif [[ $line =~ ^[[:space:]]*\} && -n $time ]]; then
+      echo "$((10#${time%%:*} * 60 + 10#${time##*:})) $time ${value:-6000}"
+      time=""
+    fi
+  done <"$conf" | sort -n
+}
+
+# The first profile after now, else the first one tomorrow.
+next() {
+  local now all
+  now=$(now_minutes)
+  all=$(profiles)
+  [[ -n $all ]] || return 1
+  while read -r m t v; do
+    if ((m > now)); then echo "$t $v"; return; fi
+  done <<<"$all"
+  read -r _ t v <<<"$all"
+  echo "$t $v"
+}
+
+case ${1:-} in
+  up | down)
+    step=${2:-250}
+    [[ $step =~ ^[0-9]+$ ]] || usage
+    # Start from the held value, else what is on screen: 6500 K (neutral) under an identity profile.
+    if ! base=$(held); then
+      if hyprctl hyprsunset profile | grep -q '^Identity: true'; then base=6500
+      else base=$(hyprctl hyprsunset temperature); fi
+    fi
+    [[ $base =~ ^[0-9]+$ ]] || { echo "sunset: hyprsunset is not answering" >&2; exit 1; }
+    [[ $1 == up ]] && new=$((base + step)) || new=$((base - step))
+    new=$((new < 1000 ? 1000 : new > 20000 ? 20000 : new))
+    apply "$new"
+    refresh
+    ;;
+  schedule)
+    rm -f "$held_file"
+    ipc reset temperature
+    ipc reset identity
+    refresh
+    ;;
+  hold)
+    [[ -s $held_file ]] || exit 0
+    read -r k at <"$held_file"
+    # A scheduled change (a new active profile, maybe identity) or a hyprsunset restart
+    # replaced it. The temperature alone cannot tell: it is unchanged under identity.
+    [[ $(profile_time 2>/dev/null) == "${at:-}" && $(hyprctl hyprsunset temperature 2>/dev/null) == "$k" ]] && exit 0
+    apply "$k" 2>/dev/null || true
+    ;;
+  held) held ;;
+  next) next ;;
+  *) usage ;;
+esac
