@@ -16,6 +16,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [git-retire-branch-test/](git-retire-branch-test/) | Tests `git-retire-branch` (D65: archive/delete finished branches) against a throwaway bare remote |
 | [hypr-nested/](hypr-nested/) | A throwaway Hyprland nested in the session, in a resource-limited systemd scope, on a chosen workspace: crash triage of plugins and configs (`start --workspace N`, `ctl …`, `stop`) |
 | [package-map-test/](package-map-test/) | The package installer's resolution (D32: targets, `when`, includes, `false`, per-manager names, COPRs) via `--override-data`, nothing installed |
+| [bufferbloat-check/](bufferbloat-check/) | Latency under load (idle, download saturated, upload saturated) to the internet and the router hop, with throughput: before/after numbers for SQM |
 
 ## zsh-probe
 
@@ -112,3 +113,17 @@ tools/lock-screen-test/lock-screen-test ~/.local/bin/lock-screen
 ```
 
 Each case starts its own headless sway (new Wayland socket, checked with `grim` before any locker runs, so the real session is never locked), runs `lock-screen` with `XDG_CURRENT_DESKTOP` set, and reads "locked" off the screen (a `grim` shot differs from the empty desktop's). Cases: Hyprland lock returns only once confirmed; a second lock is a no-op; `SIGUSR1` unlocks (the recovery path); a hyprlock left over after an unlock does not block the next lock (a stand-in process plays the leftover when hyprlock 0.9.6's exit hang does not happen on its own); two concurrent locks share one hyprlock; other desktops get swaylock. Takes about 15 s. Needs sway, grim, ImageMagick, hyprlock and swaylock.
+
+## bufferbloat-check
+
+```sh
+tools/bufferbloat-check/bufferbloat-check                    # idle, download, upload; 30 s each
+tools/bufferbloat-check/bufferbloat-check --duration 60 --phases up --streams 4
+```
+
+Pings the target (default 1.1.1.1) and the default gateway at 5/s for each phase while 2 (`--streams`) transfer
+loops to Cloudflare's speed endpoints keep the link saturated, then prints a Markdown row per phase for
+[../docs/runbooks/home-network.md](../docs/runbooks/home-network.md) ("Video calls and bufferbloat"). Throughput comes
+from the default-route interface's byte counters (rx for idle/download, tx for upload). A gateway average that stays
+near idle while the target climbs puts the queue beyond the router. Each loop runs in its own process group and is
+killed with it on exit or Ctrl-C (checked 2026-10-25). Moves a few hundred MB a run; keep it off metered links.
