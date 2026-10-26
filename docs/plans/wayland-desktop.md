@@ -614,7 +614,7 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
   widget work): **spotify_player** (Rust TUI, a full client via librespot, cover art in kitty, Spotify Connect, search
   and playlists; recommended), **ncspot** (Rust TUI, simpler), **spotifyd** (headless Connect target, controlled from
   the phone), the **official client** (Flathub `com.spotify.Client`, CEF; heaviest, best compatibility). librespot-based
-  clients need **Spotify Premium** (ask MH). ncmpcpp is an MPD client: MPD has no working Spotify source to rely on
+  clients need **Spotify Premium** (MH believes they have it, 2026-10-25: confirm at the first spotify_player login). ncmpcpp is an MPD client: MPD has no working Spotify source to rely on
   (mopidy-spotify has broken with Spotify API changes before), so it does not fit. The media keys are hard-wired to
   `playerctl -p cmus` (`hyprland.lua`, the i3/SwayFX fragment): switch them to `playerctld` (the most recent player)
   so cmus and Spotify share them.

@@ -73,6 +73,9 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     `match = { float = false }, ["hyprbars:no_bar"] = true`; i3 palette (`unfocused_bg` at 90%, `fg`), close and
     maximize buttons, double click tiles the window; screenshot-checked, button commands run against a nested instance.
     (An earlier `bar_color` set by `hyprctl eval` at runtime did not take; set in the config file it does.)
+    **No tooltips** on the buttons (MH asked, 2026-10-25): hyprbars has none (a button is a command, colours, size and
+    icon; hover only redraws the icon). Adding one is ~100-150 lines of C++ in the plugin; not as a fork (rebased on
+    every Hyprland release, like hy3's risk), only as an upstream PR to `hyprwm/hyprland-plugins` (MH's call). Left as is.
 - [ ] **Hyprland effects and plugins: the riced session** (MH, 2026-10-25; evaluation by Claude from the repos'
   source and docs, nothing built yet unless marked). MH's examples (images, unmanaged, repo root): Hypr-DarkWindow's
   README screenshot, hyprliquid's desktop and power-menu shots, hyprglass dark/light, hypr-edgehover's demo video.
