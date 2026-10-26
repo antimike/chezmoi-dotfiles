@@ -59,6 +59,17 @@ DesktopNames={{ .desktopNames }}
 Type=Application
 EOF
 {{- end }}
+  # Non-uwsm entries hidden in GDM: a copy of the package's entry with NoDisplay=true
+  # (uwsm.yaml hideSessions). The source's size and mtime below re-run this script when a
+  # package update changes it.
+{{- range .uwsm.hideSessions }}
+{{-   $src := printf "/usr/share/wayland-sessions/%s.desktop" . }}
+{{-   $st := stat $src }}
+  # {{ . }}: {{ if $st }}{{ $st.size }} bytes, {{ $st.modTime }}{{ else }}not installed{{ end }}
+  if [ -f {{ $src }} ]; then
+    sed '/^\[Desktop Entry\]$/a NoDisplay=true' {{ $src }} > "$dir/{{ . }}.desktop"
+  fi
+{{- end }}
 }
 
 # Idempotency guard: the pinned version is installed and every session entry

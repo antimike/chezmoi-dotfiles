@@ -1,0 +1,65 @@
+{{- $run := and (eq .chezmoi.os "linux") (eq (dig "display_server" "x11" .) "wayland") (ne (includeTemplate "is-wsl" .) "true") (lookPath "hyprpm") -}}
+{{- if $run -}}
+#!/bin/sh
+# run_after_hyprpm-plugins.sh.tmpl — build the Hyprland plugin repos in
+# .chezmoidata/hyprland.yaml with hyprpm, and rebuild them after a Hyprland update.
+# Build only (D66): nothing is enabled; ~/.config/hypr/plugins.lua loads plugins per
+# profile, and only when the stamp below matches the running Hyprland.
+#
+# A run_after_ script (every apply) with a stamp, not run_onchange_: a build is only
+# possible from a Hyprland session running the installed binary (hyprpm builds for
+# the running commit) and with sudo (hyprpm installs headers to /var/cache/hyprpm),
+# so it often has to wait. The stamp holds the installed Hyprland commit and version
+# and the repo list; when they match, the script exits at once. Otherwise it builds
+# when it can and prints why not when it cannot, always exiting 0 so the apply goes
+# on; the next apply retries. Without cached credentials, sudo asks for the password
+# when `chezmoi apply` runs in a terminal.
+#
+# After a Hyprland update: log out and back in (plugins.lua skips the stale builds and
+# notifies), then `chezmoi apply` in a terminal, then `hyprctl reload`.
+# Undo: `hyprpm remove <url>` per repo, `hyprpm purge-cache`, and remove the stamp.
+set -eu
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi-system/hyprpm"
+STAMP=$STATE_DIR/built-for
+# Repo list, as rendered: part of the stamp, so a list change rebuilds.
+LIST='{{ range .hyprpm.repos }}{{ .url }} {{ end }}'
+
+say() { echo "hyprpm plugins: $*" >&2; }
+
+version=$(Hyprland --version | sed -n '1s/^Hyprland \([^ ]*\) .*/\1/p')
+installed=$(Hyprland --version | sed -n 's/.* at commit \([0-9a-f]*\).*/\1/p' | head -n 1)
+# Line 1 is read by plugins.lua (compared with hl.version()); keep it the bare version.
+want=$(printf '%s\n%s %s' "$version" "$installed" "$LIST")
+[ -f "$STAMP" ] && [ "$(cat "$STAMP")" = "$want" ] && exit 0
+
+if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+  say "build pending; run chezmoi apply from a Hyprland session"
+  exit 0
+fi
+running=$(hyprctl version -j | jq -r .commit)
+if [ "$running" != "$installed" ]; then
+  say "build pending; Hyprland was updated (running $(printf %.7s "$running"), installed $(printf %.7s "$installed")): log in again, then chezmoi apply"
+  exit 0
+fi
+if ! sudo -n true 2>/dev/null && ! [ -t 0 ]; then
+  say "build pending; needs sudo: run chezmoi apply in a terminal"
+  exit 0
+fi
+
+# `update` first: it installs the headers for the running Hyprland, which `add` needs,
+# and rebuilds the repos already added. `add` asks [Y/n] (Enter is yes). Neither loads
+# anything while no plugin is enabled.
+say "updating (headers and plugins for Hyprland $version, $(printf %.7s "$installed"))"
+hyprpm update
+added=$(hyprpm list 2>&1 || true)
+{{- range .hyprpm.repos }}
+if ! printf '%s\n' "$added" | grep -q 'Repository {{ .name }} (by '; then
+  say "adding {{ .url }}"
+  hyprpm add {{ .url | quote }}
+fi
+{{- end }}
+mkdir -p "$STATE_DIR"
+printf '%s\n' "$want" >"$STAMP"
+say "built for $version; reload Hyprland (hyprctl reload) to load them"
+{{- end }}

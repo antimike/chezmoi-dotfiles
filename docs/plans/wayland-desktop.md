@@ -599,6 +599,25 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       suspects: the monitor's DisplayPort setting (DP 1.1 vs 1.2 stream), or a link that cannot sustain HBR2 (4K@60
       needs DP 1.2 speeds on all four lanes).
 - [ ] **i3 stops deploying on zbook** (D50 amends D49) until the MacBook work, so D48 holds; the shared fragment stays.
+- [ ] **Passwordless `sudo` with the YubiKey** (MH, 2026-10-25; every session, it is system-wide). `pam_u2f` (`pam-u2f`
+  and `pamu2fcfg` are installed): a touch instead of the password, the password still accepted (`sufficient`, not
+  `required`), so an unplugged key never locks MH out. FIDO2/U2F is its own applet on the key, independent of the GPG
+  applet in use. Scope: `/etc/pam.d/sudo` only at first; polkit (`pkexec`, hyprpolkitagent) after; never the greeter
+  or login stacks in the same step (runbook: one PAM change per step, etckeeper snapshot first, a root shell open
+  while testing). Key mapping in `/etc/u2fmappings` (system-wide, root-owned) rather than `~/.config/Yubico` (a user
+  could add keys). Installed by a `run_onchange_install-*` script (D46: sudo prompts in a terminal) and recorded in the
+  runbook's system-installs table. Needs a D-number (an auth change). Side effect: every sudo prompt chezmoi raises
+  (uwsm, hyprpm, packages) becomes a touch.
+- [ ] **Music: Spotify while working** (MH, 2026-10-25; the riced look is in
+  [ricing-backlog.md](ricing-backlog.md), "Spotify, riced"). One player for both profiles; the riced session adds
+  looks (widgets), not a second player. Options, all exposing MPRIS (so `playerctl`, waybar's `mpris` module and any
+  widget work): **spotify_player** (Rust TUI, a full client via librespot, cover art in kitty, Spotify Connect, search
+  and playlists; recommended), **ncspot** (Rust TUI, simpler), **spotifyd** (headless Connect target, controlled from
+  the phone), the **official client** (Flathub `com.spotify.Client`, CEF; heaviest, best compatibility). librespot-based
+  clients need **Spotify Premium** (MH believes they have it, 2026-10-25: confirm at the first spotify_player login). ncmpcpp is an MPD client: MPD has no working Spotify source to rely on
+  (mopidy-spotify has broken with Spotify API changes before), so it does not fit. The media keys are hard-wired to
+  `playerctl -p cmus` (`hyprland.lua`, the i3/SwayFX fragment): switch them to `playerctld` (the most recent player)
+  so cmus and Spotify share them.
 
 ## Steps (order agreed by MH, 2026-10-17)
 

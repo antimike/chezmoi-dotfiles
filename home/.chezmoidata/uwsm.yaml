@@ -48,8 +48,36 @@ uwsm:
       # niri-session detects it runs as a user service and execs `niri --session`.
       exec: "uwsm start -- niri.desktop"
       desktopNames: "niri"
+    # D66: Hyprland's work profile. Same id as the COPR's /usr/share entry, which this one
+    # replaces in GDM (GDM loads /usr/local/share after /usr/share; the later one wins), to
+    # pair its name with the riced entry. Its id stays hyprland-uwsm (DESKTOP_SESSION).
+    - id: hyprland-uwsm
+      name: "Hyprland (work)"
+      comment: "Hyprland under uwsm, work profile: no unpromoted plugins (D66)"
+      exec: "uwsm start -e -D Hyprland hyprland.desktop"
+      desktopNames: "Hyprland"
+    # D66: Hyprland's riced profile. Same Exec as the COPR's hyprland-uwsm.desktop, so
+    # XDG_CURRENT_DESKTOP stays "Hyprland" (helpers and units test it exactly); the
+    # profile comes from DESKTOP_SESSION (GDM sets it to this entry's id), mapped to
+    # HYPR_PROFILE in ~/.config/uwsm/env-hyprland.
+    - id: hyprland-riced-uwsm
+      name: "Hyprland (riced)"
+      comment: "Hyprland under uwsm, with effects and plugins (D66)"
+      exec: "uwsm start -e -D Hyprland hyprland.desktop"
+      desktopNames: "Hyprland"
     - id: wayfire-uwsm
       name: "Wayfire (uwsm)"
       comment: "Wayfire under uwsm"
       exec: "uwsm start -- wayfire.desktop"
       desktopNames: "Wayfire;wlroots"
+  # Non-uwsm entries hidden in GDM (MH, 2026-10-25): they start the compositor without uwsm,
+  # so env-* files, `uwsm finalize` and wm-helpers-wayland.target never run (no bar, no
+  # helpers; D48). Each becomes a copy of /usr/share/wayland-sessions/<id>.desktop with
+  # NoDisplay=true in /usr/local/share/wayland-sessions, made at install time. Not
+  # Hidden=true: uwsm refuses hidden entries (main.py: "is hidden"), and both Hyprland
+  # entries start `hyprland.desktop` by reference; uwsm ignores NoDisplay.
+  hideSessions:
+    - hyprland   # Hyprland without uwsm (/usr/bin/start-hyprland)
+    - sway       # SwayFX without uwsm ("SwayFX (uwsm)" starts `sway` by command)
+    - niri       # niri without uwsm ("niri (uwsm)" starts niri.desktop by reference)
+    - wayfire    # Wayfire without uwsm ("Wayfire (uwsm)" starts wayfire.desktop by reference)

@@ -8,6 +8,14 @@
 # after a driver change). Without editing:
 #   chezmoi apply --override-data '{"hyprland_render_gpu":"nvidia"}' ~/.config/uwsm/env-hyprland
 # then log in again (the next plain apply reverts it).
+
+# D66: the profile, from the GDM entry picked (DESKTOP_SESSION is its id): "riced" for
+# "Hyprland (riced)" (hyprland-riced-uwsm, .chezmoidata/uwsm.yaml), "work" otherwise.
+# Read by ~/.config/hypr/plugins.lua and hyprland.lua; exported to the session's units.
+case ${DESKTOP_SESSION:-} in
+	hyprland-riced-uwsm) export HYPR_PROFILE=riced ;;
+	*) export HYPR_PROFILE=work ;;
+esac
 {{- $gpu := dig "hyprland_render_gpu" "intel" . }}
 if [ -e /dev/dri/igpu ] && [ -e /dev/dri/dgpu ]; then
 {{- if eq $gpu "nvidia" }}
