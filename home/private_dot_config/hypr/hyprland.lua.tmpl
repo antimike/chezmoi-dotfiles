@@ -108,11 +108,11 @@ if hl.plugin.hyprbars then
     hl.config({
         plugin = {
             hyprbars = {
-                bar_height                 = 22,
+                bar_height                 = 28,
                 bar_color                  = "rgba({{ trimPrefix "#" .i3.colors.unfocused_bg.default }}e6)",
                 ["col.text"]               = "rgba({{ trimPrefix "#" .i3.colors.fg.default }}ff)",
                 bar_text_font              = "Iosevka Nerd Font",
-                bar_text_size              = 10,
+                bar_text_size              = 13,
                 bar_padding                = 8,
                 bar_button_padding         = 6,
                 bar_precedence_over_border = true,
@@ -120,9 +120,9 @@ if hl.plugin.hyprbars then
             },
         },
     })
-    hl.plugin.hyprbars.add_button({ bg_color = "rgb(d05050)", fg_color = "rgb(ffffff)", size = 12, icon = "󰖭",
+    hl.plugin.hyprbars.add_button({ bg_color = "rgb(d05050)", fg_color = "rgb(ffffff)", size = 16, icon = "󰖭",
         action = "hyprctl dispatch 'hl.dsp.window.close()'" })
-    hl.plugin.hyprbars.add_button({ bg_color = "rgb({{ trimPrefix "#" .i3.colors.bg.default }})", fg_color = "rgb(ffffff)", size = 12, icon = "󰊓",
+    hl.plugin.hyprbars.add_button({ bg_color = "rgb({{ trimPrefix "#" .i3.colors.bg.default }})", fg_color = "rgb(ffffff)", size = 16, icon = "󰊓",
         action = "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'" })
     hl.window_rule({ name = "hyprbars-tiled-off", match = { float = false }, ["hyprbars:no_bar"] = true })
 end
@@ -265,7 +265,20 @@ bind(mod .. " + SHIFT + o", hl.dsp.workspace.move({ monitor = "+1" }), "Move wor
 -- Windows
 bind(mod .. " + f", hl.dsp.window.fullscreen({ action = "toggle" }), "Fullscreen")
 bind(mod .. " + SHIFT + f", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }), "Maximize (keeps gaps and bar)")
-bind(mod .. " + SHIFT + space", hl.dsp.window.float({ action = "toggle" }), "Toggle floating")
+-- A window floated from the tiling keeps its tiled size, often most of the monitor, which
+-- puts its title bar (hyprbars, above the window) off screen: give it 60% of its monitor
+-- (logical size: modes are in physical pixels), centred.
+bind(mod .. " + SHIFT + space", function()
+    local w = hl.get_active_window()
+    if not w then return end
+    local was_tiled = not w.floating
+    hl.dispatch(hl.dsp.window.float({ action = "toggle" }))
+    if was_tiled then
+        local m = w.monitor
+        hl.dispatch(hl.dsp.window.resize({ x = math.floor(m.width / m.scale * 0.6), y = math.floor(m.height / m.scale * 0.6) }))
+        hl.dispatch(hl.dsp.window.center())
+    end
+end, "Toggle floating (newly floated: 60% of the monitor, centred)")
 -- i3's "focus mode_toggle": from a floating window to a tiled one on the workspace, or back.
 bind(mod .. " + space", function()
     local w = hl.get_active_window()
