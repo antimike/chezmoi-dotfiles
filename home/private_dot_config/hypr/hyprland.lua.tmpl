@@ -92,8 +92,15 @@ end)
 -----------------
 -- D66: plugins per profile ("work": the Hyprland login, "riced": Hyprland (riced)), loaded
 -- by plugins.lua, which returns the profile. Plugin settings below are guarded on
--- hl.plugin.<name>: Hyprland reloads the config after each plugin load.
-local profile = dofile("{{ joinPath .chezmoi.homeDir ".config" "hypr" "plugins.lua" }}")
+-- hl.plugin.<name>: Hyprland reloads the config after each plugin load. In pcall: an error
+-- would abort the rest of this file (every bind and setting below), e.g. when `chezmoi
+-- apply` writes this file before plugins.lua and Hyprland reloads in between (2026-10-25).
+local ok, profile = pcall(dofile, "{{ joinPath .chezmoi.homeDir ".config" "hypr" "plugins.lua" }}")
+if not ok then
+    hl.exec_cmd("notify-send -u critical -a hyprland 'Hyprland plugins not loaded' '"
+        .. tostring(profile):gsub("'", "") .. "'")
+    profile = "work"
+end
 
 -- hyprbars: title bars on floating windows only (MH, 2026-10-25), in the i3 palette.
 -- Buttons run shell commands, so hyprctl's Lua dispatch syntax; a click focuses the window first.
