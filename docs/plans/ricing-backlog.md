@@ -137,10 +137,12 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     workspaces, split view, compact mode (hover-reveal sidebar). Not in Fedora's repos (Flathub or tarball). Chromium
     stays the default (D-number not needed: set 2026-10-24; Meet screen sharing, camera and mic tested with it, which
     matters for interviews); try Zen in the riced session.
-  - **Order**: (1) the profile switch + built-in effects in the riced session, measured; (2) CSS: waybar per profile,
-    wlogout; (3) hyprglass: nested triage, nested A/B on the ASUS, real riced logins (and the NVIDIA decision);
-    (4) hyprexpo, pyprland, edgehover, one at a time with nested triage; (5) swaync for the riced session; (6) Quickshell
-    only if still wanted.
+  - **Order (MH, 2026-10-25; the profile switch is built)**: (1) built-in effects in the riced session (blur, shadows,
+    animations, opacity), measured, with the GPU perf tests; (2) **theming steps 1-2** ([theming.md](theming.md), "Where
+    it fits"): palette generator, theme cache, one theme end to end with a hyprpaper wallpaper, so the styling below
+    uses that palette instead of being done twice; (3) riced styling on that palette: waybar per profile, wlogout, then
+    hyprglass (nested triage, nested A/B on the ASUS, real riced logins, the NVIDIA decision), swaync; then hyprexpo,
+    pyprland, edgehover, one at a time with nested triage; Quickshell only if still wanted.
 - [ ] **Colour temperature in the bar** (MH, 2026-10-25): hyprsunset runs (`hyprsunset.service`, since 2026-10-24;
   `hyprctl hyprsunset temperature` → 6000, `profile` → the active profile). A `waybar-module sunset` (text: K and an
   icon; tooltip: profile and next change from `hyprsunset.conf`; scroll ±250 K, click back to the schedule). Note:

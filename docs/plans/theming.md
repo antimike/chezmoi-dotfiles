@@ -1,7 +1,7 @@
 ---
 summary: Long-running theming project: switchable theme bundles kept uniform across apps, wallpaper fetching and palette-aware selection, palette generation, fonts, pickers, nvim via lush
-status: planned; starts after the SwayFX daily driver (wayland-desktop.md step 7 at the earliest)
-updated: 2026-10-17
+status: planned; refreshed for Hyprland 2026-10-25; starts after the riced built-in effects (see "Where it fits")
+updated: 2026-10-25
 ---
 
 # Theming plan
@@ -9,6 +9,19 @@ updated: 2026-10-17
 Second of the two desktop projects (MH, 2026-10-17). The first, a SwayFX daily driver, is
 [wayland-desktop.md](wayland-desktop.md) and comes first; this one proceeds as time allows. Loose items:
 [ricing-backlog.md](ricing-backlog.md).
+
+## Where it fits (MH, 2026-10-25)
+
+Order agreed with MH: (1) the riced session's built-in effects and GPU perf tests
+([ricing-backlog.md](ricing-backlog.md), "Hyprland effects and plugins"), which do not depend on colours; (2) **steps 1-2
+below**: the palette generator, the theme cache and one theme end to end, with a wallpaper through hyprpaper; (3) the
+riced styling (waybar, wlogout, then hyprglass, swaync), on that palette. The palette feeds every riced style, so styling
+them with hand-picked colours first would mean doing them twice. Main-line position: after SQM/router hardening and the
+hyprsunset widget (STATUS.md, next actions).
+
+**Two profiles (D66).** Open: do work and riced share one theme, or does riced get its own (e.g. translucent variants
+of the same palette)? The cache layout should allow a per-profile override (`~/.cache/theme/<profile>/` falling back
+to `current/`), decided at step 2.
 
 ## Goals (MH)
 
@@ -30,9 +43,13 @@ A runtime switcher must never edit chezmoi-managed files: the next `chezmoi appl
 
 | App | Include mechanism | Reload |
 |---|---|---|
-| SwayFX / Sway | `include ~/.cache/theme/current/sway` | `swaymsg reload` |
+| Hyprland (daily driver, D62) | `hyprland.lua` reads a generated Lua table (`dofile`, in `pcall` as `plugins.lua` is) for borders, hyprbars, group colours | `hyprctl reload` |
+| hyprlock | `source = ~/.cache/theme/current/hyprlock.conf` (hyprlang; to check) | read at each lock |
+| SwayFX / Sway (fallback) | `include ~/.cache/theme/current/sway` | `swaymsg reload` |
 | kitty | `include` in `kitty.conf` | `kill -SIGUSR1` (kitty reloads its config) |
 | dunst | drop-in under `dunstrc.d` (to check) | `dunstctl reload` |
+| swaync (riced, planned) | `@import` in `style.css` | `swaync-client -rs` |
+| wlogout (planned) | `@import` in `style.css` | read at each launch |
 | waybar | `@import` in `style.css` | `SIGUSR2` |
 | rofi | `@import` in the theme | read at each launch |
 | GTK3 | `gsettings` (theme, icons, cursor, font) + `gtk.css` | live through gsettings |
@@ -73,7 +90,8 @@ colors only.
      not from a composite.
   Tools: Python with Pillow and a small k-means; or reuse the palette generator's own JSON output per image as the
   features.
-- **Selection:** the existing wallpaper timer (2 h) moves to Wayland (swaybg per output) and picks from a cluster.
+- **Selection:** the existing wallpaper timer (2 h) moves to Wayland and picks from a cluster: **hyprpaper** per output
+  under Hyprland (installed, D63; IPC `hyprctl hyprpaper`), swaybg under SwayFX.
   Random vs deterministic (seeded by date, for example) is undecided.
 - **Picker:** rofi with image thumbnails (rofi 2.0 shows them); picking sets the wallpaper and, if wanted,
   regenerates the theme.
@@ -97,8 +115,10 @@ The existing LazyVim colorscheme stays the fallback when no palette file exists.
 
 ## Steps (not scheduled)
 
-1. Choose the palette generator (pywal16 / wallust / matugen) on sample wallpapers.
-2. Theme cache layout and the include line in each app config; one preset theme end to end.
+1. Choose the palette generator (pywal16 / wallust / matugen) on sample wallpapers; check each with `tools/term-contrast`
+   (the kitty Blazer palette is the current hand-made baseline).
+2. Theme cache layout (with the per-profile question) and the include line in each app config; one preset theme end to
+   end, including a wallpaper through hyprpaper.
 3. Switcher + theme picker.
 4. Wallpaper fetcher service and index; clustering; per-output selection; timer on Wayland; wallpaper picker.
 5. Fonts: chezmoi subset + nerd-fonts-installer; font pickers.
