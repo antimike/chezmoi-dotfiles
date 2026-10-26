@@ -80,7 +80,7 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     `.chezmoidata/uwsm.yaml`, same `Exec` as the COPR's entry). Not a second desktop name: five units
     (`ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland`, exact match) and `lock-screen` test it exactly. GDM sets
     `DESKTOP_SESSION` to the entry's id, which reaches Hyprland through uwsm; `~/.config/uwsm/env-hyprland` maps it to
-    `HYPR_PROFILE` (`riced`/`work`). The non-uwsm "Hyprland" and "Sway" entries are hidden (`hideSessions`: copies
+    `HYPR_PROFILE` (`riced`/`work`). The non-uwsm "Hyprland", "Sway", "Niri" and "Wayfire" entries are hidden (`hideSessions`: copies
     with `NoDisplay=true` in `/usr/local`, which GDM loads after `/usr/share`; not `Hidden=true`, which uwsm refuses,
     and both Hyprland logins start `hyprland.desktop` by reference). Found when MH picked plain "Hyprland": no uwsm, so
     no env files, `uwsm finalize` failed and no helpers (bar) started. `hyprland.lua` branches on it: built-in effects (blur, shadows, animations,
