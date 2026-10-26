@@ -160,17 +160,16 @@ nmcli device reapply enp59s0u1u1    # the wired device; name follows the hub's p
   port forwards; WAN zone input DROP / forward REJECT with stock rules; no VPN client or server; side toggle unset; all
   four router APs off; web admin listens everywhere but WAN DROP keeps it off the home LAN side.
 - **No static DHCP lease for zbook** (D68): revisit with the VPN or media server.
-- **opkg does not check feed signatures**: GL's `/etc/opkg.conf` lacks `option check_signature` (stock OpenWrt has
-  it), though GL signs its feeds (`Packages.sig`, keys in `/etc/opkg/keys/`). Until it is turned on (open item),
-  verify by hand after `opkg update`: fetch each feed's `Packages.sig` and run `usign -V -P /etc/opkg/keys -m
-  <gunzipped /var/opkg-lists/<feed>> -x <sig>`.
+- **opkg checks feed signatures** (since 2026-10-26): GL's `/etc/opkg.conf` shipped without `option
+  check_signature` (stock OpenWrt has it); added, and `opkg update` now prints "Signature check passed." per feed (keys
+  in `/etc/opkg/keys/`). The file is in `sysupgrade -b` backups.
 - **Config backups**: `sysupgrade -b` on the router, piped over SSH straight into `gpg -e -r <MH's personal key
   fingerprint>`, so no plaintext lands on zbook. The backup holds the home Wi-Fi PSK and the root password hash. Copies
   (same file, checked by sha256): `~/.local/state/router-backups/` and `backups/router-gl-ar750s/` on both external
-  drives (Backups, PortableSSD); not in any git repo. Files: `gl-ar750s-2026-10-26-pre-change` and
-  `…-post-sqm.tar.gz.gpg`. Decrypting needs the YubiKey (or the offline subkey backup).
+  drives (Backups, PortableSSD); not in any git repo. Files: `gl-ar750s-2026-10-26-pre-change`,
+  `…-post-sqm` and `…-post-opkgsig.tar.gz.gpg` (the last is current). Decrypting needs the YubiKey (or the offline subkey backup).
 - **What a backup does not restore**: `sysupgrade -b` saves `/etc/config` and the like, not installed packages or
-  init-script enablement. After a reflash + restore: `opkg update` (verify as above), `opkg install kmod-sched-cake
+  init-script enablement. After a reflash + restore: `opkg update` (signature checked, since `opkg.conf` is restored), `opkg install kmod-sched-cake
   sqm-scripts luci-app-sqm`, `/etc/init.d/shortcut-fe stop; /etc/init.d/shortcut-fe disable`, `/etc/init.d/sqm
   restart`, then `bufferbloat-check`.
 
@@ -208,4 +207,4 @@ nmcli device reapply enp59s0u1u1    # the wired device; name follows the hub's p
 6. Evaluate: DNS rebinding protection, encrypted DNS, DDNS, IPv6 (no DHCPv6 on the LAN now), IGMP snooping, firewall
    rules (WAN side closed), GoodCloud (default: off), plugins (weigh attack surface and RAM).
 7. ~~Hardening~~: **done 2026-10-26** (above, "Access, hardening and backups"); the static lease was dropped (D68).
-   Left: opkg signature checking (open item).
+   opkg signature checking turned on the same day.
