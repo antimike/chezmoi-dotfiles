@@ -16,7 +16,8 @@
     ],
     "modules-center": [
         "clock",
-        "custom/weather"
+        "custom/weather",
+        "custom/sunset"
     ],
     "modules-right": [
         "custom/recording",
