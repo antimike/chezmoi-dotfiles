@@ -142,6 +142,26 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   `hyprctl hyprsunset temperature` → 6000, `profile` → the active profile). A `waybar-module sunset` (text: K and an
   icon; tooltip: profile and next change from `hyprsunset.conf`; scroll ±250 K, click back to the schedule). Note:
   `hyprctl hyprsunset identity` with no argument is a setter, not a query (it answered `ok`); do not poll it.
+- [ ] **Dropdown and drawer terminals** (MH, 2026-10-25; riced profile, maybe work later): a guake-style terminal that
+  drops from the top with the bar still visible and a small gap below it; then drawers from the sides at several
+  opacity/blur levels. First candidate: kitty's own **`kitten quick-access-terminal`** (kitty 0.47.1 is installed): a
+  layer-shell panel on a screen edge, shown and hidden by running the kitten again (a bind); per kitty's docs its
+  `quick-access-terminal.conf` sets the edge, size in lines/columns, margins (the gap to the bar), opacity and
+  hide-on-focus-loss: to verify. Blur through a Hyprland layer rule on its namespace (built-in blur, or hyprglass).
+  Alternatives: **pyprland** scratchpads (adopted for riced, D66: animated slide-in from any side, any app), or a
+  special workspace with window rules (no slide). Fiddliness: medium (margins against the bar's height per monitor,
+  opacity vs readability: `tools/term-contrast`).
+- [ ] **Spotify, riced** (MH, 2026-10-25; the player itself is a daily-driver item, [wayland-desktop.md](wayland-desktop.md),
+  "Music: Spotify while working"): the same player in both profiles; the riced look comes from widgets reading its
+  MPRIS data (cover art, title, controls, progress): waybar's `mpris` module styled per profile, swaync's MPRIS widget,
+  or a Quickshell media panel (the hyprliquid screenshot's player is one). spotify_player also draws cover art inside
+  kitty. Optional: Spicetify themes, if the official client is chosen.
+- **Widget shells and TUIs** (MH's question, 2026-10-25): Quickshell does not turn a TUI into a widget: it cannot show
+  ncmpcpp's or calcurse's screen. It draws its own panels (QML on layer-shell surfaces: bars, popups, drawers,
+  overlays) and feeds them from the same data the TUI reads: MPRIS over D-Bus for players, `calcurse -Q` (or its data
+  files) for appointments, NetworkManager/BlueZ over D-Bus, PipeWire for volume. A "calcurse widget" is a QML panel
+  listing `calcurse -Q --days 7`, with a click that opens calcurse in a kitty popup for editing (as the bar's clock does
+  today). waybar's custom modules are the same idea in miniature (one line of text and a tooltip).
 - [ ] **Solaar** (MH, 2026-10-23): install through the package manifest; configure the Logitech Bluetooth keyboards (the
   MX Keys S's screenshot key could be diverted to Print), and feed device battery levels to the bar.
 - [ ] **Clipboard picker with image thumbnails in rofi** (MH, 2026-10-24): rofi dmenu rows take an icon
