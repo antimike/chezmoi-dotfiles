@@ -1,6 +1,7 @@
 // Module settings shared by the bars in bars/ (included by each). Icons are Nerd Font glyphs
 // (FiraCode Nerd Font, the fallback in style.css). custom/* modules run
-// ~/.local/bin/waybar-module; signals 8 (idle), 9 (dunst), 10 (weather), 11 (recording).
+// ~/.local/bin/waybar-module; signals 8 (idle), 9 (dunst), 10 (weather), 11 (recording),
+// 12 (sunset).
 {
     "hyprland/workspaces": {
         "format": "{id}",
@@ -174,5 +175,14 @@
         "signal": 10,
         "on-click": "chromium-browser --app=https://www.meteoblue.com/en/weather/week",
         "on-click-right": "pkill -RTMIN+10 -x waybar"
+    },
+    "custom/sunset": {
+        "exec": "waybar-module sunset",
+        "return-type": "json",
+        "interval": 60,
+        "signal": 12,
+        "on-click": "sunset schedule",
+        "on-scroll-up": "sunset up",
+        "on-scroll-down": "sunset down"
     }
 }

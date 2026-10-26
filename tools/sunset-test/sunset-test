@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# sunset-test — check `sunset` and `waybar-module sunset` against a stubbed hyprsunset.
+#
+#   tools/sunset-test/sunset-test
+#
+# Runs the source copies (home/dot_local/bin/) with stubs for hyprctl, pgrep and pkill
+# first on PATH: the stub keeps hyprsunset's state (temperature, identity, active profile)
+# in a temp dir and answers `hyprctl hyprsunset temperature|profile|identity X|reset X`
+# as 0.4.0 does. Never touches the running hyprsunset or waybar. Covers the next-change
+# parser, the held value (up/down, clamp, hold after a profile change, schedule) and
+# the module's text, class and hiding. Prints one line per case; exits 1 if any fails.
+# Needs jq.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+mkdir -p "$tmp/bin" "$tmp/state" "$tmp/run"
+cp "$repo/home/dot_local/bin/executable_sunset" "$tmp/bin/sunset"
+cp "$repo/home/dot_local/bin/executable_waybar-module" "$tmp/bin/waybar-module"
+cat >"$tmp/bin/hyprctl" <<'EOF'
+#!/usr/bin/env bash
+# hyprsunset 0.4.0's IPC, from files in $STUB.
+[[ $1 == hyprsunset ]] || exit 1
+s=$STUB
+r() { cat "$s/$1"; }
+case $2 in
+  temperature) if [[ -n ${3:-} ]]; then echo "$3" >"$s/temperature"; echo ok; else r temperature; fi ;;
+  identity) [[ -n ${3:-} ]] || { echo "identity without an argument" >>"$s/../misuse"; }; echo "${3:-true}" >"$s/identity"; echo ok ;;
+  profile) printf 'Time: %s\nTemperature: %s\nGamma: 1\nIdentity: %s\n' "$(r ptime)" "$(r ptemp)" "$(r pidentity)" ;;
+  reset)
+    case $3 in
+      temperature) cp "$s/ptemp" "$s/temperature" ;;
+      identity) cp "$s/pidentity" "$s/identity" ;;
+    esac
+    echo ok ;;
+esac
+EOF
+# shellcheck disable=SC2016 # expands in the stub, not here
+printf '#!/bin/sh\n[ -e "$STUB/running" ]\n' >"$tmp/bin/pgrep"
+printf '#!/bin/sh\nexit 0\n' >"$tmp/bin/pkill"
+chmod +x "$tmp/bin"/*
+
+cat >"$tmp/hyprsunset.conf" <<'EOF'
+profile {
+    time = 7:00
+    identity = true
+}
+# a comment
+profile {
+    time = 20:00
+    temperature = 4500   # trailing comment
+}
+profile {
+    time = 22:30
+    temperature = 3700
+}
+EOF
+
+export STUB=$tmp/state XDG_RUNTIME_DIR=$tmp/run HYPRSUNSET_CONF=$tmp/hyprsunset.conf PATH=$tmp/bin:$PATH
+
+# State: active profile TIME TEMP IDENTITY; the screen follows it.
+profile() {
+  echo "$1" >"$STUB/ptime"
+  echo "$2" >"$STUB/ptemp"
+  echo "$3" >"$STUB/pidentity"
+}
+reset_state() {
+  rm -f "$STUB"/* "$XDG_RUNTIME_DIR"/*
+  touch "$STUB/running"
+  profile "$@"
+  cp "$STUB/ptemp" "$STUB/temperature"
+  cp "$STUB/pidentity" "$STUB/identity"
+}
+check() { # NAME GOT WANT
+  if [[ $2 == "$3" ]]; then echo "pass  $1: $2"; else echo "FAIL  $1: got '$2', want '$3'"; failed=1; fi
+}
+screen() { echo "$(cat "$STUB/temperature") identity=$(cat "$STUB/identity")"; }
+module() { waybar-module sunset | jq -r "$1"; }
+
+# Next change.
+for c in "06:59 7:00 identity" "07:00 20:00 4500" "12:00 20:00 4500" "21:15 22:30 3700" "22:30 7:00 identity" "23:59 7:00 identity"; do
+  read -r now t v <<<"$c"
+  check "next at $now" "$(SUNSET_NOW=$now sunset next)" "$t $v"
+done
+
+# Module text by state.
+reset_state 22:30 3700 false
+check "module: evening" "$(module '.text + "|" + .class')" $'\U000f0594 3700 K|'
+reset_state 20:00 4500 false
+check "module: 4500 K" "$(module .text)" $'\U000f059a 4500 K'
+reset_state 7:00 6000 true
+check "module: identity" "$(module .text)" $'\U000f0599 off'
+check "module: identity tooltip" "$(module '.tooltip | split("\n")[0]')" "Schedule: off (identity) since 7:00"
+rm "$STUB/running"
+check "module: hidden without hyprsunset" "$(module .text)" ""
+
+# Held value.
+reset_state 7:00 6000 true
+sunset up
+check "up from identity starts at 6500" "$(screen)" "6750 identity=false"
+check "module: held" "$(module '.text + "|" + .class')" $'\U000f05a8 6750 K|held'
+sunset down 10000
+check "clamp at 1000 K" "$(screen)" "1000 identity=false"
+reset_state 22:30 3700 false
+sunset down
+check "down from the schedule" "$(screen)" "3450 identity=false"
+profile 7:00 3700 true
+echo true >"$STUB/identity" # the 7:00 identity profile fired: temperature unchanged
+sunset hold
+check "hold after an identity profile" "$(screen)" "3450 identity=false"
+echo 4500 >"$STUB/temperature" # hyprsunset restarted on another profile
+sunset hold
+check "hold after a temperature change" "$(screen)" "3450 identity=false"
+check "module keeps the held value" "$(module '.tooltip | split("\n")[0]')" "Held at 3450 K until you click; the schedule says off (identity) since 7:00"
+sunset schedule
+check "schedule: back to the profile" "$(screen)" "3700 identity=true"
+check "schedule: nothing held" "$(sunset held || echo none)" "none"
+sunset hold
+check "hold with nothing held is a no-op" "$(screen)" "3700 identity=true"
+
+check "identity never sent without an argument" "$(cat "$tmp/misuse" 2>/dev/null || echo never)" "never"
+exit $failed
