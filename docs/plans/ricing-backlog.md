@@ -143,10 +143,16 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     uses that palette instead of being done twice; (3) riced styling on that palette: waybar per profile, wlogout, then
     hyprglass (nested triage, nested A/B on the ASUS, real riced logins, the NVIDIA decision), swaync; then hyprexpo,
     pyprland, edgehover, one at a time with nested triage; Quickshell only if still wanted.
-- [ ] **Colour temperature in the bar** (MH, 2026-10-25): hyprsunset runs (`hyprsunset.service`, since 2026-10-24;
-  `hyprctl hyprsunset temperature` → 6000, `profile` → the active profile). A `waybar-module sunset` (text: K and an
-  icon; tooltip: profile and next change from `hyprsunset.conf`; scroll ±250 K, click back to the schedule). Note:
-  `hyprctl hyprsunset identity` with no argument is a setter, not a query (it answered `ok`); do not poll it.
+- [x] **Colour temperature in the bar: done 2026-10-26** (MH's live test passed; branch `ricing/sunset-widget`).
+  `custom/sunset` on the main bar after the weather (`waybar-module sunset`, signal 12): icon by temperature
+  (󰖙 off, 󰖨 >5000, 󰖚 4000-5000, 󰖔 <4000 K), tooltip with the active profile and the next change parsed from
+  `hyprsunset.conf`. Scroll: `sunset up|down` (±250 K, 1000-20000), **held across scheduled changes** until a click
+  (`sunset schedule`, hyprsunset 0.4.0's `reset temperature|identity` IPC); the held value is in `$XDG_RUNTIME_DIR`
+  (ends with the session) with the profile time it was set under, and the module's 60 s refresh re-applies it after a
+  profile change (the temperature query is unchanged under identity, so it cannot tell alone). Held = yellow text.
+  `tools/sunset-test` (stubbed IPC). Bar-only (no key binds, MH). Still true: `hyprctl hyprsunset identity` with no
+  argument is a setter (identity on), not a query; current identity cannot be queried, only the profile. Untested:
+  touchpad smooth scrolling (add `smooth-scrolling-threshold` if it jumps).
 - [ ] **Dropdown and drawer terminals** (MH, 2026-10-25; riced profile, maybe work later): a guake-style terminal that
   drops from the top with the bar still visible and a small gap below it; then drawers from the sides at several
   opacity/blur levels. First candidate: kitty's own **`kitten quick-access-terminal`** (kitty 0.47.1 is installed): a
