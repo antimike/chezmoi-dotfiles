@@ -76,11 +76,14 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
 - [ ] **Hyprland effects and plugins: the riced session** (MH, 2026-10-25; evaluation by Claude from the repos'
   source and docs, nothing built yet unless marked). MH's examples (images, unmanaged, repo root): Hypr-DarkWindow's
   README screenshot, hyprliquid's desktop and power-menu shots, hyprglass dark/light, hypr-edgehover's demo video.
-  - **Two login entries (D66; built)**: "Hyprland" (work) and "Hyprland (riced)" (`hyprland-riced-uwsm`,
+  - **Two login entries (D66; built)**: "Hyprland (work)" (`hyprland-uwsm`, overriding the COPR's "Hyprland (uwsm-managed)") and "Hyprland (riced)" (`hyprland-riced-uwsm`,
     `.chezmoidata/uwsm.yaml`, same `Exec` as the COPR's entry). Not a second desktop name: five units
     (`ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland`, exact match) and `lock-screen` test it exactly. GDM sets
     `DESKTOP_SESSION` to the entry's id, which reaches Hyprland through uwsm; `~/.config/uwsm/env-hyprland` maps it to
-    `HYPR_PROFILE` (`riced`/`work`). `hyprland.lua` branches on it: built-in effects (blur, shadows, animations,
+    `HYPR_PROFILE` (`riced`/`work`). The non-uwsm "Hyprland" and "Sway" entries are hidden (`hideSessions`: copies
+    with `NoDisplay=true` in `/usr/local`, which GDM loads after `/usr/share`; not `Hidden=true`, which uwsm refuses,
+    and both Hyprland logins start `hyprland.desktop` by reference). Found when MH picked plain "Hyprland": no uwsm, so
+    no env files, `uwsm finalize` failed and no helpers (bar) started. `hyprland.lua` branches on it: built-in effects (blur, shadows, animations,
     opacity; all off today), waybar/wlogout styles, and the plugins (`plugins.lua`, above). hyprpm only builds.
     Hyprland checks only the plugin API version on load, so `plugins.lua` refuses builds for another version itself
     (`hl.version()` has the version only, no commit).
