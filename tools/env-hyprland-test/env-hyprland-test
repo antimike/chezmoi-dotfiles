@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# env-hyprland-test — check the GPU order ~/.config/uwsm/env-hyprland picks (D60, D69).
+#
+#   tools/env-hyprland-test/env-hyprland-test
+#
+# Renders home/private_dot_config/uwsm/env-hyprland.tmpl with `chezmoi execute-template
+# --override-data` per case, rewrites its /dev/dri and /sys/class/drm paths into a fake
+# tree (GPU device links, NVIDIA connector status files), sources it with a GDM session
+# id, and compares HYPR_PROFILE and AQ_DRM_DEVICES. Never touches the real session or
+# chezmoi state. Prints one line per case; exits 1 if any fails. Needs chezmoi.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+tmpl=$repo/home/private_dot_config/uwsm/env-hyprland.tmpl
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+# A fake tree: card1 is Intel, card2 NVIDIA with three DP connectors.
+mkdir -p "$tmp/root/dev/dri" "$tmp/root/sys/class/drm"
+touch "$tmp/root/dev/dri/card1" "$tmp/root/dev/dri/card2"
+for c in DP-4 DP-5 DP-6; do mkdir -p "$tmp/root/sys/class/drm/card2-$c"; done
+gpus() { # both | intel-only
+  rm -f "$tmp/root/dev/dri/igpu" "$tmp/root/dev/dri/dgpu"
+  ln -s card1 "$tmp/root/dev/dri/igpu"
+  [[ $1 == intel-only ]] || ln -s card2 "$tmp/root/dev/dri/dgpu"
+}
+externals() { # N connected NVIDIA connectors (0-3)
+  local i=0 c
+  for c in DP-4 DP-5 DP-6; do
+    if ((i < $1)); then echo connected; else echo disconnected; fi >"$tmp/root/sys/class/drm/card2-$c/status"
+    i=$((i + 1))
+  done
+}
+
+case_() { # NAME DATA-JSON DESKTOP_SESSION WANT-PROFILE WANT-AQ
+  local name=$1 data=$2 session=$3 want="$4 $5" got
+  chezmoi execute-template --override-data "$data" <"$tmpl" >"$tmp/env.raw"
+  local r=$tmp/root
+  # Rewrite the absolute paths into the fake tree (readlink -f then resolves inside it).
+  sed -e "s#/dev/dri/#$r/dev/dri/#g" -e "s#/sys/class/drm/#$r/sys/class/drm/#g" "$tmp/env.raw" >"$tmp/env"
+  # shellcheck disable=SC2016 # expanded by the inner sh
+  got=$(env -i DESKTOP_SESSION="$session" PATH="$PATH" sh -c '. "$1"; echo "$HYPR_PROFILE ${AQ_DRM_DEVICES:-unset}"' _ "$tmp/env")
+  got=${got//$r/}
+  if [[ $got == "$want" ]]; then echo "pass  $name: $got"; else echo "FAIL  $name: got '$got', want '$want'"; failed=1; fi
+}
+
+riced=hyprland-riced-uwsm work=hyprland-uwsm
+I=/dev/dri/igpu:/dev/dri/dgpu N=/dev/dri/dgpu:/dev/dri/igpu
+
+gpus both
+externals 2
+case_ "work, docked: Intel first (D60)" '{}' $work work $I
+case_ "riced, docked: NVIDIA first (D69)" '{}' $riced riced $N
+externals 1
+case_ "riced, one external: NVIDIA first" '{}' $riced riced $N
+externals 0
+case_ "riced, undocked: Intel first" '{}' $riced riced $I
+case_ "work, undocked: Intel first" '{}' $work work $I
+externals 2
+case_ "riced, docked, hyprland_riced_render_gpu=intel" '{"hyprland_riced_render_gpu":"intel"}' $riced riced $I
+case_ "work, docked, hyprland_render_gpu=nvidia" '{"hyprland_render_gpu":"nvidia"}' $work work $N
+externals 0
+case_ "work, undocked, hyprland_render_gpu=nvidia" '{"hyprland_render_gpu":"nvidia"}' $work work $N
+case_ "other session id: work profile" '{}' gnome work $I
+gpus intel-only
+case_ "Intel only: AQ_DRM_DEVICES unset" '{}' $riced riced unset
+exit "$failed"
