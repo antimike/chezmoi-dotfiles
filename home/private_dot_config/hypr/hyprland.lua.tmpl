@@ -162,6 +162,50 @@ hl.config({
     },
 })
 
+-- Riced effects (D66 profile "riced"; work stays plain): first-pass values for the GPU
+-- measurements (tools/hypr-effects-perf), tuned with theming later. Quick and functional:
+-- about 200 ms animations (speed is in 100 ms units). xray off: translucent windows blur
+-- what is behind them, other windows included (the costlier, truer look; measured both ways).
+if profile == "riced" then
+    hl.config({
+        decoration = {
+            inactive_opacity = 0.92,
+            shadow = {
+                enabled      = true,
+                range        = 12,
+                render_power = 3,
+                color        = "rgba(00000055)",
+            },
+            blur = {
+                enabled           = true,
+                size              = 6,
+                passes            = 2,
+                new_optimizations = true,
+                xray              = false,
+                popups            = true,
+            },
+        },
+        animations = { enabled = true },
+    })
+    hl.curve("snap",   { type = "bezier", points = { { 0.2, 1 }, { 0.3, 1 } } })
+    hl.curve("linear", { type = "bezier", points = { { 0, 0 }, { 1, 1 } } })
+    hl.animation({ leaf = "global",     enabled = true, speed = 2,   bezier = "snap" })
+    hl.animation({ leaf = "border",     enabled = true, speed = 3,   bezier = "snap" })
+    hl.animation({ leaf = "windows",    enabled = true, speed = 2,   bezier = "snap" })
+    hl.animation({ leaf = "windowsIn",  enabled = true, speed = 2,   bezier = "snap",   style = "popin 90%" })
+    hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.5, bezier = "linear", style = "popin 90%" })
+    hl.animation({ leaf = "fade",       enabled = true, speed = 2,   bezier = "snap" })
+    hl.animation({ leaf = "layers",     enabled = true, speed = 2,   bezier = "snap",   style = "fade" })
+    hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "snap",   style = "slide" })
+    -- Blur behind the bar and rofi (both translucent); ignore_alpha 0: fully transparent pixels
+    -- (rofi's rounded corners) are not blurred.
+    -- waybar's namespace is the bar's "name" (bars/main.jsonc, bars/extra.jsonc).
+    hl.layer_rule({ name = "blur-waybar", match = { namespace = "^(main|extra)$" }, blur = true, ignore_alpha = 0 })
+    hl.layer_rule({ name = "blur-rofi",   match = { namespace = "^rofi$" },   blur = true, ignore_alpha = 0 })
+    -- Video and images stay opaque when unfocused.
+    hl.window_rule({ name = "opaque-media", match = { class = "^(mpv|vlc|swayimg)$" }, opaque = true })
+end
+
 ---------------------
 ---- KEYBINDINGS ----
 ---------------------
