@@ -13,7 +13,7 @@
 # Settings: off, blur, shadow, anim, opacity, all, all-xray (all with blur xray on).
 # "off" turns every effect off; the others add one effect to it. kitty's own background
 # opacity (0.9) stays, so blur always has something to do. Hands off the keyboard and
-# mouse while it runs (a notification says when); about 4 minutes at the default.
+# mouse while it runs (from the start: a warm-up phase comes first); about 4.5 minutes at the default.
 # Afterwards: `hyprctl reload` (the config's own effects again), the test windows closed
 # (by PID) and the previous workspace focused; also on Ctrl+C.
 #
@@ -211,15 +211,22 @@ measure() {
              printf "%.1f %.0f %s %s%s\n", 100 * c / clk / (dt / 1000), b, mhz, eng, nv }'
 }
 
-# Each numeric column's average in an intel_gpu_top CSV, as tab-separated "NAME=AVG".
+# Each numeric column's average in an intel_gpu_top CSV, as tab-separated "NAME=AVG". The
+# first sample is skipped: it covers intel_gpu_top's own startup (package power far off).
 igt_average() {
-  awk -F, 'NR == 1 { for (i = 1; i <= NF; i++) h[i] = $i; n = NF; next }
+  awk -F, 'NR == 1 { for (i = 1; i <= NF; i++) h[i] = $i; n = NF; next } NR == 2 { next }
     { for (i = 1; i <= n; i++) if ($i ~ /^ *-?[0-9.]+ *$/) { s[i] += $i; c[i]++ } }
     END { for (i = 1; i <= n; i++) if (c[i]) printf "%s%s=%.1f", (o++ ? "\t" : ""), h[i], s[i] / c[i]; print "" }' "$1"
 }
 
+# Warm-up, not recorded: right after the scene opens the first phase read low (kitty's
+# render time 11% against about 18% later, 2026-10-27), skewing the "off" baseline.
+notify-send -a hypr-effects-perf "Hands off" "Warming up for ${phase} s, then measuring"
+ev "$(lua_for off)"
+measure "$phase" warmup >/dev/null
+
 gpu_order=${AQ_DRM_DEVICES:-unset}
-notify-send -a hypr-effects-perf "Hands off" "Measuring ${#settings[@]} settings, about $(((${#settings[@]} * phase * 2 + ${#settings[@]} * 3) / 60 + 1)) min"
+notify-send -a hypr-effects-perf "Measuring" "${#settings[@]} settings, about $(((${#settings[@]} * phase * 2 + ${#settings[@]} * 3) / 60 + 1)) min more; still hands off"
 for s in "${settings[@]}"; do
   ev "$(lua_for "$s")"
   d 'hl.dsp.focus({ workspace = 98 })'
