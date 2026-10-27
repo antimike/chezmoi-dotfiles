@@ -5,7 +5,7 @@
 # (D59) is for SwayFX: its WLR_DRM_DEVICES does not apply to Hyprland, which reads
 # AQ_DRM_DEVICES only.
 # Host key hyprland_render_gpu ("intel", the default, or "nvidia" for re-tests, e.g.
-# after a driver change). Without editing:
+# after a driver change; it applies to both profiles, D69's riced rule below aside). Without editing:
 #   chezmoi apply --override-data '{"hyprland_render_gpu":"nvidia"}' ~/.config/uwsm/env-hyprland
 # then log in again (the next plain apply reverts it).
 
@@ -17,10 +17,30 @@ case ${DESKTOP_SESSION:-} in
 	*) export HYPR_PROFILE=work ;;
 esac
 {{- $gpu := dig "hyprland_render_gpu" "intel" . }}
+{{- $riced := dig "hyprland_riced_render_gpu" "nvidia" . }}
 if [ -e /dev/dri/igpu ] && [ -e /dev/dri/dgpu ]; then
 {{- if eq $gpu "nvidia" }}
-	export AQ_DRM_DEVICES=/dev/dri/dgpu:/dev/dri/igpu
+	aq_devices=/dev/dri/dgpu:/dev/dri/igpu
 {{- else }}
-	export AQ_DRM_DEVICES=/dev/dri/igpu:/dev/dri/dgpu
+	aq_devices=/dev/dri/igpu:/dev/dri/dgpu
 {{- end }}
+{{- if eq $riced "nvidia" }}
+	# D69 (2026-10-27): the riced profile renders on NVIDIA when an external monitor is
+	# connected at login (the same test as ./env's D59 rule). Its effects double Intel's
+	# render work (61-69% busy), but take NVIDIA to ~17%, at no extra total power: NVIDIA
+	# runs anyway for the externals. Undocked riced and the work profile stay on D60.
+	# Host key hyprland_riced_render_gpu: "nvidia" (the default) or "intel".
+	if [ "$HYPR_PROFILE" = riced ]; then
+		dgpu_card=$(basename "$(readlink -f /dev/dri/dgpu)")
+		for status in /sys/class/drm/"$dgpu_card"-*/status; do
+			if [ "$(cat "$status" 2>/dev/null)" = connected ]; then
+				aq_devices=/dev/dri/dgpu:/dev/dri/igpu
+				break
+			fi
+		done
+		unset dgpu_card status
+	fi
+{{- end }}
+	export AQ_DRM_DEVICES="$aq_devices"
+	unset aq_devices
 fi
