@@ -2,7 +2,7 @@
 # hypr-effects-perf — GPU and CPU cost of Hyprland's effects, one row per effect setting,
 # in the running session (the riced-profile GPU decision; docs/plans/ricing-backlog.md).
 #
-#   tools/hypr-effects-perf/hypr-effects-perf run LABEL [--phase SECONDS] [--only SETTING,...]
+#   tools/hypr-effects-perf/hypr-effects-perf run LABEL [--phase SECONDS] [--only SETTING,...] [--igt]
 #   tools/hypr-effects-perf/hypr-effects-perf results
 #
 # run: on the focused monitor, opens a test scene on workspaces 98 and 99 (a kitty scrolling
@@ -18,30 +18,46 @@
 # (by PID) and the previous workspace focused; also on Ctrl+C.
 #
 # Per phase: Hyprland CPU % (of one core, from /proc), Intel GPU busy % (1 - RC6
-# residency; i915 sysfs, no root) and its average clock, NVIDIA utilisation % and power
-# (nvidia-smi, 1 s samples). Whole-GPU numbers: keep other apps quiet (no video, a busy
-# Claude Code spinner). Rows go to $HYPR_EFFECTS_PERF_DIR (default
+# residency; i915 sysfs, no root) and its average clock; Intel engine time per process
+# (% of one engine: Hyprland's render and copy engines, kitty's, Chromium's GPU process'
+# and waybar's render engine; DRM fdinfo, no root; clients that exit mid-phase, such as
+# the churn windows, are not counted); NVIDIA utilisation, memory-controller utilisation
+# and power (nvidia-smi, 1 s samples). Whole-GPU numbers: keep other apps quiet (no
+# video, a busy Claude Code spinner). Rows go to $HYPR_EFFECTS_PERF_DIR (default
 # ~/.local/state/hypr-effects-perf/results.tsv) with the label, the GPU order
-# (AQ_DRM_DEVICES) and HYPR_PROFILE.
+# (AQ_DRM_DEVICES) and HYPR_PROFILE; a results file with another header is kept as
+# results-<its first date>.tsv.
+#
+# --igt: also runs `sudo intel_gpu_top -c` for each phase (sudo asks once, at the start;
+# run it from a terminal): per-engine busy %, memory bandwidth, power. Raw CSV per phase
+# in igt/, and each column's phase average in igt-summary.tsv (`results --igt`).
 set -euo pipefail
 
-usage() { echo "usage: hypr-effects-perf run LABEL [--phase SECONDS] [--only SETTING,...] | results" >&2; exit 2; }
+usage() { echo "usage: hypr-effects-perf run LABEL [--phase SECONDS] [--only SETTING,...] [--igt] | results [--igt]" >&2; exit 2; }
 
 dir=${HYPR_EFFECTS_PERF_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr-effects-perf}
 results=$dir/results.tsv
+igt_summary=$dir/igt-summary.tsv
 all_settings=(off blur shadow anim opacity all all-xray)
 
 case ${1:-} in
-  results) [[ -s $results ]] && column -t -s $'\t' "$results"; exit 0 ;;
+  results)
+    f=$results
+    [[ ${2:-} == --igt ]] && f=$igt_summary
+    [[ -s $f ]] && column -t -s $'\t' "$f"
+    exit 0
+    ;;
   run) label=${2:-}; [[ -n $label && $label != -* ]] || usage; shift 2 ;;
   *) usage ;;
 esac
 phase=15
+igt=0
 settings=("${all_settings[@]}")
 while (($#)); do
   case $1 in
     --phase) phase=${2:-}; [[ $phase =~ ^[0-9]+$ ]] || usage; shift 2 ;;
     --only) IFS=, read -r -a settings <<<"${2:-}"; shift 2 ;;
+    --igt) igt=1; shift ;;
     *) usage ;;
   esac
 done
@@ -53,8 +69,16 @@ igpu=/sys/class/drm/$(basename "$(readlink -f /dev/dri/igpu 2>/dev/null || echo 
 [[ -r $igpu/rc6_residency_ms ]] || { echo "no i915 RC6 counters at $igpu" >&2; exit 1; }
 clk=$(getconf CLK_TCK)
 tmp=$(mktemp -d)
-mkdir -p "$dir"
-[[ -s $results ]] || printf 'date\tlabel\tgpu_order\tprofile\tsetting\tphase\thypr_cpu%%\tigpu_busy%%\tigpu_mhz\tnv_util%%\tnv_w\n' >"$results"
+mkdir -p "$dir/igt"
+header=$'date\tlabel\tgpu_order\tprofile\tsetting\tphase\thypr_cpu%\tigpu_busy%\tigpu_mhz\thypr_rcs%\thypr_bcs%\tkitty_rcs%\tchromium_rcs%\twaybar_rcs%\tnv_util%\tnv_mem%\tnv_w'
+if [[ -s $results && $(head -1 "$results") != "$header" ]]; then
+  mv "$results" "$dir/results-$(sed -n '2s/\t.*//p' "$results").tsv"
+fi
+[[ -s $results ]] || echo "$header" >"$results"
+if ((igt)); then
+  command -v intel_gpu_top >/dev/null || { echo "intel_gpu_top not installed (igt-gpu-tools)" >&2; exit 1; }
+  sudo -v
+fi
 
 # hyprctl answers "ok" or an error text (exit status 0 either way).
 ipc() {
@@ -125,11 +149,42 @@ churn() {
   done
 }
 
-# Measure SECONDS; prints "cpu% busy% mhz nv_util% nv_w".
+# Intel engine time so far, one "COMM PID CLIENT ENGINE NS" line per DRM client and engine.
+# A client shows on every fd that shares it, each read a moment apart: keep the largest.
+engines() {
+  local comm p
+  for comm in Hyprland kitty chromium-browse waybar; do
+    for p in $(pgrep -u "$UID" -x "$comm"); do
+      # getline, not awk's file arguments: fds close all the time (churn), and a file that
+      # vanished after the glob must be skipped, not end the read.
+      awk -v c="$comm" -v p="$p" 'BEGIN {
+        for (i = 1; i < ARGC; i++) {
+          drv = ""; id = ""
+          while ((getline line < ARGV[i]) > 0) {
+            split(line, f, /[ \t]+/)
+            if (f[1] == "drm-driver:") drv = f[2]
+            else if (f[1] == "drm-client-id:") id = f[2]
+            else if (drv == "i915" && f[1] ~ /^drm-engine-(render|copy):$/) {
+              e = f[1]; sub(/^drm-engine-/, "", e); sub(/:$/, "", e); print c, p, id, e, f[2]
+            }
+          }
+          close(ARGV[i])
+        } }' "/proc/$p/fdinfo/"* 2>/dev/null || true
+    done
+  done | awk '{ k = $1 " " $2 " " $3 " " $4; if (!(k in m) || $5 > m[k]) m[k] = $5 } END { for (k in m) print k, m[k] }'
+}
+
+# Measure SECONDS (igt file name as $2 with --igt); prints "cpu% busy% mhz hypr_rcs%
+# hypr_bcs% kitty_rcs% chromium_rcs% waybar_rcs% nv_util% nv_mem% nv_w".
 measure() {
-  local s=$1 t0 t1 r0 r1 c0 c1
-  nvidia-smi --query-gpu=utilization.gpu,power.draw --format=csv,noheader,nounits -l 1 >"$tmp/nv" 2>/dev/null &
+  local s=$1 t0 t1 r0 r1 c0 c1 igp=""
+  nvidia-smi --query-gpu=utilization.gpu,utilization.memory,power.draw --format=csv,noheader,nounits -l 1 >"$tmp/nv" 2>/dev/null &
   local nvp=$!
+  if ((igt)); then
+    sudo -n intel_gpu_top -c -s 1000 -n "$s" -o "$dir/igt/$2.csv" 2>/dev/null &
+    igp=$!
+  fi
+  engines >"$tmp/e0"
   (while :; do cat "$igpu/rps_act_freq_mhz"; sleep 0.5; done) >"$tmp/mhz" &
   local fp=$!
   t0=$(date +%s%3N) r0=$(<"$igpu/rc6_residency_ms")
@@ -137,14 +192,30 @@ measure() {
   sleep "$s"
   t1=$(date +%s%3N) r1=$(<"$igpu/rc6_residency_ms")
   c1=$(awk '{print $14 + $15}' "/proc/$hpid/stat")
+  engines >"$tmp/e1"
+  [[ -z ${HYPR_EFFECTS_PERF_DEBUG:-} ]] || cp "$tmp/e0" "$tmp/e1" "$HYPR_EFFECTS_PERF_DEBUG/"
   kill "$nvp" "$fp" 2>/dev/null
   wait "$nvp" "$fp" 2>/dev/null || true
+  [[ -z $igp ]] || wait "$igp" 2>/dev/null || true
   local dt=$((t1 - t0))
-  awk -v c="$((c1 - c0))" -v clk="$clk" -v dt="$dt" -v rc6="$((r1 - r0))" \
+  # Engine time per COMM and engine over the phase, as % of one engine (new clients from 0).
+  local eng
+  eng=$(awk -v dt="$dt" 'NR == FNR { b[$1 " " $2 " " $3 " " $4] = $5; next }
+    { k = $1 " " $2 " " $3 " " $4; t[$1 "/" $4] += $5 - (k in b ? b[k] : 0) }
+    END { split("Hyprland/render Hyprland/copy kitty/render chromium-browse/render waybar/render", o, " ")
+          for (i = 1; i <= 5; i++) printf "%.1f ", 100 * t[o[i]] / (dt * 1e6) }' "$tmp/e0" "$tmp/e1")
+  awk -v c="$((c1 - c0))" -v clk="$clk" -v dt="$dt" -v rc6="$((r1 - r0))" -v eng="$eng" \
     -v mhz="$(awk '{s += $1; n++} END {printf "%.0f", n ? s / n : 0}' "$tmp/mhz")" \
-    -v nv="$(awk -F', *' '{u += $1; w += $2; n++} END {printf "%.0f %.1f", n ? u / n : 0, n ? w / n : 0}' "$tmp/nv")" \
+    -v nv="$(awk -F', *' '{u += $1; m += $2; w += $3; n++} END {printf "%.0f %.0f %.1f", n ? u / n : 0, n ? m / n : 0, n ? w / n : 0}' "$tmp/nv")" \
     'BEGIN { b = 100 * (1 - rc6 / dt); if (b < 0) b = 0
-             printf "%.1f %.0f %s %s\n", 100 * c / clk / (dt / 1000), b, mhz, nv }'
+             printf "%.1f %.0f %s %s%s\n", 100 * c / clk / (dt / 1000), b, mhz, eng, nv }'
+}
+
+# Each numeric column's average in an intel_gpu_top CSV, as tab-separated "NAME=AVG".
+igt_average() {
+  awk -F, 'NR == 1 { for (i = 1; i <= NF; i++) h[i] = $i; n = NF; next }
+    { for (i = 1; i <= n; i++) if ($i ~ /^ *-?[0-9.]+ *$/) { s[i] += $i; c[i]++ } }
+    END { for (i = 1; i <= n; i++) if (c[i]) printf "%s%s=%.1f", (o++ ? "\t" : ""), h[i], s[i] / c[i]; print "" }' "$1"
 }
 
 gpu_order=${AQ_DRM_DEVICES:-unset}
@@ -155,10 +226,18 @@ for s in "${settings[@]}"; do
   sleep 3
   for p in scroll churn; do
     [[ $p == churn ]] && { churn & churn_pid=$!; }
-    read -r cpu busy mhz nvu nvw <<<"$(measure "$phase")"
+    igt_name=$label-$s-$p
+    read -r -a m <<<"$(measure "$phase" "$igt_name")"
     [[ $p == churn ]] && { kill "$churn_pid"; wait "$churn_pid" 2>/dev/null || true; churn_pid=""; }
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date +%FT%T)" "$label" "$gpu_order" "${HYPR_PROFILE:-}" \
-      "$s" "$p" "$cpu" "$busy" "$mhz" "$nvu" "$nvw" | tee -a "$results"
+    (IFS=$'\t'; echo "$(date +%FT%T)"$'\t'"$label"$'\t'"$gpu_order"$'\t'"${HYPR_PROFILE:-}"$'\t'"$s"$'\t'"$p"$'\t'"${m[*]}") | tee -a "$results"
+    if ((igt)); then
+      if [[ -s $dir/igt/$igt_name.csv ]]; then
+        printf '%s\t%s\t%s\t%s\n' "$label" "$s" "$p" "$(igt_average "$dir/igt/$igt_name.csv")" >>"$igt_summary"
+      else
+        echo "intel_gpu_top wrote nothing for $igt_name (sudo expired?)" >&2
+      fi
+      sudo -n -v 2>/dev/null || true # keep the credentials fresh for the next phase
+    fi
   done
   pids_of perf-churn | xargs -r kill 2>/dev/null || true
 done
