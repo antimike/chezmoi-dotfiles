@@ -95,7 +95,7 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     `main`/`extra`, the bars' names) and rofi, media opaque; work profile unchanged. Measured per effect with the new
     `tools/hypr-effects-perf` (scene on workspaces 98/99, `hyprctl eval` per setting; rootless per-process engine time
     from DRM fdinfo, `--igt` for `sudo intel_gpu_top`); results in `~/.local/state/hypr-effects-perf/`. Riced renders on
-    NVIDIA when docked (D69); **MH's riced login test on the D69 rule pending**. Values get tuned with theming; xray
+    NVIDIA when docked (D69); MH's riced and work login tests passed 2026-10-27 (riced `dgpu` first, work `igpu` first, effects on, three outputs). Values get tuned with theming; xray
     is a look question for when hyprpaper sets a wallpaper.
   - **GPU for the riced session**: probably NVIDIA (the T1000; Intel UHD 630 renders today, D60) — MH agrees, but
     **only after perf tests**. A nested Hyprland renders on the parent session's GPU (aquamarine's Wayland backend
