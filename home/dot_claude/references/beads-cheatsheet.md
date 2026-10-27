@@ -130,6 +130,10 @@ Memory: `bd-link-edge-types-and-syntax`.
 
 Journal / commit-history bloat in the embedded Dolt store. Fix: `bd compact --days 7 --force && bd gc --skip-decay --force`. Nuclear: `bd flatten --force && bd gc --skip-decay --force`. Add a daily maintenance cron for active projects.
 
+### `bd init` writes to the outer git repo
+
+Seen with bd 1.3 (2026-10-27, embedded mode, `--skip-hooks --skip-agents --sandbox`): `bd init` committed `.beads/` and a `.gitignore` block to the project's repo ("bd init: initialize beads issue tracking"), set `sync.remote` to the git `origin` URL and added that URL as Dolt remote `origin`. A later `bd dolt push` would then put Dolt data on that remote, which is wrong for a public repo. Every `bd config set/unset` also made a git commit until `no-git-ops` was set. Recovery: `bd config set no-git-ops true` first, `bd dolt remote remove origin`, `bd config unset sync.remote`, gitignore `.beads/` if the beads stay local, then `git reset HEAD~N` (mixed, keeps the files) over bd's unpushed commits. Check `git log` after each bd setup step. `--sandbox` did not prevent any of it.
+
 ### Memory entries vs auto-memory
 
 - `bd remember` -- project-technical facts; lives in `.beads/`, auto-injected at prime time, shared across machines that clone the repo.
