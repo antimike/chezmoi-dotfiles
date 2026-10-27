@@ -9,7 +9,9 @@ packageManagers:
 
 # Targets: named package sets (D32 item 7). A host installs the targets named by
 # its `package_targets` key (.chezmoi.yml.tmpl; every target when unset), plus
-# what they `include`, minus any whose `when` conditions (host data keys) fail.
+# what they `include`, minus any whose `when` conditions (host data keys) fail. The
+# installer also detects `gpu_intel` and `gpu_nvidia` (PCI vendor of the DRM cards) for
+# `when`; a host data key of the same name overrides the detection.
 #
 # An entry is a logical name, which is also the package name for every manager,
 # or a map with these keys:
@@ -222,6 +224,20 @@ packageTargets:
       work_tooling: true
     packages:
       - { name: rano, release: rano }
+
+  gpu-intel:
+    description: Intel GPU monitoring (intel_gpu_top; tools/hypr-effects-perf reads it)
+    when:
+      gpu_intel: true
+    packages:
+      - igt-gpu-tools
+
+  gpu-nvidia:
+    description: NVIDIA GPU monitoring (nvtop, interactive; nvidia-smi comes with the driver)
+    when:
+      gpu_nvidia: true
+    packages:
+      - nvtop
 
 # COPR repositories, referenced by `copr:` in the package lists. `project` is
 # the owner/name passed to `dnf copr enable`; that name is the pin. Checked

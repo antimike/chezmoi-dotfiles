@@ -90,6 +90,13 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     opacity; all off today), waybar/wlogout styles, and the plugins (`plugins.lua`, above). hyprpm only builds.
     Hyprland checks only the plugin API version on load, so `plugins.lua` refuses builds for another version itself
     (`hl.version()` has the version only, no commit).
+  - **Built-in effects, first pass, and the riced GPU: done 2026-10-27 (D69)** (branch `ricing/effects`): blur (size 6,
+    2 passes, xray off), soft shadows, ~200 ms animations, inactive windows at 0.92, blur behind waybar (namespaces
+    `main`/`extra`, the bars' names) and rofi, media opaque; work profile unchanged. Measured per effect with the new
+    `tools/hypr-effects-perf` (scene on workspaces 98/99, `hyprctl eval` per setting; rootless per-process engine time
+    from DRM fdinfo, `--igt` for `sudo intel_gpu_top`); results in `~/.local/state/hypr-effects-perf/`. Riced renders on
+    NVIDIA when docked (D69); MH's riced and work login tests passed 2026-10-27 (riced `dgpu` first, work `igpu` first, effects on, three outputs). Values get tuned with theming; xray
+    is a look question for when hyprpaper sets a wallpaper.
   - **GPU for the riced session**: probably NVIDIA (the T1000; Intel UHD 630 renders today, D60) — MH agrees, but
     **only after perf tests**. A nested Hyprland renders on the parent session's GPU (aquamarine's Wayland backend
     opens the parent's dmabuf main device; `AQ_DRM_DEVICES` is read only by the DRM backend), so nested tests give

@@ -46,6 +46,10 @@ data:
   # too: "intel" (NVIDIA stays free for compute; no measured CPU cost) or "nvidia".
   # Read as {{ "{{ dig \"hyprland_render_gpu\" \"intel\" . }}" }} in ~/.config/uwsm/env-hyprland.
   hyprland_render_gpu: intel
+  # zbook only (D69, 2026-10-27): the riced profile ("Hyprland (riced)") renders on
+  # NVIDIA when an external monitor is connected at login ("nvidia"), or follows
+  # hyprland_render_gpu ("intel"). Read as {{ "{{ dig \"hyprland_riced_render_gpu\" \"nvidia\" . }}" }}.
+  hyprland_riced_render_gpu: nvidia
   # Desktop-notification client behind ~/.claude/scripts/notify. Under WSL2,
   # D-Bus advertises org.freedesktop.Notifications but no daemon runs, so stock
   # notify-send blocks; use the wsl-notify-send shim there when its chezmoi

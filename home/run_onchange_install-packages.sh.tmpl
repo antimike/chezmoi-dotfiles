@@ -5,7 +5,8 @@
 # The template resolves everything; the script needs nothing beyond bash and the
 # package manager (jq, say, is itself on the list):
 #   targets   `package_targets` (host key; every target when unset), plus their
-#             `includes`, minus targets whose `when` host keys do not match
+#             `includes`, minus targets whose `when` host keys do not match (also the
+#             detected gpu_intel/gpu_nvidia, which a host key overrides)
 #   names     an entry's own key for this host's manager, else `pipx` (a pipx
 #             install), else `release` (inventory only: its own installer,
 #             run_onchange_install-<id>.sh.tmpl, does the work; the render fails
@@ -26,6 +27,10 @@
 {{- $all := dig "packageTargets" (dict) . }}
 {{- $coprs := dig "coprs" (dict) . }}
 {{- $host := . }}
+{{- /* Hardware facts for `when`, read at each render: GPU vendors from the PCI ids of the DRM
+       cards (Intel 0x8086, NVIDIA 0x10de). A host data key of the same name wins. */}}
+{{- $vendors := output "sh" "-c" "cat /sys/class/drm/card*/device/vendor 2>/dev/null; true" }}
+{{- $detected := dict "gpu_intel" (contains "0x8086" $vendors) "gpu_nvidia" (contains "0x10de" $vendors) }}
 {{- $selected := list }}
 {{- range (dig "package_targets" (keys $all | sortAlpha) .) }}
 {{-   if not (hasKey $all .) }}{{ fail (printf "package_targets: no target %q in packages.yaml" .) }}{{ end }}
@@ -50,7 +55,7 @@
 {{-   $target := index $all $t }}
 {{-   $on := true }}
 {{-   range $k, $v := (dig "when" (dict) $target) }}
-{{-     if ne (toString (dig $k "" $host)) (toString $v) }}{{ $on = false }}{{ end }}
+{{-     if ne (toString (dig $k (dig $k "" $detected) $host)) (toString $v) }}{{ $on = false }}{{ end }}
 {{-   end }}
 {{-   if $on }}
 {{-     range $target.packages }}

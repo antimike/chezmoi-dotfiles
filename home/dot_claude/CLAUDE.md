@@ -65,6 +65,7 @@ Before invoking the Agent tool, use the `spawn-agents` skill — predict tools e
 - Discuss alternatives to the proposed approach, summarizing trade-offs concisely
 - When a design decision is significant enough to affect the project's direction, flag it and suggest adding it to the project's decision log
 - Do not soften feedback to be polite; clarity matters more than comfort
+- Ask for tool installs freely: if a package would give better data or tooling (even an interactive one only the user would run, e.g. `nvtop`), name it and ask; installing costs the user one `sudo` command in an adjacent terminal. Add what gets installed to the project's package manifest, guarded to the hosts where it is relevant.
 
 ### Beads (bd) Performance
 

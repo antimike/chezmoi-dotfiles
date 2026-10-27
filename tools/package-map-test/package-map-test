@@ -7,7 +7,7 @@
 # --override-data` for each case and checks the resolved list (`--list`): target
 # selection and `when`, `includes`, `false` entries, per-manager names, COPRs only for
 # dnf, pipx entries (and a manager key winning over them), `verify` checks, release
-# (inventory) entries, and render failures for unknown targets and missing installers. Uses the live packages.yaml, so counts
+# (inventory) entries, GPU targets (detected vendors, host keys overriding them), and render failures for unknown targets and missing installers. Uses the live packages.yaml, so counts
 # are derived from it, not hard-coded. Prints one line per case; exits 1 if any fails.
 # Needs chezmoi and python3 (PyYAML, for the expected counts).
 set -euo pipefail
@@ -76,4 +76,16 @@ resolve '{"work_tooling":false,"package_targets":["work"]}'
 check "work target: skipped without work_tooling" test "$(lines)" = 0
 resolve '{"work_tooling":true,"package_targets":["work"]}'
 check "work target: rano with work_tooling" grep -q $'^release\trano\trano$' "$tmp/list"
+for v in intel nvidia; do
+  pkg=$([[ $v == intel ]] && echo igt-gpu-tools || echo nvtop)
+  resolve "{\"gpu_$v\":true,\"package_targets\":[\"gpu-$v\"]}"
+  check "gpu-$v target: $pkg with gpu_$v" test "$(cat "$tmp/list")" = $'native\t'"$pkg"$'\t'
+  resolve "{\"gpu_$v\":false,\"package_targets\":[\"gpu-$v\"]}"
+  check "gpu-$v target: a gpu_$v=false host key beats the detection" test "$(lines)" = 0
+done
+resolve '{"package_targets":["gpu-intel","gpu-nvidia"]}'
+want=0
+grep -q 0x8086 /sys/class/drm/card*/device/vendor 2>/dev/null && want=$((want + 1))
+grep -q 0x10de /sys/class/drm/card*/device/vendor 2>/dev/null && want=$((want + 1))
+check "gpu targets: detected from this machine's cards ($want)" test "$(lines)" = "$want"
 exit "$failed"
