@@ -1,7 +1,7 @@
 ---
 summary: Long-running theming project: switchable theme bundles kept uniform across apps, wallpaper fetching and palette-aware selection, palette generation, fonts, pickers, nvim via lush
-status: planned; refreshed for Hyprland 2026-10-25; starts after the riced built-in effects (see "Where it fits")
-updated: 2026-10-25
+status: in progress; library and theme engine moved to the standalone project amontillado (D70, 2026-10-27); v0.1 scaffolded
+updated: 2026-10-27
 ---
 
 # Theming plan
@@ -19,9 +19,15 @@ riced styling (waybar, wlogout, then hyprglass, swaync), on that palette. The pa
 them with hand-picked colours first would mean doing them twice. Main-line position: after SQM/router hardening and the
 hyprsunset widget (STATUS.md, next actions).
 
-**Two profiles (D66).** Open: do work and riced share one theme, or does riced get its own (e.g. translucent variants
-of the same palette)? The cache layout should allow a per-profile override (`~/.cache/theme/<profile>/` falling back
-to `current/`), decided at step 2.
+**Two profiles (D66): decided 2026-10-27.** One palette for now; the cache layout is per profile anyway
+(`~/.cache/theme/<profile>/` falling back to `current/`, D39).
+
+**amontillado (D70, 2026-10-27).** The wallpaper library (fetcher, metrics, sidecars, index) and, as its v0.2, the theme
+engine (palette format, generator adapters, renderer, reload hooks, cache, contrast checks, per-output selection) are
+built as a standalone public project in `~/.local/src/amontillado`, installed with pipx at a pinned tag. Its
+`docs/design.md` is the design; this plan keeps the chezmoi side. Revised order: amontillado v0.1 → `amo fetch
+--test-set` gives the generator comparison images → tinted-theming evaluation → amontillado v0.2 → the chezmoi include
+lines, hyprpaper and one theme end to end → riced styling.
 
 ## Goals (MH)
 
@@ -115,18 +121,23 @@ The existing LazyVim colorscheme stays the fallback when no palette file exists.
 
 ## Steps (not scheduled)
 
-1. Choose the palette generator (pywal16 / wallust / matugen) on sample wallpapers; check each with `tools/term-contrast`
-   (the kitty Blazer palette is the current hand-made baseline).
-2. Theme cache layout (with the per-profile question) and the include line in each app config; one preset theme end to
-   end, including a wallpaper through hyprpaper.
-3. Switcher + theme picker.
-4. Wallpaper fetcher service and index; clustering; per-output selection; timer on Wayland; wallpaper picker.
+Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontillado is marked.
+
+1. Choose the palette generator (matugen / wallust; pywal16 dropped as unmaintained) on the `amo fetch --test-set`
+   images; check each with `tools/term-contrast` (the kitty Blazer palette is the current hand-made baseline).
+   matugen 3.1.0 is installed (2026-10-27); open: can it produce usable ANSI 0-15?
+2. Theme cache layout (**decided**: per profile, D39) and the include line in each app config; one theme end to end,
+   including a wallpaper through hyprpaper. The renderer is amontillado v0.2; the include lines stay here.
+3. Switcher + theme picker (switcher: amontillado; picker UI: here).
+4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
+   Wayland and the picker UI: here.
 5. Fonts: chezmoi subset + nerd-fonts-installer; font pickers.
 6. lush.nvim spec.
 7. Greeter theme sync (see the greeter section in [wayland-desktop.md](wayland-desktop.md)).
 
 ## Open questions
 
-1. Which sites does the fetcher pull from (licensing for any seeds)? Is the old service's code reusable?
+1. ~~Which sites does the fetcher pull from?~~ Wallhaven (D70). Still open: the CC0 seed for a fresh machine (MH chose
+   a committed seed plus MH's own images, 2026-10-27; source to be found, e.g. Wikimedia Commons, shown to MH first).
 2. Random or deterministic wallpaper selection.
 3. Which Nerd Fonts make the chezmoi subset (the i3 data references Iosevka Nerd Font Mono).

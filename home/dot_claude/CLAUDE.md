@@ -83,6 +83,7 @@ One-line gotchas (detail in cheatsheet — see end of section):
 - **Custom statuses**: `bd config set status.custom <comma-list>`; entry shape `<name>` or `<name>:<category>`; name regex `[a-z][a-z0-9_-]*`. Mirror to `~/.config/bd-track/repos.yaml` without the category suffix.
 - **`BEADS_DIR` contamination**: do NOT export `BEADS_DIR` or `BEADS_DOLT_PASSWORD` from any `.envrc` — they leak into other projects' shells and override cwd-based auto-discovery. If contaminated, `unset` them.
 - **Dependency edge removal**: `bd dep remove <id> <depends-on-id>` removes whichever edge exists between two beads regardless of type.
+- **`bd init` commits and adds a Dolt remote**: it commits `.beads/` to the outer repo and makes git `origin` a Dolt remote (`sync.remote`); `bd config set/unset` commit too until `no-git-ops` is set. For a public repo: set `no-git-ops` first, then `bd dolt remote remove origin` + `bd config unset sync.remote`, and check `git log`.
 - **Searching memories**: `bd memories <substring>` matches slugs; add `--json` for full bodies. Cheap — reach for it before guessing bd syntax. **Note**: bd memories are per-project; slugs only resolve inside their originating project.
 
 **Maintenance**: when new bd findings turn up, add a one-liner here if broadly useful and expand `~/.claude/references/beads-cheatsheet.md`.
