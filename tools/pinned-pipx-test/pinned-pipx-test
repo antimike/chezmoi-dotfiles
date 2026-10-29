@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# pinned-pipx-test — tests .chezmoitemplates/install/pinned-pipx-tool.sh (the pinned installer
+# for bd-track and amontillado) against a throwaway clone with stubbed pipx and just.
+#
+#   tools/pinned-pipx-test/pinned-pipx-test
+#
+# Renders the template with `chezmoi execute-template` from this source tree, then runs it per
+# case: pin already met, checkout past the tag (editable install, branch untouched), checkout
+# older than the tag, tag missing, no checkout (install from git). Real git and jq; nothing is
+# installed. Exit 1 if any case fails.
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+fails=0
+
+# Stubs: pipx keeps the "installed" version in $work/state/version; every call is logged.
+mkdir -p "$work/bin" "$work/state"
+cat >"$work/bin/pipx" <<'STUB'
+#!/usr/bin/env bash
+echo "pipx $*" >>"$STATE/calls"
+case $1 in
+  list) v=$(cat "$STATE/version" 2>/dev/null || true)
+        if [[ -n $v ]]; then
+          printf '{"venvs":{"tool":{"metadata":{"main_package":{"package_version":"%s"}}}}}\n' "$v"
+        else echo '{"venvs":{}}'; fi ;;
+  uninstall) rm -f "$STATE/version" ;;
+  install) ref=${2##*@}; echo "${ref#v}" >"$STATE/version" ;;
+esac
+STUB
+cat >"$work/bin/just" <<'STUB'
+#!/usr/bin/env bash
+echo "just $*" >>"$STATE/calls"
+echo "$DEV_VERSION" >"$STATE/version"
+STUB
+chmod +x "$work/bin/pipx" "$work/bin/just"
+export STATE=$work/state PATH="$work/bin:$PATH"
+# The clone must not see MH's git config (signed tags, hooks).
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+
+# A clone: v1.0.0 tagged, then a feature branch two commits past it.
+clone=$work/clone
+git init -q -b main "$clone"
+git -C "$clone" -c user.name=t -c user.email=t@t commit -q --allow-empty -m one
+git -C "$clone" tag v1.0.0
+git -C "$clone" switch -q -c feature
+git -C "$clone" -c user.name=t -c user.email=t@t commit -q --allow-empty -m two
+
+render() {  # $1 = ref, $2 = clone dir
+  printf '{{ includeTemplate "install/pinned-pipx-tool.sh" (dict "name" "tool" "package" "tool" "repo_url" "https://example.invalid/tool.git" "ref" "%s" "clone_dir" "%s" "requires" "") }}' "$1" "$2" |
+    chezmoi execute-template --source "$src" >"$work/install.sh"
+}
+
+run_case() {  # $1 = label, $2 = installed version ("" = none), $3 = expected exit, $4 = expected calls regex
+  local label=$1 status=0
+  : >"$STATE/calls"
+  if [[ -n $2 ]]; then echo "$2" >"$STATE/version"; else rm -f "$STATE/version"; fi
+  sh "$work/install.sh" 2>"$work/err" || status=$?
+  local calls
+  calls=$(grep -v '^pipx list' "$STATE/calls" | tr '\n' ';' || true)
+  if [[ $status -eq $3 && $calls =~ $4 ]]; then
+    echo "ok    $label"
+  else
+    echo "FAIL  $label: exit $status (want $3), calls '$calls' (want /$4/)"; sed 's/^/      /' "$work/err"
+    fails=$((fails + 1))
+  fi
+}
+
+render v1.0.0 "$clone"
+run_case "pin met: nothing to do" 1.0.0 0 '^$'
+run_case "newer installed: nothing to do" 1.2.0 0 '^$'
+DEV_VERSION=1.1.0 run_case "checkout past the tag: editable install" "" 0 '^just .*install-dev;$'
+branch=$(git -C "$clone" branch --show-current)
+if [[ $branch == feature ]]; then echo "ok    checkout's branch untouched"; else echo "FAIL  branch is now '$branch'"; fails=$((fails + 1)); fi
+DEV_VERSION=0.9.0 run_case "editable install below the pin: fail" "" 1 '^just .*install-dev;$'
+
+git -C "$clone" switch -q main
+git -C "$clone" -c user.name=t -c user.email=t@t commit -q --allow-empty -m three
+git -C "$clone" tag v2.0.0
+git -C "$clone" switch -q feature
+render v2.0.0 "$clone"
+run_case "checkout older than the tag: fail, nothing installed" 1.0.0 1 '^$'
+
+render v9.9.9 "$clone"
+run_case "tag missing: fail" "" 1 '^$'
+
+render v1.0.0 "$work/no-such-clone"
+run_case "no checkout: install from git" "" 0 '^pipx uninstall tool;pipx install git\+https://example.invalid/tool.git@v1.0.0;$'
+
+if ((fails)); then echo "$fails failed"; exit 1; fi
+echo "all passed"

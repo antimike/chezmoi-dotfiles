@@ -105,8 +105,9 @@ packageTargets:
       # Misc
       - logrotate
       # Pinned-release tools (own installers; inventory entries)
+      - { name: amontillado, release: amontillado }  # MH's wallpaper library (D70); pinned tag, checkout left alone
       - { name: appimagelauncher, release: appimagelauncher }
-      - { name: bd-track, release: bd-track }     # the project's `just install-dev` at a pinned tag
+      - { name: bd-track, release: bd-track }     # pinned tag; a checkout at or past it is installed editable
       - { name: bd, release: beads }
       - { name: bv, release: beads_viewer }
       - { name: cheat, release: cheat }
@@ -139,8 +140,8 @@ packageTargets:
       - { name: reno, pipx: true }
       - { name: tox, pipx: true }
       - { name: ufmt, pipx: true }
-      # Not here on purpose: bd-track (run_onchange_install-bd-track.sh: the project's own
-      # installer at a pinned tag), apyanki (chess-trainer's tooling installs it).
+      # Not here on purpose: bd-track and amontillado (their own run_onchange installers,
+      # pinned tags; .chezmoitemplates/install/pinned-pipx-tool.sh), apyanki (chess-trainer's tooling installs it).
 
   x11:
     description: X11 session helpers for i3 (the MacBook, D49); was systemd.yaml's install lists

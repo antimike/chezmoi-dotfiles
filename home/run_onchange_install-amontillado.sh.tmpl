@@ -1,0 +1,11 @@
+#!/bin/sh
+# run_onchange_install-amontillado.sh.tmpl — install amontillado (`amo`) at a pinned release.
+# Pin: .chezmoidata/amontillado.yaml. Logic: .chezmoitemplates/install/pinned-pipx-tool.sh.
+# amontillado {{ .amontillado.ref }}
+{{ includeTemplate "install/pinned-pipx-tool.sh" (dict
+     "name" "amontillado"
+     "package" "amontillado"
+     "repo_url" .amontillado.repo_url
+     "ref" .amontillado.ref
+     "clone_dir" (joinPath .chezmoi.homeDir .amontillado.clone_dir)
+     "requires" "") }}
