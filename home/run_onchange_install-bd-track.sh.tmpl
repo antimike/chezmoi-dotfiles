@@ -1,41 +1,12 @@
 #!/bin/sh
-# run_onchange_install-bd-track.sh.tmpl — install bd-track from a pinned ref.
-#
-# Clones (or updates) the repo, checks out the pinned ref, then delegates to
-# the repo's `just install-dev` (editable pipx install). Needs git, pipx, just
-# and bd on PATH; timew is NOT required.
-#
-# Pin lives in .chezmoidata/bd_track.yaml.
+# run_onchange_install-bd-track.sh.tmpl — install bd-track at a pinned release.
+# Pin: .chezmoidata/bd_track.yaml. Logic: .chezmoitemplates/install/pinned-pipx-tool.sh.
+# bd (beads) is checked too: bd-track needs it at run time (timew is NOT required).
 # bd-track {{ .bdTrack.ref }}
-{{- $cloneDir := joinPath .chezmoi.homeDir .bdTrack.clone_dir }}
-
-set -eu
-
-REF={{ .bdTrack.ref | quote }}
-REPO_URL={{ .bdTrack.repo_url | quote }}
-CLONE_DIR={{ $cloneDir | quote }}
-
-for tool in git pipx just bd; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "bd-track installer: $tool not found on PATH; skipping" >&2
-    exit 1
-  fi
-done
-
-mkdir -p "$(dirname "$CLONE_DIR")"
-if [ ! -d "$CLONE_DIR/.git" ]; then
-  echo "bd-track installer: cloning $REPO_URL" >&2
-  git clone "$REPO_URL" "$CLONE_DIR"
-else
-  git -C "$CLONE_DIR" fetch --tags --quiet
-fi
-
-# Never clobber local work in a developer checkout.
-if [ -n "$(git -C "$CLONE_DIR" status --porcelain --untracked-files=no)" ]; then
-  echo "bd-track installer: $CLONE_DIR has uncommitted changes; not switching to $REF" >&2
-else
-  git -C "$CLONE_DIR" checkout --quiet "$REF"
-fi
-
-just --justfile "$CLONE_DIR/justfile" --working-directory "$CLONE_DIR" install-dev
-echo "bd-track installer: $REF installed" >&2
+{{ includeTemplate "install/pinned-pipx-tool.sh" (dict
+     "name" "bd-track"
+     "package" "bd-track"
+     "repo_url" .bdTrack.repo_url
+     "ref" .bdTrack.ref
+     "clone_dir" (joinPath .chezmoi.homeDir .bdTrack.clone_dir)
+     "requires" "bd") }}

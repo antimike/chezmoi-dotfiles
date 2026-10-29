@@ -1,9 +1,10 @@
 # Pinned bd-track release, consumed by run_onchange_install-bd-track.sh.tmpl.
 #
 # bd-track (https://github.com/antimike/bd-track) is the Beads time-tracking
-# bridge. The installer clones the repo at `ref` into `clone_dir` and delegates
-# to the repo's own `just install-dev` (editable pipx install), so the tool owns
-# its install logic and chezmoi only pins the version.
+# bridge. The installer (.chezmoitemplates/install/pinned-pipx-tool.sh) leaves a
+# developer checkout in `clone_dir` alone: if it is at or past `ref`, it is
+# installed with the repo's own `just install-dev` (editable); with no checkout,
+# `ref` is installed from git. It never checks out the tag (no detached HEAD).
 #
 # To bump: tag a release in the bd-track repo, change `ref`, commit.
 bdTrack:
