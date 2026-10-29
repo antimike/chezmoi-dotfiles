@@ -1,3 +1,9 @@
 *.swp
 .envrc
 __pycache__/
+
+# Beads (prefix chz): the issue database stays local (public repo); see CLAUDE.md
+.beads/
+.beads-credential-key
+.dolt/
+*.gate.lock*
