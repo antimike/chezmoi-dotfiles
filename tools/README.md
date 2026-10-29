@@ -20,6 +20,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [hypr-nested/](hypr-nested/) | A throwaway Hyprland nested in the session, in a resource-limited systemd scope, on a chosen workspace: crash triage of plugins and configs (`start --workspace N`, `ctl …`, `stop`) |
 | [package-map-test/](package-map-test/) | The package installer's resolution (D32: targets, `when`, includes, `false`, per-manager names, COPRs) via `--override-data`, nothing installed |
 | [bufferbloat-check/](bufferbloat-check/) | Latency under load (idle, download saturated, upload saturated) to the internet and the router hop, with throughput: before/after numbers for SQM |
+| [pinned-pipx-test/](pinned-pipx-test/) | The pinned installer for MH's own pipx tools (`bd-track`, `amontillado`; `.chezmoitemplates/install/pinned-pipx-tool.sh`) against a throwaway clone with stubbed pipx/just: pin met, checkout past the tag (editable, branch untouched), checkout older than the tag, tag missing, no checkout: `tools/pinned-pipx-test/pinned-pipx-test` |
 
 ## zsh-probe
 
