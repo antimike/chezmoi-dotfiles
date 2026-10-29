@@ -95,8 +95,9 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
     `main`/`extra`, the bars' names) and rofi, media opaque; work profile unchanged. Measured per effect with the new
     `tools/hypr-effects-perf` (scene on workspaces 98/99, `hyprctl eval` per setting; rootless per-process engine time
     from DRM fdinfo, `--igt` for `sudo intel_gpu_top`); results in `~/.local/state/hypr-effects-perf/`. Riced renders on
-    NVIDIA when docked (D69); MH's riced and work login tests passed 2026-10-27 (riced `dgpu` first, work `igpu` first, effects on, three outputs). Values get tuned with theming; xray
-    is a look question for when hyprpaper sets a wallpaper.
+    NVIDIA when docked (D69); MH's riced and work login tests passed 2026-10-27 (riced `dgpu` first, work `igpu` first, effects on, three outputs). Values get tuned with theming. **xray: off (MH, 2026-10-29)**, by look,
+    over a wallpaper (hyprpaper, test-set "busy" image): re-measured with `tools/hypr-effects-perf` (`nvidia-docked-wallpaper`),
+    the wallpaper costs nothing measurable and xray on was only ~2 points of Hyprland CPU cheaper while scrolling, within one run's noise.
   - **GPU for the riced session**: probably NVIDIA (the T1000; Intel UHD 630 renders today, D60) — MH agrees, but
     **only after perf tests**. A nested Hyprland renders on the parent session's GPU (aquamarine's Wayland backend
     opens the parent's dmabuf main device; `AQ_DRM_DEVICES` is read only by the DRM backend), so nested tests give
@@ -194,7 +195,7 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   futex after "Unlocked, exiting!" on a headless sway; **watch whether real Hyprland does it too**). Config: blurred
   screenshot, clock, date, Blazer colours. `tools/lock-screen-test` covers it; recovery in
   [../runbooks/display-session-recovery.md](../runbooks/display-session-recovery.md).
-- [ ] **hyprpaper** for the wallpaper picker (D63; installed, not configured).
+- [x] **hyprpaper** (D63): configured 2026-10-28, every output shows `~/.local/state/wallpaper/current` (a symlink; the unit waits for it); the picker and theme-driven choice come with theming.
 - [ ] **Media apps** (MH, 2026-10-24; defaults set by `run_onchange_after_default-apps.sh.tmpl`: swayimg for images,
   mpv for video; all four in the package map):
   - [ ] **mpv keybindings**: review the defaults, then a managed `~/.config/mpv/input.conf` for what should change.
