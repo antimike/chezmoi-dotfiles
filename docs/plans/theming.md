@@ -126,6 +126,10 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
 1. Choose the palette generator (matugen / wallust; pywal16 dropped as unmaintained) on the `amo fetch --test-set`
    images; check each with `tools/term-contrast` (the kitty Blazer palette is the current hand-made baseline).
    matugen 3.1.0 is installed (2026-10-27); open: can it produce usable ANSI 0-15?
+   **Test set fetched 2026-10-28** (amontillado v0.1.0: `amo fetch --test-set --atleast 3840x2160 --ratio 16:9`;
+   8 kept of 23 thumbnails), records in `~/.local/share/amontillado/library/`: dark `wallhaven-xed63v`, light
+   `wallhaven-739r63`, muted `wallhaven-dp2mol`, saturated `wallhaven-43ey53`, busy `wallhaven-3qz176`, sparse
+   `wallhaven-j5wmyp`, monochrome `wallhaven-og3vv9`, multi-hue `wallhaven-8g8zmj` (`amo list` prints the paths).
 2. Theme cache layout (**decided**: per profile, D39) and the include line in each app config; one theme end to end,
    including a wallpaper through hyprpaper. The renderer is amontillado v0.2; the include lines stay here.
 3. Switcher + theme picker (switcher: amontillado; picker UI: here).
