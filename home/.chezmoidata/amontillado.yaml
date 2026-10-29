@@ -1,0 +1,12 @@
+# Pinned amontillado release, consumed by run_onchange_install-amontillado.sh.tmpl.
+#
+# amontillado (https://github.com/antimike/amontillado) is the wallpaper library (D70). The
+# installer (.chezmoitemplates/install/pinned-pipx-tool.sh) leaves a developer checkout in
+# `clone_dir` alone: it installs that checkout (editable) if it is at or past `ref`, and
+# installs `ref` from git when there is no checkout.
+#
+# To bump: tag a release in the amontillado repo, change `ref`, commit.
+amontillado:
+  repo_url: "https://github.com/antimike/amontillado.git"
+  ref: "v0.1.0"
+  clone_dir: ".local/src/amontillado"
