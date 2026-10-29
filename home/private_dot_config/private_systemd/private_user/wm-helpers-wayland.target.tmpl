@@ -4,7 +4,7 @@ Description=Helpers shared by the uwsm-managed Wayland compositors
 Documentation=file://%h/.local/share/chezmoi/docs/plans/wayland-desktop.md
 BindsTo=graphical-session.target
 After=graphical-session.target
-Wants=clipboard-stack-wayland.target swayidle.service kanshi.service wifi-band-watch.service dock-awake.service hyprsunset.service hyprpolkitagent.service polkit-mate-agent.service waybar.service
+Wants=clipboard-stack-wayland.target swayidle.service kanshi.service wifi-band-watch.service dock-awake.service hyprsunset.service hyprpaper.service hyprpolkitagent.service polkit-mate-agent.service waybar.service
 # No [Install] section on purpose: GNOME also starts graphical-session.target,
 # so helpers hang off this target instead, and only a compositor config starts
 # it (after `uwsm finalize`). Helper units use PartOf= this target.
