@@ -1,0 +1,12 @@
+# hyprpaper (D63): one wallpaper on every output. The image is whatever the symlink
+# ~/.local/state/wallpaper/current points at (hyprpaper follows it at start); until the
+# theme engine sets wallpapers (docs/plans/theming.md), point it by hand:
+#   ln -sfn "$(amo list --random 1)" ~/.local/state/wallpaper/current && systemctl --user restart hyprpaper
+# The unit does not start while the symlink is missing.
+splash = false
+
+wallpaper {
+    monitor =
+    path = {{ joinPath .chezmoi.homeDir ".local/state/wallpaper/current" }}
+    fit_mode = cover
+}

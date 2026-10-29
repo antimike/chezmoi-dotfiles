@@ -1,0 +1,19 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+# Shadows the package's /usr/lib/systemd/user/hyprpaper.service, to tie it to the
+# compositor-started helper target instead of graphical-session.target (GNOME, SwayFX).
+Description=Wallpaper (hyprpaper, D63)
+Documentation=https://wiki.hyprland.org/Hypr-Ecosystem/hyprpaper/
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+# The image: ~/.config/hypr/hyprpaper.conf. No wallpaper chosen yet: no hyprpaper.
+ConditionPathExists=%h/.local/state/wallpaper/current
+
+[Service]
+ExecStart=/usr/bin/hyprpaper
+Slice=session.slice
+Restart=on-failure
+RestartSec=2
+{{- end }}
