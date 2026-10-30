@@ -1,0 +1,11 @@
+{{ if and (lookPath "mani") (lookPath "fd") -}}
+[Unit]
+Description=Regenerate ~/mani.yaml from the clones on this machine (mani-discover, D35, D72)
+Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_mani-discover.tmpl
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/mani-discover
+Nice=15
+IOSchedulingClass=idle
+{{- end }}

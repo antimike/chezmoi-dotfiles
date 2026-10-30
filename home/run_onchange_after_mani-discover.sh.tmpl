@@ -1,0 +1,8 @@
+{{ if and (lookPath "mani") (lookPath "fd") -}}
+#!/bin/sh
+# Regenerate ~/mani.yaml when the project registry or mani-discover itself changes (D72);
+# the hourly mani-discover.timer covers new clones.
+# projects.yaml {{ include "private_dot_config/projects.yaml" | sha256sum }}
+# mani-discover {{ include "dot_local/bin/executable_mani-discover.tmpl" | sha256sum }}
+exec "$HOME/.local/bin/mani-discover"
+{{ end -}}
