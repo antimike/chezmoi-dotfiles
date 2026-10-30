@@ -24,6 +24,7 @@ Examples:
   git diff | ticket -p amontillado --title "Patch for review" -
   ticket --quick -p chezmoi "waybar clock drifts after resume?"
   ticket --list            # open tickets of the current project (all with --all)
+  ticket --summary         # one line for a SessionStart hook (silent if none)
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ logger = logging.getLogger("ticket")
 
 TYPES = ["bug", "feature", "task", "question"]
 URGENCIES = ["low", "normal", "high"]
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 CANCELLED = 1
 USAGE = 2
 TEMPLATE = """\
@@ -95,6 +97,11 @@ def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--list", action="store_true", help="list the project's open tickets")
     mode.add_argument("--projects", action="store_true", help="list the registry's project names")
+    mode.add_argument(
+        "--summary",
+        action="store_true",
+        help="one line on the project's open tickets, for a SessionStart hook (silent if none)",
+    )
     parser.add_argument("--all", action="store_true", help="with --list: every project's inbox")
     parser.add_argument(
         "--registry",
@@ -302,30 +309,73 @@ def ticket_title(path: Path, limit: int = 80) -> str:
     return first if len(first) <= limit else first[: limit - 1] + "…"
 
 
+def file_date(path: Path) -> str:
+    return dt.date.fromtimestamp(path.stat().st_mtime).isoformat()
+
+
+def open_tickets(root: Path, name: str) -> list[dict[str, str]]:
+    """A project's open tickets: one entry per ticket file, one per inbox.md paragraph."""
+    inbox = root / name / "triage"
+    tickets: list[dict[str, str]] = []
+    if not inbox.is_dir():
+        return tickets
+    for path in sorted(inbox.glob("*.md")):
+        if path.name == "inbox.md":
+            for note in (n for n in path.read_text().split("\n\n") if n.strip()):
+                stamp = DATE.match(note.strip())
+                tickets.append({"file": path.name, "date": stamp[0] if stamp else file_date(path)})
+            continue
+        fields = frontmatter(path)
+        if fields.get("status", "open") != "open":
+            continue
+        tickets.append(
+            {
+                "file": path.name,
+                "date": fields.get("date") or file_date(path),
+                "meta": "/".join(v for v in (fields.get("type"), fields.get("urgency")) if v) or "-",
+                "title": ticket_title(path),
+            }
+        )
+    return tickets
+
+
 def list_tickets(root: Path, names: list[str]) -> int:
     count = 0
     for name in names:
-        inbox = root / name / "triage"
-        if not inbox.is_dir():
-            continue
-        for path in sorted(inbox.glob("*.md")):
-            if path.name == "inbox.md":
-                notes = [p for p in path.read_text().split("\n\n") if p.strip()]
-                if notes:
-                    print(f"{name}\tinbox.md\t{len(notes)} quick note(s)")
-                    count += len(notes)
-                continue
-            fields = frontmatter(path)
-            if fields.get("status", "open") != "open":
-                continue
-            meta = "/".join(v for v in (fields.get("type"), fields.get("urgency")) if v) or "-"
-            print(f"{name}\t{path.name}\t{meta}\t{ticket_title(path)}")
-            count += 1
+        tickets = open_tickets(root, name)
+        notes = sum(t["file"] == "inbox.md" for t in tickets)
+        for ticket in tickets:
+            if ticket["file"] != "inbox.md":
+                print(f"{name}\t{ticket['file']}\t{ticket['meta']}\t{ticket['title']}")
+        if notes:
+            print(f"{name}\tinbox.md\t{notes} quick note(s)")
+        count += len(tickets)
     logger.info("%d open ticket(s)", count)
     return 0
 
 
+def summary(args: argparse.Namespace) -> int:
+    """One line for a SessionStart hook; silent outside a registered project or with an empty inbox."""
+    try:
+        projects = load_registry(args.registry)
+        project = check_project(args.project, projects) if args.project else current_project(projects)
+    except Usage as error:
+        logger.debug("%s", error)
+        return 0
+    tickets = open_tickets(args.root, project) if project else []
+    if tickets:
+        oldest = min(t["date"] for t in tickets)
+        where = str(args.root / project).replace(str(Path.home()), "~", 1)
+        print(
+            f"Ticket inbox: {len(tickets)} open triage ticket(s) for '{project}' (oldest {oldest}) "
+            f"in {where}; run /triage to process them."
+        )
+    return 0
+
+
 def run(args: argparse.Namespace) -> int:
+    if args.summary:
+        return summary(args)
     projects = load_registry(args.registry)
     if args.projects:
         print("\n".join(sorted(projects)))
