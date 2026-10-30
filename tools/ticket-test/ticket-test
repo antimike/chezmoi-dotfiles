@@ -97,7 +97,7 @@ printf 'Just some words\n' >"$inbox/gamma/triage/free-form.md"
 list=$(python3 "$ticket" --list -p gamma)
 check "--list shows open tickets" "$list" $'gamma\t'"$(date +%F)-from-stdin.md"$'\ttask/normal\tFrom stdin'
 check "--list counts quick notes" "$list" $'inbox.md\t2 quick note(s)'
-check "--list shows free-form tickets" "$list" $'free-form.md\t-\tfree-form'
+check "--list shows free-form tickets by their first line" "$list" $'free-form.md\t-\tJust some words'
 if grep -q old.md <<<"$list"; then fail "--list skips closed tickets"; else ok "--list skips closed tickets"; fi
 cd "$HOME/Source/alpha"
 check "--list defaults to the current project" "$(python3 "$ticket" --list)" $'alpha\t'
