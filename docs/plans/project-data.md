@@ -55,11 +55,28 @@ private repository for all private project data and metadata**.
   Dolt's help; **not tested here**.
   - For: full fidelity (history, branches), and the same private repo as everything else; ordinary
     clones do not fetch `refs/dolt/*` unless a refspec asks, so they stay small.
-  - Against: `bd dolt push` stalls on network trouble (MH's global rule keeps it out of
-    automation; it stays a manual, best-effort push); binary chunk history grows the GitHub repo
-    without bound (no compaction on the remote side); two storage formats in one repo.
-  - Likely blend: JSONL in git (automated, readable), Dolt backup to the SSD (automated, full
-    fidelity), a Dolt git remote only as an optional manual push.
+  - Against, revised 2026-10-29 with MH:
+    - **Push stalls:** MH suspects the stalls behind the global no-`bd dolt push` rule came from
+      WSL2's network stack, not Dolt. What the rule protects against is a push *blocking a session
+      end*; a push from bd-track's daily timer with a hard timeout cannot block anything (a stall
+      fails, is logged, retries the next day). So: an automated push is acceptable on this
+      machine, **behind a switch** (bd-track `dolt_push: true|false`, global with a per-project
+      override; chezmoi renders it per host, `false` where `is-wsl`), **and benchmarked**:
+      bd-track logs each push's duration and result; after about two weeks MH decides whether the
+      global rule relaxes for non-WSL hosts. Until then the session rule stands. Each project's
+      bd `no-push` stays on: only the timer pushes.
+    - **History growth:** minor. `bd compact --days N` squashes old commits and runs a full Dolt
+      GC, and bd-track's daily cleanup already runs it; `bd gc` adds decay of closed issues,
+      `dolt gc --full` collects all generations. That is local: after a compaction the next push
+      replaces the ref, and GitHub drops the old, unreferenced objects on its own schedule. At
+      0.4-1.5 MB per database the growth is negligible for years.
+    - Two storage formats in one repo (cosmetic; the Dolt refs are not on any branch).
+  - Revised blend: JSONL in git (automated, readable), **a Dolt push to the private repo per
+    project from bd-track's timer** (automated, full fidelity, switchable), and `bd backup` to the
+    SSD (offline copy).
+  - **Test first** (scratch data, ~20 min, part of `chz-2fk`): two databases pushed to one local
+    bare git repo on distinct refs; push, `bd compact`, push again (the rewritten history must
+    replace the ref); confirm the refs do not interfere and a fresh clone restores each.
 - **Shared server vs shared database** (MH's question):
   - `bd init --shared-server`: one `dolt sql-server` for all projects (`~/.beads/shared-server/`),
     **one database per project** (named after the prefix). bd also knows a separate cross-project
