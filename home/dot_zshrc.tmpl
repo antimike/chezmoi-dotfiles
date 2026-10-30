@@ -25,6 +25,10 @@ fi
 export ZINIT_HOME={{ joinPath "$HOME" .filesystem.appData "zinit" "zinit.git" | quote }}
 export ZCOMP_CACHE={{ joinPath "$HOME" .filesystem.cacheDir "zcomp" | quote }}
 [[ -d "$ZCOMP_CACHE" ]] || mkdir -p "$ZCOMP_CACHE"
+# zinit's zicompinit (run by a turbo plugin's atinit, with -C) must load the dump our compinit
+# below keeps fresh; its default, ~/.zcompdump, is never refreshed and would undo new completions.
+typeset -gA ZINIT
+ZINIT[ZCOMPDUMP_PATH]="${ZCOMP_CACHE}/.zcompdump"
 
 source "${ZINIT_HOME}/zinit.zsh"
 
