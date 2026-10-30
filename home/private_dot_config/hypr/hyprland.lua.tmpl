@@ -226,6 +226,7 @@ local function app(cmd) return hl.dsp.exec_cmd("uwsm app -- " .. cmd) end
 -- Apps, session, notifications
 bind(mod .. " + Return", app(term), "Terminal")
 bind(mod .. " + o", run("fuzzel --launch-prefix='uwsm app -- '"), "App launcher")
+bind(mod .. " + t", app("ticket-picker"), "File a ticket (project, then Enter: quick note, Alt+Enter: editor)")
 local window_switcher = run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window")
 bind("XF86LaunchA", window_switcher, "Window switcher")
 bind(mod .. " + grave", window_switcher, "Window switcher: all workspaces")
@@ -447,6 +448,8 @@ end)
 hl.window_rule({ name = "idle-inhibit-fullscreen", match = { fullscreen_state_internal = 2 }, idle_inhibit = "always" })
 -- Terminal popups from waybar clicks (calcurse, nmtui, bluetoothctl): floating and centred.
 hl.window_rule({ name = "bar-popup", match = { class = "bar-popup" }, float = true, size = { 1000, 640 }, center = true })
+-- ticket-picker's editor for a full ticket (D72)
+hl.window_rule({ name = "ticket-editor", match = { class = "ticket-editor" }, float = true, size = { 1000, 640 }, center = true })
 -- pavucontrol (waybar's volume module, right click): floating, centred, see-through.
 hl.window_rule({ name = "pavucontrol", match = { class = "org.pulseaudio.pavucontrol" }, float = true, size = { 1000, 640 }, center = true, opacity = 0.9 })
 -- blueman-manager (Bluetooth module, right click) and the meteoblue forecast (weather
