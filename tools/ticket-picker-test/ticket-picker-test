@@ -49,7 +49,7 @@ pick() {  # $1 = expected exit status, rest = answers ("exit|output"), one per r
   shift
   printf '%s\n' "$@" >"$work/answers"
   rm -f "$work/calls" "$work/rofi-args" "$work/notes" "$work"/menu.*
-  bash "$src/executable_ticket-picker" >/dev/null 2>"$work/err" || got=$?
+  bash "$src/executable_ticket-picker" </dev/null >/dev/null 2>"$work/err" || got=$?
   [[ $got == "$want" ]] || fail "exit $got, want $want for: $* ($(cat "$work/err"))"
 }
 

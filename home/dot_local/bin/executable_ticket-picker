@@ -63,11 +63,13 @@ fi
 result=$(mktemp)
 trap 'rm -f "$result"' EXIT
 # shellcheck disable=SC2016  # expanded by the inner sh
-script='ticket -p "$1" --edit -- "$2" >"$3"'
+# On failure the window stays open, so the error can be read.
+script='ticket -p "$1" --edit -- "$2" >"$3" || { printf "\nNothing filed. Press Enter to close. "; read -r _; }'
 if [[ -n ${TICKET_PICKER_TERM:-} ]]; then
   read -ra term <<<"$TICKET_PICKER_TERM"
 else
-  term=(kitty --class ticket-editor --title "New ticket: $project")
+  # In $HOME, so mise reads ~/.tool-versions (the pinned nvim).
+  term=(kitty --class ticket-editor --title "New ticket: $project" --directory "$HOME")
 fi
 "${term[@]}" sh -c "$script" sh "$project" "$text" "$result" || true
 if [[ -s $result ]]; then
