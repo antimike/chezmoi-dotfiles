@@ -19,6 +19,9 @@ state=${XDG_STATE_HOME:-$HOME/.local/state}/ticket-picker
 recent=$state/recent
 
 notify() { notify-send -a ticket "$@" || true; }
+# The bar menus' theme (readable input text; rofi's default here, fancy, draws it white on light
+# grey), centred instead of under the bar.
+theme=(-theme bar-menu -theme-str 'window { location: center; anchor: center; x-offset: 0; y-offset: 0; width: 44em; }')
 
 for cmd in ticket "$rofi_cmd"; do
   command -v "$cmd" >/dev/null 2>&1 || { notify "ticket-picker" "'$cmd' not found"; exit 1; }
@@ -30,7 +33,8 @@ projects=$(ticket --projects 2>&1) || { notify "ticket-picker" "$projects"; exit
 ordered=$( { [[ -r $recent ]] && grep -Fxf <(printf '%s\n' "$projects") "$recent"; printf '%s\n' "$projects"; } |
   awk 'NF && !seen[$0]++')
 
-project=$(printf '%s\n' "$ordered" | "$rofi_cmd" -dmenu -i -no-custom -p "Ticket for") || exit 1
+project=$(printf '%s\n' "$ordered" | "$rofi_cmd" "${theme[@]}" -dmenu -i -no-custom -p "Ticket for" \
+  -theme-str 'entry { placeholder: "project"; }') || exit 1
 [[ -n $project ]] || exit 1
 
 mkdir -p "$state"
@@ -38,7 +42,8 @@ mkdir -p "$state"
 mv "$recent.tmp" "$recent"
 
 rc=0
-text=$("$rofi_cmd" -dmenu -l 0 -p "$project" -kb-custom-1 Alt+Return \
+text=$("$rofi_cmd" "${theme[@]}" -theme-str 'entry { placeholder: "one line"; }' \
+  -dmenu -l 0 -p "$project" -kb-custom-1 Alt+Return \
   -mesg "Enter: quick note · Alt+Enter: full ticket in the editor (this line is its title)" </dev/null) || rc=$?
 case $rc in
   0) [[ -n ${text//[[:space:]]/} ]] && mode=quick || mode=edit ;;
