@@ -215,7 +215,11 @@ def edit_text(project: str, args: argparse.Namespace, prefill: str = "") -> str:
         except OSError:
             logger.debug("no terminal; the editor inherits stdin/stdout")
     try:
-        subprocess.run([*shlex.split(editor), str(path)], check=True, **streams)
+        command = shlex.split(editor)
+        try:
+            subprocess.run([*command, str(path)], check=True, **streams)
+        except FileNotFoundError:
+            raise Usage(f"editor '{command[0]}' not found (set VISUAL or EDITOR)") from None
         lines = path.read_text().splitlines()
     finally:
         path.unlink(missing_ok=True)

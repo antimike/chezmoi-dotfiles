@@ -105,6 +105,9 @@ before=$(find "$inbox" -type f | wc -l)
 EDITOR=true status_is "unchanged editor file cancels" 1 -p gamma
 if [[ $(find "$inbox" -type f | wc -l) == "$before" ]]; then ok "... and files nothing"; else fail "... and files nothing"; fi
 
+EDITOR=no-such-editor status_is "a missing editor is refused" 2 -p gamma
+check "... in one line, no traceback" "$(cat "$work/err")" "ticket: editor 'no-such-editor' not found (set VISUAL or EDITOR)"
+if grep -q Traceback "$work/err"; then fail "... no traceback"; else ok "... no traceback"; fi
 check "--quick prints inbox.md" "$(python3 "$ticket" -q -p gamma "first   note")" "$inbox/gamma/triage/inbox.md"
 python3 "$ticket" -q -p gamma --type bug "second note" >/dev/null
 check "quick notes are paragraphs" "$(cat "$inbox/gamma/triage/inbox.md")" \
