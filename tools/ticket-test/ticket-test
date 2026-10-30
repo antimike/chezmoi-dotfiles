@@ -6,7 +6,8 @@
 # Runs home/dot_local/bin/executable_ticket from this source tree with a fake $HOME and checks:
 # --projects; the default project from the current repo (by remote, by pinned path); unknown and
 # missing projects refused (with close matches); frontmatter, title, body and sections; stdin with
-# --title; a repeated title gets a suffix; $EDITOR input (and an empty file cancelling); --quick
+# --title; a repeated title gets a suffix; $EDITOR input (an empty file cancelling, --edit
+# prefilling it); --quick
 # notes in inbox.md; --list (open only, free-form tickets, quick notes) and --list --all; --summary
 # (counts, oldest date, silent outside a project, with an empty inbox or without a registry).
 # Exit 1 if any check fails.
@@ -83,6 +84,10 @@ printf '#!/bin/sh\nprintf "Edited title\\nedited body\\n" >>"$1"\n' >"$work/edit
 path=$(EDITOR=$work/editor python3 "$ticket" -p gamma)
 check "\$EDITOR text filed" "$(cat "$path")" $'# Edited title\n\nedited body'
 if grep -q '^#!' "$path"; then fail "editor comments dropped"; else ok "editor comments dropped"; fi
+# shellcheck disable=SC2016  # $1 belongs to the fake editor
+printf '#!/bin/sh\nprintf "the body\\n" >>"$1"\n' >"$work/editor2" && chmod +x "$work/editor2"
+path=$(EDITOR=$work/editor2 python3 "$ticket" -p gamma --edit "Prefilled title")
+check "--edit starts the editor from TEXT" "$(cat "$path")" $'# Prefilled title\n\nthe body'
 before=$(find "$inbox" -type f | wc -l)
 EDITOR=true status_is "unchanged editor file cancels" 1 -p gamma
 if [[ $(find "$inbox" -type f | wc -l) == "$before" ]]; then ok "... and files nothing"; else fail "... and files nothing"; fi
@@ -108,7 +113,7 @@ for p in alpha beta gamma; do check "--list --all has $p" "$all" "$p"$'\t'; done
 
 printf -- '---\ndate: 2001-02-03\nstatus: open\n---\n\n# Old one\n' >"$inbox/gamma/triage/ancient.md"
 check "--summary counts files and quick notes, oldest date" "$(python3 "$ticket" --summary -p gamma)" \
-  "6 open triage ticket(s) for 'gamma' (oldest 2001-02-03) in ~/.local/state/triage/gamma; run /triage"
+  "7 open triage ticket(s) for 'gamma' (oldest 2001-02-03) in ~/.local/state/triage/gamma; run /triage"
 cd "$HOME/Source/beta-old"
 check "--summary defaults to the current project" "$(python3 "$ticket" --summary)" "for 'beta'"
 cd "$HOME/Source/loose"

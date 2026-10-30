@@ -11,7 +11,7 @@ project is the one whose remote (or path) matches the current git repo; an unkno
 name is refused with the closest registry names.
 
 The text is TEXT, or stdin with "-", or $EDITOR when neither is given (an empty
-file cancels). Its first line is the title (a leading "#" is dropped), the rest the
+file cancels); --edit opens $EDITOR starting from TEXT. Its first line is the title (a leading "#" is dropped), the rest the
 body; --title sets the title and keeps all of the text as the body. Each
 --section NAME TEXT adds a "## NAME" section after the body.
 
@@ -94,6 +94,9 @@ def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         help="who files it (default: $TICKET_FROM, else user@<current project or host>)",
     )
     parser.add_argument("-q", "--quick", action="store_true", help="append a paragraph to inbox.md")
+    parser.add_argument(
+        "-e", "--edit", action="store_true", help="open $EDITOR even with TEXT, starting from it"
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--list", action="store_true", help="list the project's open tickets")
     mode.add_argument("--projects", action="store_true", help="list the registry's project names")
@@ -193,11 +196,11 @@ def slugify(title: str, limit: int = 50) -> str:
     return slug[:limit].rstrip("-") or "ticket"
 
 
-def edit_text(project: str, args: argparse.Namespace) -> str:
-    """Ask for the text in $EDITOR; comment lines starting with '#!' are dropped."""
+def edit_text(project: str, args: argparse.Namespace, prefill: str = "") -> str:
+    """Ask for the text in $EDITOR, starting from prefill; lines starting with '#!' are dropped."""
     editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
     with tempfile.NamedTemporaryFile("w", suffix=".md", prefix="ticket-", delete=False) as handle:
-        handle.write(TEMPLATE.format(project=project, type=args.type, urgency=args.urgency))
+        handle.write(prefill + TEMPLATE.format(project=project, type=args.type, urgency=args.urgency))
         path = Path(handle.name)
     try:
         subprocess.run([*shlex.split(editor), str(path)], check=True)
@@ -252,10 +255,10 @@ def unique_path(folder: Path, stem: str) -> Path:
 def file_ticket(project: str, args: argparse.Namespace, projects: dict[str, dict]) -> Path:
     if args.text == "-":
         text = sys.stdin.read()
-    elif args.text is not None:
+    elif args.text is not None and not args.edit:
         text = args.text
     else:
-        text = edit_text(project, args)
+        text = edit_text(project, args, prefill=args.text or "")
     if not text.strip() and not args.title:
         raise Usage("nothing to file")
     sender = args.sender or default_sender(projects)

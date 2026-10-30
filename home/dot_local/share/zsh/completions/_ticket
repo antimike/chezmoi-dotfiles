@@ -15,6 +15,7 @@ _arguments -s -S \
   '*'{-s,--section}'[add a ## NAME section]:section name: :section text: ' \
   '--from=[who files it]:sender: ' \
   '(-q --quick)'{-q,--quick}'[append a paragraph to inbox.md]' \
+  '(-e --edit)'{-e,--edit}'[open $EDITOR even with TEXT, starting from it]' \
   '(--projects --summary)--list[list the project'\''s open tickets]' \
   '(--list --summary)--projects[list the registry'\''s project names]' \
   '(--list --projects)--summary[one line on open tickets (SessionStart hook)]' \
