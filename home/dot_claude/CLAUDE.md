@@ -99,12 +99,6 @@ One-line gotchas (detail in cheatsheet — see end of section):
 - **Chezmoi worktree testing**: `chezmoi apply` always reads from the canonical source (`~/.local/share/chezmoi/`), not the active feature worktree. To test from a worktree: `chezmoi apply --source ~/Source/chezmoi-features/home --force <target>`.
 - **Chezmoi repo docs**: plans, decisions, open items and current status for the dotfiles repo live in `~/.local/share/chezmoi/docs/` (start at `docs/STATUS.md`; the repo's own `CLAUDE.md` auto-loads it when the session runs there). When working on chezmoi from another directory, read it first.
 
-### Cross-project ticket filing (`/file-ticket`)
-
-To file a bug or feature against a project you're NOT currently in (without `cd`-ing or tripping `BEADS_DIR` contamination), use `/file-ticket <project> --title "..." --type bug|feature|task`.
-
-Registry of known projects: `~/.claude/file-ticket-registry.yaml`. Add entries there when you want a project reachable by short name. The command uses `env -u BEADS_DIR -u BEADS_DOLT_PASSWORD bash -c 'cd <root> && bd create ...'` so it is safe to run from any shell environment.
-
 ## Review Checkpoints
 
 - After completing each feature or roadmap item, offer a brief review checkpoint
