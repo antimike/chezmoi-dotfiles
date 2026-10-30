@@ -33,7 +33,8 @@ clone gamma-2 git@github.com:me/gamma.git
 
 run() { MANI_DISCOVER_ROOTS="$HOME/Source" bash "$work/mani-discover" "$@"; }
 check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
-  if grep -qF -- "$3" <<<"$2"; then echo "ok    $1"; else echo "FAIL  $1: missing '$3'"; fails=$((fails + 1)); fi
+  # A substring test, not grep -F (which takes each line of a multi-line needle as a pattern).
+  if [[ $2 == *"$3"* ]]; then echo "ok    $1"; else echo "FAIL  $1: missing '$3'"; fails=$((fails + 1)); fi
 }
 
 cat >"$HOME/.config/projects.yaml" <<'YAML'

@@ -40,7 +40,9 @@ export PATH=$work/bin:$PATH TICKET_PICKER_ROFI=$work/bin/rofi TICKET_PICKER_TERM
 ok() { echo "ok    $1"; }
 fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
 check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
-  if grep -qF -- "$3" <<<"$2"; then ok "$1"; else fail "$1: missing '$3'"; fi
+  # A substring test, not grep: grep -F takes each line of a multi-line needle as its own
+  # pattern, so a needle with a blank line matched anything.
+  if [[ $2 == *"$3"* ]]; then ok "$1"; else fail "$1: missing '$3'"; fi
 }
 pick() {  # $1 = expected exit status, rest = answers ("exit|output"), one per rofi call
   local want=$1 got=0
