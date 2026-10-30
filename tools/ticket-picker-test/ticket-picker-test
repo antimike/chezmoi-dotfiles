@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# ticket-picker-test — tests ~/.local/bin/ticket-picker (D72) with a scripted fake rofi, a fake
+# notify-send, this tree's `ticket` and a throwaway registry and inbox root.
+#
+#   tools/ticket-picker-test/ticket-picker-test
+#
+# Checks: Enter files a quick note; Alt+Enter (rofi exit 10) and Enter on an empty line open the
+# editor with the line as the title; Escape at either prompt files nothing; an editor left empty
+# files nothing; recently picked projects come first; the notifications. Exit 1 if any check fails.
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+export HOME=$work/home XDG_CONFIG_HOME=$work/home/.config XDG_STATE_HOME=$work/home/.local/state
+unset VISUAL TICKET_FROM TICKET_REGISTRY TICKET_ROOT
+inbox=$XDG_STATE_HOME/triage
+mkdir -p "$XDG_CONFIG_HOME" "$work/bin"
+printf 'projects:\n  alpha: { remote: me/alpha }\n  beta: { remote: me/beta }\n  gamma: { remote: me/gamma }\n' \
+  >"$XDG_CONFIG_HOME/projects.yaml"
+fails=0
+
+# ticket from this tree; notify-send records its calls.
+printf '#!/bin/sh\nexec python3 %q "$@"\n' "$src/executable_ticket" >"$work/bin/ticket"
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>%q\n' "$work/notes" >"$work/bin/notify-send"
+# Fake rofi: each call takes the next "exit|output" line of $work/answers, logs its arguments
+# and saves its stdin (the menu) as menu.<n>.
+cat >"$work/bin/rofi" <<EOF
+#!/usr/bin/env bash
+n=\$(( \$(cat "$work/calls" 2>/dev/null || echo 0) + 1 )); echo "\$n" >"$work/calls"
+cat >"$work/menu.\$n"; printf '%s\n' "\$*" >>"$work/rofi-args"
+line=\$(sed -n "\${n}p" "$work/answers"); printf '%s' "\${line#*|}"; exit "\${line%%|*}"
+EOF
+# Fake editor: appends a body line to the file it is given.
+# shellcheck disable=SC2016  # $1 belongs to the fake editor
+printf '#!/bin/sh\nprintf "body from editor\\n" >>"$1"\n' >"$work/editor"
+chmod +x "$work"/bin/* "$work/editor"
+export PATH=$work/bin:$PATH TICKET_PICKER_ROFI=$work/bin/rofi TICKET_PICKER_TERM=env EDITOR=$work/editor
+
+ok() { echo "ok    $1"; }
+fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
+check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
+  if grep -qF -- "$3" <<<"$2"; then ok "$1"; else fail "$1: missing '$3'"; fi
+}
+pick() {  # $1 = expected exit status, rest = answers ("exit|output"), one per rofi call
+  local want=$1 got=0
+  shift
+  printf '%s\n' "$@" >"$work/answers"
+  rm -f "$work/calls" "$work/rofi-args" "$work/notes" "$work"/menu.*
+  bash "$src/executable_ticket-picker" >/dev/null 2>"$work/err" || got=$?
+  [[ $got == "$want" ]] || fail "exit $got, want $want for: $* ($(cat "$work/err"))"
+}
+
+pick 0 "0|beta" "0|waybar clock drifts"
+check "Enter files a quick note" "$(cat "$inbox/beta/triage/inbox.md")" "waybar clock drifts"
+check "... and notifies" "$(cat "$work/notes")" "Quick note for beta waybar clock drifts"
+check "project prompt is a fixed list" "$(head -1 "$work/rofi-args")" "-dmenu -i -no-custom"
+check "text prompt binds Alt+Enter" "$(tail -1 "$work/rofi-args")" "-kb-custom-1 Alt+Return"
+
+pick 0 "0|gamma" "10|Picker title"
+path=$(find "$inbox/gamma/triage" -name '*picker-title.md')
+check "Alt+Enter opens the editor with the line as title" "$(cat "$path" 2>/dev/null)" \
+  $'# Picker title\n\nbody from editor'
+check "... and notifies the path" "$(cat "$work/notes")" "Ticket filed for gamma $path"
+check "recent projects first" "$(cat "$work/menu.1")" $'beta\nalpha'
+
+pick 0 "0|alpha" "0|"
+check "Enter on an empty line opens the editor" "$(find "$inbox/alpha/triage" -name '*body-from-editor.md')" ".md"
+check "most recent project first, no duplicates" "$(cat "$work/menu.1")" $'gamma\nbeta\nalpha'
+if [[ $(wc -l <"$work/menu.1") == 3 ]]; then ok "... all three listed once"; else fail "... all three listed once"; fi
+
+before=$(find "$inbox" -type f | wc -l)
+pick 1 "1|"
+check "Escape at the project prompt: no text prompt" "$(cat "$work/calls")" "1"
+pick 1 "0|alpha" "1|"
+EDITOR=true pick 1 "0|alpha" "10|"
+check "an empty editor files nothing, and says so" "$(cat "$work/notes")" "No ticket filed"
+if [[ $(find "$inbox" -type f | wc -l) == "$before" ]]; then ok "cancels file nothing"; else fail "cancels file nothing"; fi
+
+if ((fails)); then echo "$fails failed"; exit 1; fi
+echo "all passed"

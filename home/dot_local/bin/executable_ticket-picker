@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# ticket-picker — file a ticket from the desktop (D72): pick a project, then type.   $mod+t
+#
+#   1. rofi lists the registry's projects, most recently picked first.
+#   2. A one-line rofi prompt for the ticket:
+#        Enter        files the line as a quick note (ticket --quick, into inbox.md)
+#        Alt+Enter    opens a floating kitty with $EDITOR for a full ticket, the line as
+#                     its title (ticket --edit); Enter on an empty line does the same
+#        Escape       cancels
+#   3. A notification says where it went (or that nothing was filed).
+#
+# Recent projects: $XDG_STATE_HOME/ticket-picker/recent. For tests, TICKET_PICKER_ROFI and
+# TICKET_PICKER_TERM replace `rofi` and the kitty command line (both called with the same
+# arguments). Exit status: 0 = filed, 1 = cancelled or nothing filed.
+set -euo pipefail
+
+rofi_cmd=${TICKET_PICKER_ROFI:-rofi}
+state=${XDG_STATE_HOME:-$HOME/.local/state}/ticket-picker
+recent=$state/recent
+
+notify() { notify-send -a ticket "$@" || true; }
+
+for cmd in ticket "$rofi_cmd"; do
+  command -v "$cmd" >/dev/null 2>&1 || { notify "ticket-picker" "'$cmd' not found"; exit 1; }
+done
+
+projects=$(ticket --projects 2>&1) || { notify "ticket-picker" "$projects"; exit 1; }
+
+# Recent names still in the registry first, then the rest in registry order.
+ordered=$( { [[ -r $recent ]] && grep -Fxf <(printf '%s\n' "$projects") "$recent"; printf '%s\n' "$projects"; } |
+  awk 'NF && !seen[$0]++')
+
+project=$(printf '%s\n' "$ordered" | "$rofi_cmd" -dmenu -i -no-custom -p "Ticket for") || exit 1
+[[ -n $project ]] || exit 1
+
+mkdir -p "$state"
+{ echo "$project"; [[ -r $recent ]] && grep -Fxv -- "$project" "$recent"; } | head -20 >"$recent.tmp" || true
+mv "$recent.tmp" "$recent"
+
+rc=0
+text=$("$rofi_cmd" -dmenu -l 0 -p "$project" -kb-custom-1 Alt+Return \
+  -mesg "Enter: quick note · Alt+Enter: full ticket in the editor (this line is its title)" </dev/null) || rc=$?
+case $rc in
+  0) [[ -n ${text//[[:space:]]/} ]] && mode=quick || mode=edit ;;
+  10) mode=edit ;;
+  *) exit 1 ;;
+esac
+
+if [[ $mode == quick ]]; then
+  if out=$(ticket -q -p "$project" -- "$text" 2>&1); then
+    notify "Quick note for $project" "$text"
+    exit 0
+  fi
+  notify -u critical "Ticket not filed" "$out"
+  exit 1
+fi
+
+result=$(mktemp)
+trap 'rm -f "$result"' EXIT
+# shellcheck disable=SC2016  # expanded by the inner sh
+script='ticket -p "$1" --edit -- "$2" >"$3"'
+if [[ -n ${TICKET_PICKER_TERM:-} ]]; then
+  read -ra term <<<"$TICKET_PICKER_TERM"
+else
+  term=(kitty --class ticket-editor --title "New ticket: $project")
+fi
+"${term[@]}" sh -c "$script" sh "$project" "$text" "$result" || true
+if [[ -s $result ]]; then
+  notify "Ticket filed for $project" "$(cat "$result")"
+  exit 0
+fi
+notify "No ticket filed" "the editor was left empty or closed"
+exit 1

@@ -24,6 +24,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [mani-discover-test/](mani-discover-test/) | `mani-discover`'s naming from the project registry `~/.config/projects.yaml` (D72) against throwaway clones in a fake `$HOME`: remote forms, unnamed and second clones, `path:` pins, missing clones, no registry, mani parses the output: `tools/mani-discover-test/mani-discover-test` |
 | [ticket-test/](ticket-test/) | `ticket` (D72 inboxes) against a throwaway registry, inbox root and clones: default project by remote or pinned path, unknown/missing project refused with close matches, frontmatter and sections, stdin, `$EDITOR` (empty cancels), `--quick` notes, `--list`/`--all`, `--summary` (the SessionStart line): `tools/ticket-test/ticket-test` |
 | [zcomp-list/](zcomp-list/) | The candidates zsh completes for a command line, from this tree's `home/dot_local/share/zsh/completions/` in a clean zsh (zpty, `compadd` captured): `tools/zcomp-list/zcomp-list 'ticket -p '` |
+| [ticket-picker-test/](ticket-picker-test/) | `ticket-picker` (Super+T) with a scripted fake rofi and notify-send: Enter = quick note, Alt+Enter / empty Enter = editor with the line as title, cancels and an empty editor file nothing, recent projects first: `tools/ticket-picker-test/ticket-picker-test` |
 
 ## zsh-probe
 
