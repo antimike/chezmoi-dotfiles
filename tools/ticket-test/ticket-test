@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# ticket-test — tests ~/.local/bin/ticket (D72) against a throwaway registry, inbox root and clones.
+#
+#   tools/ticket-test/ticket-test
+#
+# Runs home/dot_local/bin/executable_ticket from this source tree with a fake $HOME and checks:
+# --projects; the default project from the current repo (by remote, by pinned path); unknown and
+# missing projects refused (with close matches); frontmatter, title, body and sections; stdin with
+# --title; a repeated title gets a suffix; $EDITOR input (an empty file cancelling, --edit
+# prefilling it); --quick
+# notes in inbox.md; --list (open only, free-form tickets, quick notes) and --list --all; --summary
+# (counts, oldest date, silent outside a project, with an empty inbox or without a registry).
+# Exit 1 if any check fails.
+set -euo pipefail
+
+root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+ticket=$root/home/dot_local/bin/executable_ticket
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+export HOME=$work/home XDG_CONFIG_HOME=$work/home/.config XDG_STATE_HOME=$work/home/.local/state
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+unset TICKET_FROM TICKET_REGISTRY TICKET_ROOT VISUAL
+inbox=$XDG_STATE_HOME/triage
+mkdir -p "$XDG_CONFIG_HOME" "$HOME/Source" "$HOME/elsewhere"
+fails=0
+
+ok() { echo "ok    $1"; }
+fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
+check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
+  # A substring test, not grep: grep -F takes each line of a multi-line needle as its own
+  # pattern, so a needle with a blank line matched anything.
+  if [[ $2 == *"$3"* ]]; then ok "$1"; else fail "$1: missing '$3'"; fi
+}
+status_is() {  # $1 = label, $2 = expected exit status, rest = ticket args (run in $PWD)
+  local label=$1 want=$2 got=0
+  shift 2
+  python3 "$ticket" "$@" >"$work/out" 2>"$work/err" </dev/null || got=$?
+  if [[ $got == "$want" ]]; then ok "$label"; else fail "$label: exit $got, want $want ($(cat "$work/err"))"; fi
+}
+
+git init -q "$HOME/Source/alpha" && git -C "$HOME/Source/alpha" remote add origin git@host-alias.github.com:me/alpha.git
+git init -q "$HOME/Source/beta-old" && git -C "$HOME/Source/beta-old" remote add origin https://github.com/me/other
+git init -q "$HOME/Source/loose"
+cat >"$XDG_CONFIG_HOME/projects.yaml" <<'YAML'
+projects:
+  alpha: { remote: me/alpha }
+  beta: { remote: me/beta, path: ~/Source/beta-old }
+  gamma: { remote: me/gamma, beads: { prefix: gam } }
+YAML
+
+cd "$HOME/elsewhere"
+check "--projects lists the registry" "$(python3 "$ticket" --projects)" $'alpha\nbeta\ngamma'
+
+cd "$HOME/Source/alpha"
+path=$(python3 "$ticket" --type bug --urgency high -s Ask "Make it so" -s "Done when" "it is" \
+  $'# Clock drifts\n\nAfter resume the clock is late.')
+check "default project from the remote" "$path" "$inbox/alpha/triage/$(date +%F)-clock-drifts.md"
+body=$(cat "$path")
+check "frontmatter from" "$body" "from: $(id -un)@alpha"
+check "frontmatter type/urgency" "$body" $'type: bug\nurgency: high\nstatus: open\n---'
+check "title from the first line" "$body" $'---\n\n# Clock drifts\n\nAfter resume the clock is late.'
+check "sections in order" "$body" $'## Ask\n\nMake it so\n\n## Done when\n\nit is'
+if [[ -d $inbox/alpha/done ]]; then ok "done/ created"; else fail "done/ created"; fi
+
+path2=$(python3 "$ticket" "Clock drifts")
+check "repeated title gets a suffix" "$path2" "clock-drifts-2.md"
+
+cd "$HOME/Source/beta-old"
+check "default project from a pinned path" "$(python3 "$ticket" --from tester@x "Beta thing")" "$inbox/beta/triage/"
+
+cd "$HOME/Source/loose"
+status_is "unregistered repo without -p refused" 2 "No remote"
+check "... and names the projects" "$(cat "$work/err")" "pass -p NAME (alpha, beta, gamma)"
+cd "$HOME/elsewhere"
+status_is "outside a repo without -p refused" 2 "No repo"
+status_is "unknown project refused" 2 -p alpah "Typo"
+check "... with close matches" "$(cat "$work/err")" "did you mean: alpha"
+if [[ ! -e $inbox/alpah ]]; then ok "nothing filed for an unknown project"; else fail "nothing filed for an unknown project"; fi
+
+path=$(printf 'line one\nline two\n' | python3 "$ticket" -p gamma --title "From stdin" -)
+check "stdin with --title keeps all text as the body" "$(cat "$path")" $'# From stdin\n\nline one\nline two'
+check "--from defaults to user@host outside a project" "$(cat "$path")" "from: $(id -un)@$(uname -n)"
+
+# shellcheck disable=SC2016  # $1 belongs to the fake editor
+printf '#!/bin/sh\nprintf "Edited title\\nedited body\\n" >>"$1"\n' >"$work/editor" && chmod +x "$work/editor"
+path=$(EDITOR=$work/editor python3 "$ticket" -p gamma)
+check "\$EDITOR text filed" "$(cat "$path")" $'# Edited title\n\nedited body'
+if grep -q '^#!' "$path"; then fail "editor comments dropped"; else ok "editor comments dropped"; fi
+# shellcheck disable=SC2016  # $1 belongs to the fake editor
+printf '#!/bin/sh\nprintf "the body\\n" >>"$1"\n' >"$work/editor2" && chmod +x "$work/editor2"
+path=$(EDITOR=$work/editor2 python3 "$ticket" -p gamma --edit "Prefilled title")
+check "--edit starts the editor from TEXT" "$(cat "$path")" $'# Prefilled title\n\nthe body'
+# Under a real terminal (script(1)), with stdout captured as ticket-picker does: the editor must
+# still get the terminal, or it draws into the capture file (a blank window in the picker).
+# shellcheck disable=SC2016  # $1 belongs to the fake editor
+printf '#!/bin/sh\n[ -t 0 ] && [ -t 1 ] && printf "ran on a terminal\\n" >>"$1"\n' >"$work/tty-editor"
+chmod +x "$work/tty-editor"
+# (VISUAL is set inside: script's shell may read a .zshenv that sets it; stdin closed so script
+# cannot wait on ours.)
+timeout 20 script -qec "VISUAL=$work/tty-editor EDITOR=$work/tty-editor python3 $ticket -p gamma --edit 'Captured title' >$work/captured" \
+  /dev/null </dev/null >/dev/null || true
+check "--edit with stdout captured: the editor gets the terminal" "$(cat "$(cat "$work/captured")")" \
+  $'# Captured title\n\nran on a terminal'
+before=$(find "$inbox" -type f | wc -l)
+EDITOR=true status_is "unchanged editor file cancels" 1 -p gamma
+if [[ $(find "$inbox" -type f | wc -l) == "$before" ]]; then ok "... and files nothing"; else fail "... and files nothing"; fi
+
+EDITOR=no-such-editor status_is "a missing editor is refused" 2 -p gamma
+check "... in one line, no traceback" "$(cat "$work/err")" "ticket: editor 'no-such-editor' not found (set VISUAL or EDITOR)"
+if grep -q Traceback "$work/err"; then fail "... no traceback"; else ok "... no traceback"; fi
+check "--quick prints inbox.md" "$(python3 "$ticket" -q -p gamma "first   note")" "$inbox/gamma/triage/inbox.md"
+python3 "$ticket" -q -p gamma --type bug "second note" >/dev/null
+check "quick notes are paragraphs" "$(cat "$inbox/gamma/triage/inbox.md")" \
+  "$(date +%F) $(id -un)@$(uname -n) (task, normal): first note"$'\n\n'"$(date +%F) $(id -un)@$(uname -n) (bug, normal): second note"
+status_is "--quick refuses --title" 2 -q -p gamma --title x "y"
+
+printf -- '---\nstatus: done\n---\n\n# Handled\n' >"$inbox/gamma/triage/old.md"
+printf 'Just some words\n' >"$inbox/gamma/triage/free-form.md"
+list=$(python3 "$ticket" --list -p gamma)
+check "--list shows open tickets" "$list" $'gamma\t'"$(date +%F)-from-stdin.md"$'\ttask/normal\tFrom stdin'
+check "--list counts quick notes" "$list" $'inbox.md\t2 quick note(s)'
+check "--list shows free-form tickets by their first line" "$list" $'free-form.md\t-\tJust some words'
+if grep -q old.md <<<"$list"; then fail "--list skips closed tickets"; else ok "--list skips closed tickets"; fi
+cd "$HOME/Source/alpha"
+check "--list defaults to the current project" "$(python3 "$ticket" --list)" $'alpha\t'
+cd "$HOME/elsewhere"
+all=$(python3 "$ticket" --list --all)
+for p in alpha beta gamma; do check "--list --all has $p" "$all" "$p"$'\t'; done
+
+printf -- '---\ndate: 2001-02-03\nstatus: open\n---\n\n# Old one\n' >"$inbox/gamma/triage/ancient.md"
+check "--summary counts files and quick notes, oldest date" "$(python3 "$ticket" --summary -p gamma)" \
+  "8 open triage ticket(s) for 'gamma' (oldest 2001-02-03) in ~/.local/state/triage/gamma; run /triage"
+cd "$HOME/Source/beta-old"
+check "--summary defaults to the current project" "$(python3 "$ticket" --summary)" "for 'beta'"
+cd "$HOME/Source/loose"
+status_is "--summary in an unregistered repo: exit 0" 0 --summary
+if [[ -s $work/out || -s $work/err ]]; then fail "... and silent"; else ok "... and silent"; fi
+cd "$HOME/elsewhere"
+status_is "--summary outside a repo: exit 0" 0 --summary
+if [[ -s $work/out || -s $work/err ]]; then fail "... and silent"; else ok "... and silent"; fi
+mkdir -p "$inbox/empty/triage" && printf 'projects:\n  empty: { remote: me/empty }\n' >"$work/reg.yaml"
+status_is "--summary with an empty inbox: exit 0" 0 --summary -p empty --registry "$work/reg.yaml"
+if [[ -s $work/out ]]; then fail "... and silent"; else ok "... and silent"; fi
+status_is "--summary without a registry: exit 0" 0 --summary --registry "$work/none.yaml"
+if [[ -s $work/out || -s $work/err ]]; then fail "... and silent"; else ok "... and silent"; fi
+
+if ((fails)); then echo "$fails failed"; exit 1; fi
+echo "all passed"

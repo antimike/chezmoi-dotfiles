@@ -90,6 +90,10 @@ One-line gotchas (detail in cheatsheet — see end of section):
 
 **Full reference**: `~/.claude/references/beads-cheatsheet.md`.
 
+### Ticket inboxes (cross-project requests)
+
+Every project in the registry `~/.config/projects.yaml` has an inbox at `~/.local/state/triage/<project>/` (`triage/` open tickets, `triage/inbox.md` quick notes, `done/` handled). To hand something to another project, file a ticket with the `ticket` command and **never touch that project's repo or beads** (the `triage-file` skill has the format). A project processes its own inbox with `/triage` (the `triage` skill): MH decides each ticket; accepted ones become beads or docs. Design: chezmoi D72.
+
 ### Collaboration Preferences (see auto-memory for full context)
 
 - **Jira comments**: lead with context/methodology, integrate links, connect to team knowledge; avoid prescriptive "next steps" in analysis comments. See `feedback-jira-comment-style.md`.
@@ -98,12 +102,6 @@ One-line gotchas (detail in cheatsheet — see end of section):
 - **Chezmoi propagation -- never `cp`**: to push a source edit to its live target, use `chezmoi apply --force <target>`, NOT `cp ~/.local/share/chezmoi/... ~/.claude/...`. A raw `cp` bypasses chezmoi's state bookkeeping, so a later `chezmoi apply` sees the target as externally-modified and tries to prompt before overwriting -- which fails with `could not open a new TTY` in a non-interactive shell. Using `apply` consistently keeps the bookkeeping coherent; `--force` skips the destination-modified confirmation.
 - **Chezmoi worktree testing**: `chezmoi apply` always reads from the canonical source (`~/.local/share/chezmoi/`), not the active feature worktree. To test from a worktree: `chezmoi apply --source ~/Source/chezmoi-features/home --force <target>`.
 - **Chezmoi repo docs**: plans, decisions, open items and current status for the dotfiles repo live in `~/.local/share/chezmoi/docs/` (start at `docs/STATUS.md`; the repo's own `CLAUDE.md` auto-loads it when the session runs there). When working on chezmoi from another directory, read it first.
-
-### Cross-project ticket filing (`/file-ticket`)
-
-To file a bug or feature against a project you're NOT currently in (without `cd`-ing or tripping `BEADS_DIR` contamination), use `/file-ticket <project> --title "..." --type bug|feature|task`.
-
-Registry of known projects: `~/.claude/file-ticket-registry.yaml`. Add entries there when you want a project reachable by short name. The command uses `env -u BEADS_DIR -u BEADS_DOLT_PASSWORD bash -c 'cd <root> && bd create ...'` so it is safe to run from any shell environment.
 
 ## Review Checkpoints
 

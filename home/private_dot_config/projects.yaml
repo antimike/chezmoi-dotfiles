@@ -1,0 +1,33 @@
+# Project registry (D72): human-readable names for MH's projects, matched to clones by their
+# git remote (owner/repo; any host or URL form), so the file is the same on every machine (D35).
+# Used by:
+#   ticket          valid project names and the default project (from the current repo)
+#   mani-discover   names these clones in ~/mani.yaml (others keep their path as the key)
+# Keys per project:
+#   remote   owner/repo of the clone's `origin` (preferred)
+#   path     ~-relative path: for a repo without a remote, or to pin one of several clones of a
+#            remote (then only that clone gets the name)
+#   beads    the project's beads prefix, if it uses beads (read by tools; bd-track keeps its own
+#            ~/.config/bd-track/repos.yaml for now, see the bd-track inbox ticket on one registry)
+# The ticket inbox is ~/.local/state/triage/<name>/ (D72); any project listed here can receive tickets.
+projects:
+  chezmoi:
+    remote: antimike/chezmoi-dotfiles
+    beads: { prefix: chz }
+  bd-track:
+    remote: antimike/bd-track
+    beads: { prefix: bd-timew }
+  amontillado:
+    remote: antimike/amontillado
+    beads: { prefix: amo }
+  claude-state:
+    remote: antimike/claude-state
+  chezmoi-boco:
+    remote: antimike/chezmoi-boco
+  claude-config:
+    remote: antimike/claude-config
+  resume-builder:
+    remote: antimike/resume-builder
+    path: ~/Documents/personal/resume-builder   # ~/Documents/job_search is an older clone (2024)
+  chess-trainer:
+    remote: antimike/chess_trainer

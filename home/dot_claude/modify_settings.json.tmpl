@@ -31,6 +31,11 @@ input="$(cat)"
 # "Tracking:" line. Silent no-op outside a beads project or without bd-track.
 track_cmd='command -v bd-track >/dev/null 2>&1 || exit 0; sid=$(jq -r '\''.session_id // empty'\''); bd-track status ${sid:+--session-id "$sid"} 2>&1 | grep -q "Tracking:" && echo "⚠ bd-track interval still open for this session — /stop if done" || true'
 
+# SessionStart: one line on the session project's open triage tickets (D72), added to
+# Claude's context. `ticket --summary` is silent outside a registered project or with an
+# empty inbox. Not on resume: the line is already in that transcript.
+tickets_cmd='command -v ticket >/dev/null 2>&1 || exit 0; cd "$(jq -r '\''.cwd // empty'\'')" 2>/dev/null || exit 0; ticket --summary 2>/dev/null || true'
+
 # Notification hook: sentinel-aware desktop notification (per-session opt-in).
 notify_cmd="$HOME/.claude/scripts/hooks/on-notification.sh"
 
@@ -54,6 +59,7 @@ notify_allow_tilde="Bash(~/.claude/scripts/notify *)"
 
 printf '%s\n' "$input" | jq \
   --arg track_cmd        "$track_cmd" \
+  --arg tickets_cmd      "$tickets_cmd" \
   --arg notify_cmd       "$notify_cmd" \
   --arg cleanup_cmd      "$cleanup_cmd" \
   --arg poll_until_allow "$poll_until_allow" \
@@ -61,6 +67,9 @@ printf '%s\n' "$input" | jq \
   --arg notify_allow     "$notify_allow" \
   --arg notify_allow_tilde "$notify_allow_tilde" \
   '.hooks = {
+     "SessionStart": [
+       {"matcher": "startup|clear|compact", "hooks": [{"type": "command", "command": $tickets_cmd}]}
+     ],
      "SessionEnd": [
        {"hooks": [{"type": "command", "command": $track_cmd}]},
        {"hooks": [{"type": "command", "command": $cleanup_cmd}]}

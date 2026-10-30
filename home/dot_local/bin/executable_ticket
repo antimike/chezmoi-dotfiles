@@ -1,0 +1,434 @@
+#!/usr/bin/env python3
+"""File a ticket in a project's inbox (D72), without touching the project itself.
+
+A ticket is one Markdown file in ~/.local/state/triage/<project>/triage/, with a
+frontmatter (from, date, type, urgency, status: open) and a body; the project
+handles its inbox later (/triage). --quick appends one paragraph to that inbox's
+triage/inbox.md instead, for notes too small for a file.
+
+Project names come from the registry ~/.config/projects.yaml. Without -p, the
+project is the one whose remote (or path) matches the current git repo; an unknown
+name is refused with the closest registry names.
+
+The text is TEXT, or stdin with "-", or $EDITOR when neither is given (an empty
+file cancels); --edit opens $EDITOR starting from TEXT. Its first line is the title (a leading "#" is dropped), the rest the
+body; --title sets the title and keeps all of the text as the body. Each
+--section NAME TEXT adds a "## NAME" section after the body.
+
+Prints the ticket's path on stdout. Exit status: 0 = filed (or listed), 1 = cancelled
+or nothing to file, 2 = usage error or unknown project.
+
+Examples:
+  ticket -p bd-track --type bug "bd-track stop loses the note on SIGINT"
+  ticket --section Ask "Make it configurable" "Hardcoded state dir"
+  git diff | ticket -p amontillado --title "Patch for review" -
+  ticket --quick -p chezmoi "waybar clock drifts after resume?"
+  ticket --list            # open tickets of the current project (all with --all)
+  ticket --summary         # one line for a SessionStart hook (silent if none)
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import difflib
+import getpass
+import json
+import logging
+import os
+import re
+import shlex
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+logger = logging.getLogger("ticket")
+
+TYPES = ["bug", "feature", "task", "question"]
+URGENCIES = ["low", "normal", "high"]
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+CANCELLED = 1
+USAGE = 2
+TEMPLATE = """\
+
+#! The first line is the title, the rest the body. Lines starting with '#!' are dropped;
+#! an empty file cancels. Project: {project}, type: {type}, urgency: {urgency}.
+"""
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+    """Preserve description whitespace and show defaults."""
+
+
+class Usage(Exception):
+    """A user error; the message says what to fix."""
+
+
+def config_home() -> Path:
+    return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+
+
+def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="ticket", description=__doc__, formatter_class=HelpFormatter)
+    parser.add_argument("text", nargs="?", metavar="TEXT", help='ticket text; "-" reads stdin')
+    parser.add_argument("-p", "--project", help="target project (default: the current git repo's)")
+    parser.add_argument("-t", "--type", default="task", choices=TYPES, help="ticket type")
+    parser.add_argument("-u", "--urgency", default="normal", choices=URGENCIES, help="urgency")
+    parser.add_argument("--title", help="title (then all of TEXT is the body)")
+    parser.add_argument(
+        "-s",
+        "--section",
+        nargs=2,
+        action="append",
+        default=[],
+        metavar=("NAME", "TEXT"),
+        help="add a '## NAME' section (repeatable)",
+    )
+    parser.add_argument(
+        "--from",
+        dest="sender",
+        default=os.environ.get("TICKET_FROM", ""),
+        help="who files it (default: $TICKET_FROM, else user@<current project or host>)",
+    )
+    parser.add_argument("-q", "--quick", action="store_true", help="append a paragraph to inbox.md")
+    parser.add_argument(
+        "-e", "--edit", action="store_true", help="open $EDITOR even with TEXT, starting from it"
+    )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--list", action="store_true", help="list the project's open tickets")
+    mode.add_argument("--projects", action="store_true", help="list the registry's project names")
+    mode.add_argument(
+        "--summary",
+        action="store_true",
+        help="one line on the project's open tickets, for a SessionStart hook (silent if none)",
+    )
+    parser.add_argument("--all", action="store_true", help="with --list: every project's inbox")
+    parser.add_argument(
+        "--registry",
+        type=Path,
+        default=Path(os.environ.get("TICKET_REGISTRY") or config_home() / "projects.yaml"),
+        help="project registry ($TICKET_REGISTRY)",
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=Path(
+            os.environ.get("TICKET_ROOT")
+            or Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "triage"
+        ),
+        help="inbox root ($TICKET_ROOT)",
+    )
+    parser.add_argument(
+        "--loglevel",
+        "-l",
+        default="WARNING",
+        type=lambda v: v.strip().upper(),
+        help="Logging verbosity (DEBUG, INFO, WARNING, ERROR).",
+    )
+    return parser.parse_args(argv)
+
+
+def setup_logger(args: argparse.Namespace) -> None:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("ticket: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(args.loglevel)
+
+
+def load_registry(path: Path) -> dict[str, dict]:
+    """The registry's projects as {name: entry}; yq turns the YAML into JSON (stdlib only)."""
+    if not path.is_file():
+        raise Usage(f"no project registry at {path}")
+    if not shutil.which("yq"):
+        raise Usage("yq not found; it reads the project registry")
+    result = subprocess.run(
+        ["yq", "-o", "json", ".projects // {}", str(path)], text=True, capture_output=True, check=False
+    )
+    if result.returncode != 0:
+        raise Usage(f"cannot read {path}: {result.stderr.strip()}")
+    projects = json.loads(result.stdout) or {}
+    return {name: entry or {} for name, entry in projects.items()}
+
+
+def owner_repo(url: str) -> str:
+    """owner/repo of a git URL, any host or form (scp-like, https, ssh)."""
+    url = url.strip().rstrip("/").removesuffix(".git")
+    rest, _, repo = url.rpartition("/")
+    return f"{re.split(r'[/:]', rest)[-1]}/{repo}"
+
+
+def git(*args: str, cwd: Path | None = None) -> str:
+    result = subprocess.run(["git", *args], cwd=cwd, text=True, capture_output=True, check=False)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def current_project(projects: dict[str, dict], cwd: Path | None = None) -> str | None:
+    """The registry name of the git repo around cwd: a pinned path first, then the remote."""
+    top = git("rev-parse", "--show-toplevel", cwd=cwd)
+    if not top:
+        return None
+    top_path = Path(top).resolve()
+    for name, entry in projects.items():
+        if entry.get("path") and Path(os.path.expanduser(entry["path"])).resolve() == top_path:
+            return name
+    url = git("remote", "get-url", "origin", cwd=cwd)
+    if url:
+        remote = owner_repo(url)
+        for name, entry in projects.items():
+            if entry.get("remote") == remote:
+                return name
+    return None
+
+
+def check_project(name: str, projects: dict[str, dict]) -> str:
+    if name in projects:
+        return name
+    close = difflib.get_close_matches(name, list(projects), n=3, cutoff=0.5)
+    hint = f"; did you mean: {', '.join(close)}?" if close else f"; known: {', '.join(sorted(projects))}"
+    raise Usage(f"unknown project '{name}'{hint}")
+
+
+def slugify(title: str, limit: int = 50) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return slug[:limit].rstrip("-") or "ticket"
+
+
+def edit_text(project: str, args: argparse.Namespace, prefill: str = "") -> str:
+    """Ask for the text in $EDITOR, starting from prefill; lines starting with '#!' are dropped."""
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
+    with tempfile.NamedTemporaryFile("w", suffix=".md", prefix="ticket-", delete=False) as handle:
+        handle.write(prefill + TEMPLATE.format(project=project, type=args.type, urgency=args.urgency))
+        path = Path(handle.name)
+    # stdout may be captured (path=$(ticket --edit ...)); the editor still needs the terminal:
+    # stdin's when it is one (terminal descriptors are read-write), else /dev/tty.
+    tty = None
+    streams: dict[str, object] = {}
+    if sys.stdin.isatty() and not sys.stdout.isatty():
+        streams = {"stdout": sys.stdin.fileno()}
+    elif not sys.stdin.isatty():
+        try:
+            tty = open("/dev/tty", "r+")  # noqa: SIM115 - closed in finally
+            streams = {"stdin": tty, "stdout": tty}
+        except OSError:
+            logger.debug("no terminal; the editor inherits stdin/stdout")
+    try:
+        command = shlex.split(editor)
+        try:
+            subprocess.run([*command, str(path)], check=True, **streams)
+        except FileNotFoundError:
+            raise Usage(f"editor '{command[0]}' not found (set VISUAL or EDITOR)") from None
+        lines = path.read_text().splitlines()
+    finally:
+        path.unlink(missing_ok=True)
+        if tty:
+            tty.close()
+    kept = [line for line in lines if not line.startswith("#!")]
+    return "\n".join(kept).strip()
+
+
+def split_text(text: str, title: str | None) -> tuple[str, str]:
+    """(title, body): the first line is the title unless --title gave one."""
+    text = text.strip()
+    if title:
+        return title.strip(), text
+    first, _, rest = text.partition("\n")
+    return first.lstrip("#").strip(), rest.strip()
+
+
+def default_sender(projects: dict[str, dict]) -> str:
+    return f"{getpass.getuser()}@{current_project(projects) or socket.gethostname()}"
+
+
+def render(title: str, body: str, sections: list[list[str]], args: argparse.Namespace, sender: str) -> str:
+    front = [
+        "---",
+        f"from: {sender}",
+        f"date: {dt.date.today().isoformat()}",
+        f"type: {args.type}",
+        f"urgency: {args.urgency}",
+        "status: open",
+        "---",
+        "",
+        f"# {title}",
+    ]
+    parts = ["\n".join(front)]
+    if body:
+        parts.append(body)
+    parts += [f"## {name}\n\n{text.strip()}" for name, text in sections]
+    return "\n\n".join(parts) + "\n"
+
+
+def unique_path(folder: Path, stem: str) -> Path:
+    path = folder / f"{stem}.md"
+    n = 2
+    while path.exists():
+        path = folder / f"{stem}-{n}.md"
+        n += 1
+    return path
+
+
+def file_ticket(project: str, args: argparse.Namespace, projects: dict[str, dict]) -> Path:
+    if args.text == "-":
+        text = sys.stdin.read()
+    elif args.text is not None and not args.edit:
+        text = args.text
+    else:
+        text = edit_text(project, args, prefill=args.text or "")
+    if not text.strip() and not args.title:
+        raise Usage("nothing to file")
+    sender = args.sender or default_sender(projects)
+    inbox = args.root / project / "triage"
+    inbox.mkdir(parents=True, exist_ok=True)
+    (args.root / project / "done").mkdir(exist_ok=True)
+    if args.quick:
+        if args.title or args.section:
+            raise Usage("--quick takes the text only (no --title or --section)")
+        path = inbox / "inbox.md"
+        paragraph = " ".join(text.split())
+        stamp = f"{dt.date.today().isoformat()} {sender} ({args.type}, {args.urgency}):"
+        with path.open("a") as handle:
+            if path.stat().st_size:
+                handle.write("\n")
+            handle.write(f"{stamp} {paragraph}\n")
+        return path
+    title, body = split_text(text, args.title)
+    if not title:
+        raise Usage("the ticket has no title")
+    path = unique_path(inbox, f"{dt.date.today().isoformat()}-{slugify(title)}")
+    path.write_text(render(title, body, args.section, args, sender))
+    return path
+
+
+def frontmatter(path: Path) -> dict[str, str]:
+    """Flat key: value pairs of a ticket's frontmatter ({} for a free-form ticket)."""
+    lines = path.read_text(errors="replace").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    fields: dict[str, str] = {}
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        key, sep, value = line.partition(":")
+        if sep:
+            fields[key.strip()] = value.strip()
+    return fields
+
+
+def ticket_title(path: Path, limit: int = 80) -> str:
+    """The first '# ' heading, else the first line of text after any frontmatter."""
+    lines = path.read_text(errors="replace").splitlines()
+    if lines and lines[0].strip() == "---":
+        end = next((i for i, line in enumerate(lines[1:], 1) if line.strip() == "---"), 0)
+        lines = lines[end + 1 :]
+    for line in lines:
+        if line.startswith("# "):
+            return line[2:].strip()
+    first = next((line.strip() for line in lines if line.strip()), path.stem)
+    return first if len(first) <= limit else first[: limit - 1] + "…"
+
+
+def file_date(path: Path) -> str:
+    return dt.date.fromtimestamp(path.stat().st_mtime).isoformat()
+
+
+def open_tickets(root: Path, name: str) -> list[dict[str, str]]:
+    """A project's open tickets: one entry per ticket file, one per inbox.md paragraph."""
+    inbox = root / name / "triage"
+    tickets: list[dict[str, str]] = []
+    if not inbox.is_dir():
+        return tickets
+    for path in sorted(inbox.glob("*.md")):
+        if path.name == "inbox.md":
+            for note in (n for n in path.read_text().split("\n\n") if n.strip()):
+                stamp = DATE.match(note.strip())
+                tickets.append({"file": path.name, "date": stamp[0] if stamp else file_date(path)})
+            continue
+        fields = frontmatter(path)
+        if fields.get("status", "open") != "open":
+            continue
+        tickets.append(
+            {
+                "file": path.name,
+                "date": fields.get("date") or file_date(path),
+                "meta": "/".join(v for v in (fields.get("type"), fields.get("urgency")) if v) or "-",
+                "title": ticket_title(path),
+            }
+        )
+    return tickets
+
+
+def list_tickets(root: Path, names: list[str]) -> int:
+    count = 0
+    for name in names:
+        tickets = open_tickets(root, name)
+        notes = sum(t["file"] == "inbox.md" for t in tickets)
+        for ticket in tickets:
+            if ticket["file"] != "inbox.md":
+                print(f"{name}\t{ticket['file']}\t{ticket['meta']}\t{ticket['title']}")
+        if notes:
+            print(f"{name}\tinbox.md\t{notes} quick note(s)")
+        count += len(tickets)
+    logger.info("%d open ticket(s)", count)
+    return 0
+
+
+def summary(args: argparse.Namespace) -> int:
+    """One line for a SessionStart hook; silent outside a registered project or with an empty inbox."""
+    try:
+        projects = load_registry(args.registry)
+        project = check_project(args.project, projects) if args.project else current_project(projects)
+    except Usage as error:
+        logger.debug("%s", error)
+        return 0
+    tickets = open_tickets(args.root, project) if project else []
+    if tickets:
+        oldest = min(t["date"] for t in tickets)
+        where = str(args.root / project).replace(str(Path.home()), "~", 1)
+        print(
+            f"Ticket inbox: {len(tickets)} open triage ticket(s) for '{project}' (oldest {oldest}) "
+            f"in {where}; run /triage to process them."
+        )
+    return 0
+
+
+def run(args: argparse.Namespace) -> int:
+    if args.summary:
+        return summary(args)
+    projects = load_registry(args.registry)
+    if args.projects:
+        print("\n".join(sorted(projects)))
+        return 0
+    if args.project:
+        project = check_project(args.project, projects)
+    elif not (args.list and args.all):
+        project = current_project(projects)
+        if not project:
+            raise Usage(f"not in a registered project's repo; pass -p NAME ({', '.join(sorted(projects))})")
+    if args.list:
+        if args.all:
+            names = sorted(p.name for p in args.root.iterdir() if p.is_dir()) if args.root.is_dir() else []
+        else:
+            names = [project]
+        return list_tickets(args.root, names)
+    print(file_ticket(project, args, projects))
+    return 0
+
+
+def main() -> None:
+    args = get_cli_arguments()
+    setup_logger(args)
+    try:
+        sys.exit(run(args))
+    except Usage as error:
+        logger.error("%s", error)
+        sys.exit(CANCELLED if str(error) == "nothing to file" else USAGE)
+    except subprocess.CalledProcessError as error:
+        logger.error("%s failed (exit %d); nothing filed", error.cmd[0], error.returncode)
+        sys.exit(CANCELLED)
+
+
+if __name__ == "__main__":
+    main()

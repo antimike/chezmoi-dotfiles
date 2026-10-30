@@ -1,0 +1,26 @@
+#compdef ticket
+
+# Completion for ~/.local/bin/ticket (D72). Project names come from the registry
+# via `ticket --projects`; types and urgencies mirror TYPES/URGENCIES in the script.
+
+local -a projects
+projects=(${(f)"$(ticket --projects 2>/dev/null)"})
+
+_arguments -s -S \
+  '(- *)'{-h,--help}'[show help and exit]' \
+  '(-p --project)'{-p+,--project=}'[target project]:project:compadd -a projects' \
+  '(-t --type)'{-t+,--type=}'[ticket type]:type:(bug feature task question)' \
+  '(-u --urgency)'{-u+,--urgency=}'[urgency]:urgency:(low normal high)' \
+  '--title=[title (then all of TEXT is the body)]:title: ' \
+  '*'{-s,--section}'[add a ## NAME section]:section name: :section text: ' \
+  '--from=[who files it]:sender: ' \
+  '(-q --quick)'{-q,--quick}'[append a paragraph to inbox.md]' \
+  '(-e --edit)'{-e,--edit}'[open $EDITOR even with TEXT, starting from it]' \
+  '(--projects --summary)--list[list the project'\''s open tickets]' \
+  '(--list --summary)--projects[list the registry'\''s project names]' \
+  '(--list --projects)--summary[one line on open tickets (SessionStart hook)]' \
+  '--all[with --list: every project'\''s inbox]' \
+  '--registry=[project registry]:registry:_files -g "*.y(a|)ml"' \
+  '--root=[inbox root]:directory:_directories' \
+  '(-l --loglevel)'{-l+,--loglevel=}'[logging verbosity]:level:(DEBUG INFO WARNING ERROR)' \
+  '1::ticket text (- reads stdin): '

@@ -1,0 +1,12 @@
+{{ if and (lookPath "mani") (lookPath "fd") -}}
+[Unit]
+Description=Hourly mani-discover (new clones get into ~/mani.yaml; one run takes ~0.05 s)
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+{{- end }}
