@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# mani-discover-test — tests ~/.local/bin/mani-discover's naming from the project registry (D72)
+# against throwaway clones in a fake $HOME.
+#
+#   tools/mani-discover-test/mani-discover-test
+#
+# Renders home/dot_local/bin/executable_mani-discover.tmpl from this source tree, then checks:
+# a clone named by its remote (scp-like and https URLs), a clone without a remote keyed by path,
+# a second clone of a named remote keyed by path, a `path:` entry pinning one of two clones,
+# a registry name with no clone reported, no registry at all, and that mani parses the output.
+# Exit 1 if any check fails.
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+# Render with the real HOME (chezmoi needs its own config), then switch to the fake one.
+chezmoi execute-template --source "$src" <"$src/dot_local/bin/executable_mani-discover.tmpl" >"$work/mani-discover"
+export HOME=$work/home XDG_CONFIG_HOME=$work/home/.config GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+mkdir -p "$HOME/.config" "$HOME/Source"
+fails=0
+
+clone() {  # $1 = path under ~/Source, $2 = origin URL ("" = none)
+  git init -q "$HOME/Source/$1"
+  [[ -z $2 ]] || git -C "$HOME/Source/$1" remote add origin "$2"
+}
+clone alpha git@host-alias.github.com:me/alpha.git
+clone beta https://github.com/me/beta
+clone loose ""
+clone old/alpha-copy git@github.com:me/alpha.git
+clone gamma-1 git@github.com:me/gamma.git
+clone gamma-2 git@github.com:me/gamma.git
+
+run() { MANI_DISCOVER_ROOTS="$HOME/Source" bash "$work/mani-discover" "$@"; }
+check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
+  if grep -qF -- "$3" <<<"$2"; then echo "ok    $1"; else echo "FAIL  $1: missing '$3'"; fails=$((fails + 1)); fi
+}
+
+cat >"$HOME/.config/projects.yaml" <<'YAML'
+projects:
+  alpha: { remote: me/alpha }
+  beta: { remote: me/beta }
+  gamma: { remote: me/gamma, path: ~/Source/gamma-2 }
+  ghost: { remote: me/ghost }
+YAML
+out=$(run --dry-run --report 2>"$work/err")
+err=$(cat "$work/err")
+key_for() { awk -v p="$HOME/Source/$1" '/^  "/ {k=$1} $2 == "\"" p "\"" {print k}' <<<"$out"; }
+check "named by scp-like remote (host alias)" "$(key_for alpha)" '"alpha":'
+check "named by https remote" "$(key_for beta)" '"beta":'
+check "no remote: keyed by path" "$(key_for loose)" '"Source/loose":'
+check "second clone of a named remote: keyed by path" "$(key_for old/alpha-copy)" '"Source/old/alpha-copy":'
+check "second clone reported" "$err" "is a second clone of 'alpha'"
+check "path pins one of two clones" "$(key_for gamma-2)" '"gamma":'
+check "the other clone keyed by path" "$(key_for gamma-1)" '"Source/gamma-1":'
+check "registry name without a clone reported" "$err" "no clone here for: ghost"
+check "summary counts" "$err" "3 of 4 registry project(s) found"
+check "--report lists unnamed clones" "$err" "unnamed: Source/loose"
+
+printf '%s\n' "$out" >"$HOME/mani.yaml"
+if (cd "$HOME" && mani list projects >/dev/null 2>&1); then echo "ok    mani parses the output"; else echo "FAIL  mani cannot parse the output"; fails=$((fails + 1)); fi
+
+rm "$HOME/.config/projects.yaml"
+out=$(run --dry-run 2>"$work/err")
+check "no registry: every clone keyed by path" "$(key_for alpha)" '"Source/alpha":'
+
+if ((fails)); then echo "$fails failed"; exit 1; fi
+echo "all passed"

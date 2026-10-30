@@ -21,6 +21,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [package-map-test/](package-map-test/) | The package installer's resolution (D32: targets, `when`, includes, `false`, per-manager names, COPRs) via `--override-data`, nothing installed |
 | [bufferbloat-check/](bufferbloat-check/) | Latency under load (idle, download saturated, upload saturated) to the internet and the router hop, with throughput: before/after numbers for SQM |
 | [pinned-pipx-test/](pinned-pipx-test/) | The pinned installer for MH's own pipx tools (`bd-track`, `amontillado`; `.chezmoitemplates/install/pinned-pipx-tool.sh`) against a throwaway clone with stubbed pipx/just: pin met, checkout past the tag (editable, branch untouched), checkout older than the tag, tag missing, no checkout: `tools/pinned-pipx-test/pinned-pipx-test` |
+| [mani-discover-test/](mani-discover-test/) | `mani-discover`'s naming from the project registry `~/.config/projects.yaml` (D72) against throwaway clones in a fake `$HOME`: remote forms, unnamed and second clones, `path:` pins, missing clones, no registry, mani parses the output: `tools/mani-discover-test/mani-discover-test` |
 
 ## zsh-probe
 
