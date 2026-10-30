@@ -1,0 +1,56 @@
+#!/usr/bin/env zsh
+# zcomp-list — print the completion candidates zsh offers for a command line, using this
+# source tree's completion files in a clean zsh (no ~/.zshrc), driven through zpty.
+#
+#   tools/zcomp-list/zcomp-list 'ticket -p '        # one candidate per line, sorted
+#   tools/zcomp-list/zcomp-list 'ticket --t'
+#
+# The command line is completed at its end (keep the trailing space to complete a new word).
+# Candidates come from home/dot_local/share/zsh/completions/; the command itself must be on
+# PATH if its completion calls it. Matches are captured by wrapping compadd (the technique of
+# zsh-capture-completion): what the completion functions add that matches the typed prefix,
+# sorted, without descriptions. ZCOMP_DEBUG=1 dumps the raw pty output. Exit 1 if nothing matched.
+emulate zsh  # not -L: its local_traps would fire the EXIT trap when a function returns
+
+(( $# == 1 )) || { print -u2 "usage: zcomp-list 'COMMAND LINE'"; exit 2 }
+comp_dir=${0:A:h:h:h}/home/dot_local/share/zsh/completions
+work=$(mktemp -d)
+
+cat >$work/.zshrc <<EOF
+fpath=(${(q)comp_dir} \$fpath)
+autoload -Uz compinit && compinit -u -d $work/zcompdump
+# Record what each compadd call would add; options that only query (-O/-A/-D) pass through.
+compadd() {
+  if [[ " \$* " == *" -"[OAD]" "* ]]; then builtin compadd "\$@"; return; fi
+  local -a hits
+  builtin compadd -A hits "\$@"
+  (( \$#hits )) && print -l -- \$hits >>$work/hits
+  builtin compadd "\$@"
+}
+capture() { zle complete-word; print -n ZCOMP-DONE }
+zle -N capture
+bindkey '^T' capture
+PROMPT=ZCOMP-READY
+EOF
+
+zmodload zsh/zpty
+zpty -b comp "ZDOTDIR=$work TERM=dumb zsh -i"
+# Only now: the zpty child is a fork of this script and would run an inherited EXIT trap.
+trap 'rm -rf $work' EXIT
+out="" chunk=""
+wait_for() {  # $1 = marker; reads the pty until it appears (5 s max)
+  local i
+  for i in {1..50}; do
+    [[ $out == *$1* ]] && return 0
+    zpty -r -t comp chunk 2>/dev/null && out+=$chunk || sleep 0.1
+  done
+  return 1
+}
+wait_for ZCOMP-READY || { print -u2 "zcomp-list: the child zsh never showed its prompt"; exit 2 }
+zpty -w -n comp "$1"$'\x14'
+wait_for ZCOMP-DONE
+zpty -d comp
+[[ -z $ZCOMP_DEBUG ]] || print -r -- "${(q+)out}" >&2
+
+[[ -s $work/hits ]] || { print -u2 "zcomp-list: no candidates for '$1'"; exit 1 }
+sort -u $work/hits
