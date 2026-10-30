@@ -27,7 +27,9 @@ fails=0
 ok() { echo "ok    $1"; }
 fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
 check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
-  if grep -qF -- "$3" <<<"$2"; then ok "$1"; else fail "$1: missing '$3'"; fi
+  # A substring test, not grep: grep -F takes each line of a multi-line needle as its own
+  # pattern, so a needle with a blank line matched anything.
+  if [[ $2 == *"$3"* ]]; then ok "$1"; else fail "$1: missing '$3'"; fi
 }
 status_is() {  # $1 = label, $2 = expected exit status, rest = ticket args (run in $PWD)
   local label=$1 want=$2 got=0
@@ -88,6 +90,17 @@ if grep -q '^#!' "$path"; then fail "editor comments dropped"; else ok "editor c
 printf '#!/bin/sh\nprintf "the body\\n" >>"$1"\n' >"$work/editor2" && chmod +x "$work/editor2"
 path=$(EDITOR=$work/editor2 python3 "$ticket" -p gamma --edit "Prefilled title")
 check "--edit starts the editor from TEXT" "$(cat "$path")" $'# Prefilled title\n\nthe body'
+# Under a real terminal (script(1)), with stdout captured as ticket-picker does: the editor must
+# still get the terminal, or it draws into the capture file (a blank window in the picker).
+# shellcheck disable=SC2016  # $1 belongs to the fake editor
+printf '#!/bin/sh\n[ -t 0 ] && [ -t 1 ] && printf "ran on a terminal\\n" >>"$1"\n' >"$work/tty-editor"
+chmod +x "$work/tty-editor"
+# (VISUAL is set inside: script's shell may read a .zshenv that sets it; stdin closed so script
+# cannot wait on ours.)
+timeout 20 script -qec "VISUAL=$work/tty-editor EDITOR=$work/tty-editor python3 $ticket -p gamma --edit 'Captured title' >$work/captured" \
+  /dev/null </dev/null >/dev/null || true
+check "--edit with stdout captured: the editor gets the terminal" "$(cat "$(cat "$work/captured")")" \
+  $'# Captured title\n\nran on a terminal'
 before=$(find "$inbox" -type f | wc -l)
 EDITOR=true status_is "unchanged editor file cancels" 1 -p gamma
 if [[ $(find "$inbox" -type f | wc -l) == "$before" ]]; then ok "... and files nothing"; else fail "... and files nothing"; fi
@@ -113,7 +126,7 @@ for p in alpha beta gamma; do check "--list --all has $p" "$all" "$p"$'\t'; done
 
 printf -- '---\ndate: 2001-02-03\nstatus: open\n---\n\n# Old one\n' >"$inbox/gamma/triage/ancient.md"
 check "--summary counts files and quick notes, oldest date" "$(python3 "$ticket" --summary -p gamma)" \
-  "7 open triage ticket(s) for 'gamma' (oldest 2001-02-03) in ~/.local/state/triage/gamma; run /triage"
+  "8 open triage ticket(s) for 'gamma' (oldest 2001-02-03) in ~/.local/state/triage/gamma; run /triage"
 cd "$HOME/Source/beta-old"
 check "--summary defaults to the current project" "$(python3 "$ticket" --summary)" "for 'beta'"
 cd "$HOME/Source/loose"

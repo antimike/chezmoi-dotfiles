@@ -202,11 +202,25 @@ def edit_text(project: str, args: argparse.Namespace, prefill: str = "") -> str:
     with tempfile.NamedTemporaryFile("w", suffix=".md", prefix="ticket-", delete=False) as handle:
         handle.write(prefill + TEMPLATE.format(project=project, type=args.type, urgency=args.urgency))
         path = Path(handle.name)
+    # stdout may be captured (path=$(ticket --edit ...)); the editor still needs the terminal:
+    # stdin's when it is one (terminal descriptors are read-write), else /dev/tty.
+    tty = None
+    streams: dict[str, object] = {}
+    if sys.stdin.isatty() and not sys.stdout.isatty():
+        streams = {"stdout": sys.stdin.fileno()}
+    elif not sys.stdin.isatty():
+        try:
+            tty = open("/dev/tty", "r+")  # noqa: SIM115 - closed in finally
+            streams = {"stdin": tty, "stdout": tty}
+        except OSError:
+            logger.debug("no terminal; the editor inherits stdin/stdout")
     try:
-        subprocess.run([*shlex.split(editor), str(path)], check=True)
+        subprocess.run([*shlex.split(editor), str(path)], check=True, **streams)
         lines = path.read_text().splitlines()
     finally:
         path.unlink(missing_ok=True)
+        if tty:
+            tty.close()
     kept = [line for line in lines if not line.startswith("#!")]
     return "\n".join(kept).strip()
 
