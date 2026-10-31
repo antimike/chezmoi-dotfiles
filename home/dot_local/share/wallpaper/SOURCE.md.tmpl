@@ -1,0 +1,9 @@
+# Seed wallpapers
+
+Managed by chezmoi (`.chezmoidata/wallpapers.yaml`). `{{ .wallpaperSeeds.committed.file }}` is a crop of
+the first picture below ({{ .wallpaperSeeds.committed.crop }}); the originals of all of them are
+added to the amontillado library by `run_after_wallpaper-seeds.sh` (`amo list` shows them).
+
+{{ range .wallpaperSeeds.seeds -}}
+- **{{ .title }}**, {{ .author }}. {{ .licence }}. {{ .page }}
+{{ end -}}

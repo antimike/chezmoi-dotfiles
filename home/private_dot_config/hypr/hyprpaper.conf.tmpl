@@ -2,7 +2,8 @@
 # ~/.local/state/wallpaper/current points at (hyprpaper follows it at start); until the
 # theme engine sets wallpapers (docs/plans/theming.md), point it by hand:
 #   ln -sfn "$(amo list --random 1)" ~/.local/state/wallpaper/current && systemctl --user restart hyprpaper
-# The unit does not start while the symlink is missing.
+# The unit does not start while the symlink is missing; `chezmoi apply` points a missing or
+# dangling one at the committed seed (~/.local/share/wallpaper/seed.jpg, run_after_wallpaper-seeds).
 splash = false
 
 wallpaper {
