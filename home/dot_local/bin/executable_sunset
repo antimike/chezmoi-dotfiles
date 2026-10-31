@@ -8,6 +8,8 @@
 #                           (waybar-module sunset runs this every refresh); silent
 #   sunset held             print the held value in K, if any (exit 1 if none)
 #   sunset next             print the next scheduled change as "H:MM TEMPERATURE|identity"
+#   sunset wake             if the next change is due within 60 s, refresh the bar just after it
+#                           (once; waybar-module sunset runs this every refresh, interval 60)
 #
 # The held value lives in $XDG_RUNTIME_DIR, so it ends with the login session. Scroll and
 # click on the bar's custom/sunset module call this; it refreshes the module (signal 12).
@@ -15,7 +17,7 @@
 # (identity mode on), not a query. Current identity cannot be queried; the profile can.
 set -euo pipefail
 
-usage() { echo "usage: sunset up|down [STEP] | schedule | hold | held | next" >&2; exit 2; }
+usage() { echo "usage: sunset up|down [STEP] | schedule | hold | held | next | wake" >&2; exit 2; }
 
 held_file=${XDG_RUNTIME_DIR:-/run/user/$UID}/sunset-held
 conf=${HYPRSUNSET_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprsunset.conf}
@@ -31,10 +33,11 @@ apply() {
   echo "$1 $(profile_time)" >"$held_file"
 }
 
-# Minutes since midnight now, or $SUNSET_NOW (H:MM) for tests.
-now_minutes() {
-  local t=${SUNSET_NOW:-$(date +%H:%M)}
-  echo $((10#${t%%:*} * 60 + 10#${t##*:}))
+# Seconds since midnight now, or $SUNSET_NOW (H:MM or H:MM:SS) for tests.
+now_seconds() {
+  local h m s
+  IFS=: read -r h m s <<<"${SUNSET_NOW:-$(date +%H:%M:%S)}"
+  echo $((10#$h * 3600 + 10#$m * 60 + 10#${s:-0}))
 }
 
 # The profiles of hyprsunset.conf, one "MINUTES H:MM TEMPERATURE|identity" line each, by time.
@@ -59,17 +62,32 @@ profiles() {
   done <"$conf" | sort -n
 }
 
-# The first profile after now, else the first one tomorrow.
-next() {
+# The first profile after now, else the first one tomorrow: "SECONDS-UNTIL H:MM VALUE".
+upcoming() {
   local now all
-  now=$(now_minutes)
+  now=$(now_seconds)
   all=$(profiles)
   [[ -n $all ]] || return 1
   while read -r m t v; do
-    if ((m > now)); then echo "$t $v"; return; fi
+    if ((m * 60 > now)); then echo "$((m * 60 - now)) $t $v"; return; fi
   done <<<"$all"
-  read -r _ t v <<<"$all"
-  echo "$t $v"
+  read -r m t v <<<"$all"
+  echo "$((m * 60 + 86400 - now)) $t $v"
+}
+
+next() { local u; u=$(upcoming) || return 1; echo "${u#* }"; }
+
+# The bar refreshes every 60 s from whenever waybar started, so a scheduled change could
+# show up to a minute late. Within that minute, one detached sleeper (flock) signals waybar
+# a second after the change.
+wake() {
+  local u delay
+  u=$(upcoming) || return 0
+  delay=${u%% *}
+  ((delay <= 60)) || return 0
+  # shellcheck disable=SC2016 # expands in the sleeper's sh, not here
+  setsid flock -n "${XDG_RUNTIME_DIR:-/run/user/$UID}/sunset-wake.lock" \
+    sh -c 'sleep "$1"; pkill -RTMIN+12 -x waybar' sh "$((delay + 1))" </dev/null >/dev/null 2>&1 &
 }
 
 case ${1:-} in
@@ -103,5 +121,6 @@ case ${1:-} in
     ;;
   held) held ;;
   next) next ;;
+  wake) wake ;;
   *) usage ;;
 esac
