@@ -143,6 +143,7 @@ packageTargets:
       - { name: poetry, pipx: true }
       - { name: pre-commit, pipx: true }     # the repos' gitleaks hooks (D35)
       - { name: reno, pipx: true }
+      - { name: ruff, pipx: true }           # formatter and linter (python-scripting skill); the wheel is upstream's binary
       - { name: tox, pipx: true }
       - { name: ufmt, pipx: true }
       # Not here on purpose: bd-track and amontillado (their own run_onchange installers,
