@@ -11,6 +11,8 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 | [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
+| [wallpaper-seeds-test/](wallpaper-seeds-test/) | Tests `run_after_wallpaper-seeds.sh` (hyprpaper's default link to the committed seed; seeds added to the amontillado library) with stubbed `amo` and `curl`: link missing/hand-set/dangling, downloads, checksum mismatch, offline, no amo, non-Wayland: `tools/wallpaper-seeds-test/wallpaper-seeds-test` |
+| [palette-compare/](palette-compare/) | matugen vs wallust settings on wallpapers as terminal palettes: term-contrast failures, accent contrast, distinctness and ANSI hue fidelity next to the live kitty palette, plus an HTML contact sheet: `tools/palette-compare/palette-compare.py` |
 | [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
 | [waybar-launch-test/](waybar-launch-test/) | Which monitor `waybar-launch` gives the main bar, for each dock/lid layout (stubbed `hyprctl`): `tools/waybar-launch-test/waybar-launch-test` |
 | [sunset-test/](sunset-test/) | Tests `sunset` (held colour temperature) and `waybar-module sunset` against a stubbed hyprsunset 0.4.0 IPC: next-change parser, hold across profiles, clamp, schedule, module text, the wake-up just after a scheduled change: `tools/sunset-test/sunset-test` |
@@ -106,6 +108,16 @@ tools/term-contrast/term-contrast.py --conf ~/.config/kitty/current-theme.conf -
 ```
 
 Resolves the palette through kitty itself (`kitty +runpy`, so includes and defaults count as kitty sees them; `--theme` dumps one of kitty's built-in themes), collects the colour styles the shell and CLI tools use, and lists every foreground/background pair below `--min` (WCAG ratio, default 3.0). Exits 1 on any failure. The rule it enforces for a dark theme: colour 8 must be legible on the background (comments and autosuggestions use it), and no text style may use colour 0. Needs `uv`, `kitty` and `zsh`; the `fsh` source sources the plugin from your zinit tree plus `~/.config/zsh/fsh-styles.zsh`. Known noise: trapd00r's `LS_COLORS` uses fixed 256-colour dims that fail on any dark background (`--sources` without `ls` to hide them).
+
+## palette-compare
+
+```sh
+tools/palette-compare/palette-compare.py                              # the amo library (amo list), all settings
+tools/palette-compare/palette-compare.py ~/Pictures/a.jpg --settings matugen,wallust-ansi
+xdg-open ~/.cache/palette-compare/index.html                          # the contact sheet
+```
+
+Runs matugen 4.x and wallust 3.x settings (`matugen`, `wallust`, `wallust-k`, `wallust-ansi`; `--help` lists the flags each one passes) on each picture in a throwaway XDG config and cache home with terminal sequences off, so live terminals and `~/.config`/`~/.cache` are untouched. Each result becomes a kitty `.conf` (matugen's base16 mapped to ANSI as base16-shell does) and is scored with term-contrast's own checks (the module is loaded from `tools/term-contrast/`; sources palette, fsh, autosuggest, git, less) plus accent contrast, the smallest OKLab distance between colours 1-6 and how many of them are near the hue their ANSI name promises. Writes `summary.json`, the confs and `index.html` to `--out` (default `~/.cache/palette-compare`). The live kitty palette is the baseline row; it scores 7.9 on distinctness, so the sheet's threshold of 8 is a rough guide. Needs `uv`, `kitty`, `zsh`, `matugen`, `wallust` and (without picture arguments) `amo`. Results of the first run (2026-10-30, chz-8bg.2): [plans/theming.md](../docs/plans/theming.md), step 1.
 
 ## git-retire-branch-test
 

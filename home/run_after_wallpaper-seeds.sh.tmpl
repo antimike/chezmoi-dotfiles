@@ -1,0 +1,74 @@
+#!/bin/sh
+# run_after_wallpaper-seeds.sh.tmpl — seed wallpapers (chz-8bg.3): a default for
+# hyprpaper on a fresh machine, and the seeds in the amontillado library.
+#
+# 1. ~/.local/state/wallpaper/current (hyprpaper's image) points at the committed
+#    seed (~/.local/share/wallpaper/seed.jpg) when the link is missing or
+#    dangling; a wallpaper set by hand or by the theme engine is left alone.
+# 2. Each seed in .chezmoidata/wallpapers.yaml that the library lacks (no
+#    `amo list` path inside a directory of its name) is downloaded, checked
+#    against its sha256, and added with `amo add --name <name>`.
+#
+# run_after_ rather than run_onchange_: a fresh machine may apply before it has
+# a network, and a run_onchange script that skipped would not run again until
+# the data changed. With every seed present it does no network access. Skips
+# with a note (exit 0) without amo or curl, or offline; a checksum mismatch
+# exits 1 after trying the other seeds. Only on hosts whose `display_server`
+# host key is "wayland" (hyprpaper is Hyprland's).
+{{- $ds := dig "display_server" "x11" . }}
+
+set -eu
+
+ENABLED={{ if and (eq .chezmoi.os "linux") (eq $ds "wayland") }}1{{ else }}0{{ end }}
+SEED={{ joinPath .chezmoi.homeDir .wallpaper.library .wallpaperSeeds.committed.file | quote }}
+CURRENT={{ joinPath .chezmoi.homeDir ".local/state/wallpaper/current" | quote }}
+
+if [ "$ENABLED" != 1 ]; then
+  exit 0
+fi
+
+if [ ! -e "$CURRENT" ] && [ -f "$SEED" ]; then
+  mkdir -p "$(dirname "$CURRENT")"
+  ln -sfn "$SEED" "$CURRENT"
+  echo "wallpaper-seeds: $CURRENT -> $SEED" >&2
+fi
+
+if ! command -v amo >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+  echo "wallpaper-seeds: amo or curl not found; seeds not added to the library" >&2
+  exit 0
+fi
+
+listing=$(amo -l WARNING list)
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+failed=0
+
+# name|url|sha256 per seed
+while IFS='|' read -r name url sha; do
+  [ -n "$name" ] || continue
+  case "$listing" in
+    */"$name"/*) continue ;;
+  esac
+  file="$tmp_dir/$name.${url##*.}"
+  echo "wallpaper-seeds: downloading $name" >&2
+  if ! curl -fsSL -o "$file" "$url"; then
+    echo "wallpaper-seeds: download of $name failed (offline?); the next apply retries" >&2
+    continue
+  fi
+  actual=$(sha256sum "$file" | cut -d' ' -f1)
+  if [ "$actual" != "$sha" ]; then
+    echo "wallpaper-seeds: checksum mismatch for $name ($url)" >&2
+    echo "  expected: $sha" >&2
+    echo "  actual:   $actual" >&2
+    failed=1
+    continue
+  fi
+  amo -l WARNING add --name "$name" "$file"
+  echo "wallpaper-seeds: added $name to the amontillado library" >&2
+done <<'EOF'
+{{ range .wallpaperSeeds.seeds -}}
+{{ .name }}|{{ .url }}|{{ .sha256 }}
+{{ end -}}
+EOF
+
+exit "$failed"

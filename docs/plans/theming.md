@@ -75,7 +75,9 @@ colors only.
   package reports `pywal 3.8.15`, which looks like the pywal16 fork's numbering (to verify).
 - Generators (D73): **matugen >= 4.0 first** (Material You tonal palettes; the base16 backend arrived in 4.0, so
   amontillado refuses Fedora 44's 3.1.0), **wallust** second (Rust, pywal-compatible templates, contrast checks).
-  chezmoi pins matugen 4.2.0 and wallust 3.5.1 (chz-8bg.1). Compare them on the test set before styling (step 1).
+  chezmoi pins matugen 4.2.0 and wallust 3.5.1 (chz-8bg.1). **Compared 2026-10-30 (step 1): neither one's raw ANSI
+  output is usable**; matugen's base16 backend is pywal-style clustering, not Material, so its accents carry no named
+  hue and no contrast. How amontillado builds ANSI 0-15 is open (step 1 below).
 - Templates: amontillado renders them itself (no tinty, no pywal) from optional pinned sources: built-in
   variables-only templates, tinted-theming repos, matugen-themes, pywal16 templates, a URL with sha256, a local path;
   `amo theme sync` fetches, `amo theme apply` stays offline. An app can opt into matugen's own rendering
@@ -139,6 +141,22 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    `amo fetch --test-set` images; check each with `tools/term-contrast` (the kitty Blazer palette is the current
    hand-made baseline). amontillado already ranks matugen first (D73); the comparison checks ANSI 0-15 quality
    before styling (chz-8bg.2; MH kept it, 2026-10-30).
+   **Done 2026-10-30** with `tools/palette-compare` (term-contrast's checks plus accent contrast, distinctness and
+   ANSI hue fidelity; results in `~/.cache/palette-compare/`). Blazer baseline: 0 term-contrast failures, accent
+   minimum 4.43:1, 6/6 accents on their ANSI hue.
+   - **matugen base16** (`--source-color-index 0`, dark): 6-24 failures, accent minimum 1.00 on every picture, 0-2/6
+     hues. The `wal` backend clusters picture colours apart from the Material engine (`-t` and `--contrast` leave it
+     unchanged); on dark, muted and monochrome pictures the accents collapse into the background. matugen's Material
+     roles and tonal palettes are sound.
+   - **wallust** default: 2-13 failures, colours unordered (red lands anywhere); `-k`: 2-6 failures, still unordered,
+     red turns grey on muted pictures.
+   - **wallust `-k -c lchansi -p ansidark16`**: 6/6 hues, but the accents are mostly fixed (yellow, magenta, cyan
+     identical on all 8 pictures); colour 8 and red still fail 3:1 on some pictures (xed63v: 2.30, 2.42).
+   **Open (MH, 2026-10-30; for the amontillado session):** A, amontillado builds ANSI 0-15 from fixed nominal hues
+   with lightness and chroma from matugen's tonal palettes (Claude's recommendation), or B, wallust's ANSI mode plus
+   amontillado's contrast adjust; C (matugen base16 plus the adjust) does not fix the hues. Handed off as an
+   amontillado ticket (`2026-10-30-matugen-4-2-s-base16-output-does-not-assign-named.md`), with the evidence. No
+   decision recorded here until that session decides.
    **Test set fetched 2026-10-28** (amontillado v0.1.0: `amo fetch --test-set --atleast 3840x2160 --ratio 16:9`;
    8 kept of 23 thumbnails), records in `~/.local/share/amontillado/library/`: dark `wallhaven-xed63v`, light
    `wallhaven-739r63`, muted `wallhaven-dp2mol`, saturated `wallhaven-43ey53`, busy `wallhaven-3qz176`, sparse

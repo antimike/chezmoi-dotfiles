@@ -143,6 +143,7 @@ packageTargets:
       - { name: poetry, pipx: true }
       - { name: pre-commit, pipx: true }     # the repos' gitleaks hooks (D35)
       - { name: reno, pipx: true }
+      - { name: ruff, pipx: true }           # formatter and linter (python-scripting skill); the wheel is upstream's binary
       - { name: tox, pipx: true }
       - { name: ufmt, pipx: true }
       # Not here on purpose: bd-track and amontillado (their own run_onchange installers,
@@ -223,7 +224,8 @@ packageTargets:
       # Pinned-release tools (own installers; inventory entries)
       - { name: uwsm, release: uwsm }
       - { name: wl-clip-persist, release: wl-clip-persist }
-
+      - { name: matugen, release: matugen }   # palette generator (D73); Fedora's 3.1.0 is too old, keep it uninstalled
+      - { name: wallust, release: wallust }   # palette generator, second to matugen (D73); built from crates.io
   work:
     description: Employer-only tooling (work_tooling host key)
     when:

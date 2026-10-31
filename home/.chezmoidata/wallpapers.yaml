@@ -1,0 +1,64 @@
+# Seed wallpapers (chz-8bg.3), consumed by run_after_wallpaper-seeds.sh.tmpl and
+# dot_local/share/wallpaper/SOURCE.md.tmpl.
+#
+# A fresh machine gets a wallpaper before any is fetched: `committed` is the one
+# picture in the repo (dot_local/share/wallpaper/seed.jpg, a 16:9 crop at
+# 3840x2160 of the first seed, in the X11 timer's library dir `wallpaper.library`
+# from .chezmoi.yml), and ~/.local/state/wallpaper/current (hyprpaper's image)
+# points at it when the link is missing or dangling. The originals of all
+# seeds are downloaded, checked against `sha256` and added to the amontillado
+# library (`amo add --name <name>`), so `amo list` and the theme engine see them.
+#
+# Licence rule (public repo): CC0 or public domain only. MH chose these five on
+# 2026-10-30 (the "both" choice of 2026-10-27: a committed seed plus own images).
+# The URL is the current original on upload.wikimedia.org. If someone uploads a
+# new version of a file, that URL serves other bytes and the checksum fails
+# loudly: pin the old revision's archive URL from the file page's history.
+#
+# To add a seed:
+#   1. CC0 or public domain only; check the file page's licence section
+#   2. url:    the API's imageinfo url (action=query&prop=imageinfo&iiprop=url|sha1),
+#              without the utm_ query
+#   3. sha256: download it, compare `sha1sum` with the API's sha1, then sha256sum
+#   4. commit; the rendered script changes, and the next apply adds it.
+wallpaperSeeds:
+  committed:
+    file: seed.jpg
+    from: commons-good-morning-iss
+    crop: "4928x2772+0+420 resized to 3840x2160, JPEG quality 85; the crop drops the ISS solar array"
+  seeds:
+    - name: commons-good-morning-iss
+      title: Good Morning From the International Space Station
+      author: Scott Kelly (NASA)
+      licence: Public domain (work of the US government, NASA)
+      page: https://commons.wikimedia.org/wiki/File:Good_Morning_From_the_International_Space_Station.jpg
+      url: https://upload.wikimedia.org/wikipedia/commons/3/3b/Good_Morning_From_the_International_Space_Station.jpg
+      sha256: "0681d63b6a38672a3e4c5847601ec671d579189fcc8621e80905587b789b0b6b"
+    - name: commons-cloudscape-philippine-sea
+      title: Cloudscape Over the Philippine Sea
+      author: NASA
+      licence: Public domain (work of the US government, NASA)
+      page: https://commons.wikimedia.org/wiki/File:Cloudscape_Over_the_Philippine_Sea.jpg
+      url: https://upload.wikimedia.org/wikipedia/commons/3/35/Cloudscape_Over_the_Philippine_Sea.jpg
+      sha256: "c26f4446362775f20a19f72d56340ef064e3e5468cd6d2fadc19ce3f09c5df1d"
+    - name: commons-jacques-cartier-les-loups
+      title: Panoramic view of Jacques-Cartier National Park from the Wolves peak (Les Loups), Quebec, Canada
+      author: Wilfredor
+      licence: CC0 1.0
+      page: https://commons.wikimedia.org/wiki/File:Panoramic_view_of_Jacques-Cartier_National_Park_from_the_Wolves_peak_(Les_Loups),_Quebec,_Canada.jpg
+      url: https://upload.wikimedia.org/wikipedia/commons/7/71/Panoramic_view_of_Jacques-Cartier_National_Park_from_the_Wolves_peak_%28Les_Loups%29%2C_Quebec%2C_Canada.jpg
+      sha256: "c4b7f2a56be34c5d83981f94a341a488ea3cf2a70029989b958cf665c96d4503"
+    - name: commons-sunset-key-sailboats
+      title: Sunset Key and Sailboats, Florida, 2025
+      author: Julian Lupyan
+      licence: CC0 1.0
+      page: https://commons.wikimedia.org/wiki/File:Sunset_Key_and_Sailboats,_Florida,_2025.jpg
+      url: https://upload.wikimedia.org/wikipedia/commons/7/7a/Sunset_Key_and_Sailboats%2C_Florida%2C_2025.jpg
+      sha256: "9804ac2c73f8a478d01f6648b2e9a06a6779f20e96f3a7e1cf1d6c67d1fce2a7"
+    - name: commons-juan-griego-sunset
+      title: Juan Griego Sunset
+      author: Wilfredor
+      licence: CC0 1.0
+      page: https://commons.wikimedia.org/wiki/File:Juan_Griego_Sunset.jpg
+      url: https://upload.wikimedia.org/wikipedia/commons/3/3f/Juan_Griego_Sunset.jpg
+      sha256: "bfbc3c99e2d83a8ef869dfd63edace840e4508447680abccef5097e0e3978c39"

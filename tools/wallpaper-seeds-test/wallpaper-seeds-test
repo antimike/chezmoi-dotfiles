@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# wallpaper-seeds-test — tests run_after_wallpaper-seeds.sh.tmpl (chz-8bg.3: hyprpaper's default
+# link to the committed seed, seeds added to the amontillado library) with stubbed amo and curl.
+#
+#   tools/wallpaper-seeds-test/wallpaper-seeds-test
+#
+# Renders the script with `chezmoi execute-template --override-data` (test seeds whose checksums
+# match local fixtures), then points its SEED and CURRENT paths into a throwaway directory. PATH
+# is the stubs plus /usr/bin:/bin, so the real amo and the network are never reached. Cases: link
+# missing, set by hand, dangling; all seeds present (no download); seeds added; a checksum
+# mismatch (exit 1, the others still added); offline; amo missing; a non-Wayland host.
+# Exit 1 if any case fails.
+# check() evaluates its condition after run() sets status/calls/link, so the conditions are
+# single-quoted on purpose and the variables are read only inside them.
+# shellcheck disable=SC2016,SC2034
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+fails=0
+
+mkdir -p "$work/bin" "$work/state" "$work/fixtures" "$work/home"
+printf 'alpha' >"$work/fixtures/alpha.jpg"
+printf 'beta' >"$work/fixtures/beta.jpg"
+sha() { sha256sum "$work/fixtures/$1" | cut -d' ' -f1; }
+
+# curl -fsSL -o FILE URL: copies the fixture named like the URL's last part; OFFLINE=1 fails.
+cat >"$work/bin/curl" <<'STUB'
+#!/usr/bin/env bash
+out=; while [[ $# -gt 1 ]]; do [[ $1 == -o ]] && out=$2; shift; done
+echo "curl ${1##*/}" >>"$STATE/calls"
+[[ ${OFFLINE:-0} == 1 ]] && exit 6
+cp "$FIXTURES/${1##*/}" "$out"
+STUB
+# amo -l WARNING list | add --name NAME FILE: the listing lives in $STATE/listing.
+cat >"$work/bin/amo" <<'STUB'
+#!/usr/bin/env bash
+shift 2
+case $1 in
+  list) cat "$STATE/listing" 2>/dev/null || true ;;
+  add) echo "add $3" >>"$STATE/calls"; echo "/lib/$3/${4##*/}" >>"$STATE/listing" ;;
+esac
+STUB
+chmod +x "$work/bin/curl" "$work/bin/amo"
+export STATE=$work/state FIXTURES=$work/fixtures
+
+seed_json() {  # name:fixture:sha ... -> the wallpaperSeeds override
+  local items=() s n f h
+  for s in "$@"; do
+    IFS=: read -r n f h <<<"$s"
+    items+=("{\"name\":\"$n\",\"url\":\"https://example.invalid/$f\",\"sha256\":\"$h\"}")
+  done
+  local IFS=,
+  printf '{"wallpaperSeeds":{"committed":{"file":"seed.jpg"},"seeds":[%s]},"display_server":"%s"}' \
+    "${items[*]}" "${DISPLAY_SERVER:-wayland}"
+}
+
+render() {  # $1 = output, rest = seeds
+  local out=$1; shift
+  chezmoi execute-template --source "$src" --override-data "$(seed_json "$@")" \
+    <"$src/run_after_wallpaper-seeds.sh.tmpl" |
+    sed -e "s|^SEED=.*|SEED=\"$work/home/seed.jpg\"|" \
+        -e "s|^CURRENT=.*|CURRENT=\"$work/home/state/current\"|" >"$out"
+}
+
+good=("alpha:alpha.jpg:$(sha alpha.jpg)" "beta:beta.jpg:$(sha beta.jpg)")
+render "$work/good.sh" "${good[@]}"
+render "$work/bad.sh" "${good[@]}" "gamma:alpha.jpg:0000"
+DISPLAY_SERVER=x11 render "$work/x11.sh" "${good[@]}"
+printf 'seed' >"$work/home/seed.jpg"
+printf 'mine' >"$work/home/mine.jpg"
+
+check() {  # $1 = label, $2 = condition (bash expression)
+  if eval "$2"; then echo "pass  $1"; else echo "FAIL  $1  ($2)"; fails=$((fails + 1)); fi
+}
+
+run() {  # $1 = script, $2 = link setup (missing|mine|dangling|seed), $3 = listing (all|none); sets status, calls, link
+  rm -rf "$work/home/state"; : >"$STATE/calls"; rm -f "$STATE/listing"
+  case $2 in
+    mine) mkdir -p "$work/home/state"; ln -s "$work/home/mine.jpg" "$work/home/state/current" ;;
+    dangling) mkdir -p "$work/home/state"; ln -s "$work/home/gone.jpg" "$work/home/state/current" ;;
+    seed) mkdir -p "$work/home/state"; ln -s "$work/home/seed.jpg" "$work/home/state/current" ;;
+  esac
+  [[ $3 == all ]] && printf '/lib/alpha/a.jpg\n/lib/beta/b.jpg\n' >"$STATE/listing"
+  status=0
+  PATH="${STUB_PATH:-$work/bin}:/usr/bin:/bin" sh "$1" 2>"$work/err" || status=$?
+  calls=$(tr '\n' ' ' <"$STATE/calls")
+  link=$(readlink "$work/home/state/current" 2>/dev/null || true)
+}
+
+run "$work/good.sh" missing all
+check "link missing: points at the seed" '[[ $link == "$work/home/seed.jpg" ]]'
+check "all seeds present: no download, exit 0" '[[ -z $calls && $status == 0 ]]'
+
+run "$work/good.sh" mine all
+check "link set by hand: left alone" '[[ $link == "$work/home/mine.jpg" ]]'
+
+run "$work/good.sh" dangling all
+check "dangling link: replaced by the seed" '[[ $link == "$work/home/seed.jpg" ]]'
+
+run "$work/good.sh" seed none
+check "missing seeds: downloaded and added in order" '[[ $calls == "curl alpha.jpg add alpha curl beta.jpg add beta " ]]'
+check "missing seeds: exit 0" '[[ $status == 0 ]]'
+
+run "$work/bad.sh" seed none
+check "checksum mismatch: exit 1" '[[ $status == 1 ]]'
+check "checksum mismatch: the good seeds still added, the bad one not" '[[ $calls == "curl alpha.jpg add alpha curl beta.jpg add beta curl alpha.jpg " ]]'
+check "checksum mismatch: reported" 'grep -q "checksum mismatch for gamma" "$work/err"'
+
+OFFLINE=1 run "$work/good.sh" seed none
+check "offline: exit 0, nothing added" '[[ $status == 0 && $calls != *add* ]]'
+check "offline: says the next apply retries" 'grep -q "next apply retries" "$work/err"'
+
+mkdir -p "$work/bin-noamo"; cp "$work/bin/curl" "$work/bin-noamo/"
+STUB_PATH=$work/bin-noamo run "$work/good.sh" missing none
+check "amo missing: exit 0, link still set" '[[ $status == 0 && $link == "$work/home/seed.jpg" ]]'
+check "amo missing: no download" '[[ -z $calls ]]'
+
+run "$work/x11.sh" missing none
+check "non-Wayland host: no link, no download, exit 0" '[[ -z $link && -z $calls && $status == 0 ]]'
+
+echo
+if ((fails)); then echo "$fails case(s) failed"; exit 1; fi
+echo "all cases passed"

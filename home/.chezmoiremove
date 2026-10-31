@@ -18,3 +18,6 @@
 .config/waybar/config.jsonc
 # Help page for the Python yq, replaced by mikefarah's yq (man yq) on 2026-10-24.
 .local/share/man/man1h/yq.1h
+# create_wallpaper/ deployed literally (create_ is a file-only prefix); since 2026-10-30
+# the source is wallpaper/, the X11 timer's library, holding the seed (chz-8bg.3).
+.local/share/create_wallpaper

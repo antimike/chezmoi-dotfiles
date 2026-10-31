@@ -1,0 +1,26 @@
+# Pinned matugen release, consumed by run_onchange_install-matugen.sh.tmpl.
+#
+# matugen (https://github.com/InioX/matugen) generates Material You colour
+# palettes from an image; amontillado's theme engine ranks it first (D73).
+# Fedora ships 3.1.0, which has no base16 output (it arrived in 4.0) and which
+# amontillado v0.2 refuses, so the installer puts the pinned release in
+# ~/.local/bin; the DNF package stays uninstalled (chz-8bg.1).
+#
+# Upstream publishes one Linux asset, x86_64 only: a tarball holding a single
+# `matugen` binary. The checksum is the sha256 digest GitHub records for the
+# asset (releases API, `assets[].digest`), checked against a download on zbook.
+#
+# Pin rule: exact tag, at least 14 days old. v4.2.0 = 2026-08-17; GPL-2.0.
+# Exercised on zbook: download, checksum, `matugen --version`. Only installs
+# where the `display_server` host key is "wayland" (the theming stack is
+# Wayland only).
+#
+# To bump:
+#   1. version: new upstream tag, without the "v"
+#   2. sha256:  curl -sL https://api.github.com/repos/InioX/matugen/releases/tags/v<version> \
+#                 | jq -r '.assets[] | select(.name|test("x86_64")) | .digest'
+#      then download the asset and compare with sha256sum
+#   3. commit; the rendered script hash changes, so the installer re-runs.
+matugen:
+  version: "4.2.0"
+  sha256:  "a2e3b50e49ed6439999ba3c252ed04fabd98ee4e9d12e5e5dff2e66370569751"

@@ -1,0 +1,88 @@
+#!/bin/sh
+# run_onchange_install-wallust.sh.tmpl — build and install wallust
+# (codeberg.org/explosion-mental/wallust) to ~/.local/bin.
+#
+# Built from the crates.io source archive (no release binaries, not in Fedora).
+# The pin in .chezmoidata/wallust.yaml is a version plus the archive's sha256:
+# the installer refuses to build unless the download matches, then builds with
+# `cargo build --release --locked`, so dependency versions and checksums come
+# from the crate's Cargo.lock. Cargo runs dependency build scripts; that is the
+# trust this takes beyond the pin.
+#
+# Toolchain: Fedora's /usr/bin/cargo and /usr/bin/rustc when both exist (cargo
+# is in the base target), else cargo and rustc from PATH. A stale rustup
+# toolchain in ~/.cargo/bin otherwise wins on PATH, and wallust's dependencies
+# need rustc >= 1.75.
+#
+# Only runs on Linux hosts whose `display_server` host key is "wayland"
+# (see .chezmoi.yml.tmpl). Skips with a note (exit 0), rather than failing
+# `chezmoi apply`, on other hosts or when curl or cargo is missing.
+{{- $ds := dig "display_server" "x11" . -}}
+{{- $run := and (eq .chezmoi.os "linux") (eq $ds "wayland") -}}
+{{- $v := .wallust.version }}
+
+set -eu
+
+VERSION={{ $v | quote }}
+CRATE_URL={{ printf "https://static.crates.io/crates/wallust/wallust-%s.crate" $v | quote }}
+EXPECTED_SHA={{ .wallust.sha256 | quote }}
+INSTALL_PATH={{ joinPath .chezmoi.homeDir ".local" "bin" "wallust" | quote }}
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+
+if [ "$ENABLED" != 1 ]; then
+  echo "wallust installer: needs Linux with display_server=wayland (this host: {{ .chezmoi.os }}, {{ $ds }}); skipping" >&2
+  exit 0
+fi
+
+if [ -x /usr/bin/cargo ] && [ -x /usr/bin/rustc ]; then
+  CARGO=/usr/bin/cargo
+  RUSTC=/usr/bin/rustc
+  export RUSTC
+else
+  CARGO=cargo
+fi
+for tool in curl "$CARGO"; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "wallust installer: '$tool' not found; install it (see packages.yaml) and re-run; skipping" >&2
+    exit 0
+  fi
+done
+
+# Idempotency guard: `wallust --version` prints "wallust 3.5.1 (...)".
+if [ -x "$INSTALL_PATH" ] \
+    && [ "$("$INSTALL_PATH" --version 2>/dev/null | cut -d' ' -f2)" = "$VERSION" ]; then
+  echo "wallust installer: $VERSION already installed at $INSTALL_PATH" >&2
+  exit 0
+fi
+
+mkdir -p "$(dirname "$INSTALL_PATH")"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+echo "wallust installer: downloading $CRATE_URL" >&2
+curl -fsSL -o "$tmp_dir/wallust.crate" "$CRATE_URL"
+
+actual=$(sha256sum "$tmp_dir/wallust.crate" | awk '{print $1}')
+if [ "$EXPECTED_SHA" != "$actual" ]; then
+  echo "wallust installer: checksum mismatch for wallust $VERSION" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+mkdir "$tmp_dir/src"
+tar -xzf "$tmp_dir/wallust.crate" -C "$tmp_dir/src" --strip-components=1
+
+echo "wallust installer: building with $("$CARGO" --version) (a few minutes)" >&2
+"$CARGO" build --release --locked --quiet \
+  --manifest-path "$tmp_dir/src/Cargo.toml" --target-dir "$tmp_dir/target"
+
+binary="$tmp_dir/target/release/wallust"
+if [ ! -x "$binary" ]; then
+  echo "wallust installer: build produced no binary" >&2
+  exit 1
+fi
+
+mv "$binary" "$INSTALL_PATH"
+echo "wallust installer: $VERSION installed to $INSTALL_PATH" >&2
