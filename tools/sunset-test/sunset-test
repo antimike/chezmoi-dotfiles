@@ -8,7 +8,7 @@
 # in a temp dir and answers `hyprctl hyprsunset temperature|profile|identity X|reset X`
 # as 0.4.0 does. Never touches the running hyprsunset or waybar. Covers the next-change
 # parser, the held value (up/down, clamp, hold after a profile change, schedule) and
-# the module's text, class and hiding. Prints one line per case; exits 1 if any fails.
+# the module's text, class and hiding, and the wake-up just after a scheduled change. Prints one line per case; exits 1 if any fails.
 # Needs jq.
 set -euo pipefail
 
@@ -40,7 +40,11 @@ esac
 EOF
 # shellcheck disable=SC2016 # expands in the stub, not here
 printf '#!/bin/sh\n[ -e "$STUB/running" ]\n' >"$tmp/bin/pgrep"
-printf '#!/bin/sh\nexit 0\n' >"$tmp/bin/pkill"
+# shellcheck disable=SC2016 # expands in the stubs, not here
+printf '#!/bin/sh\necho "$*" >>"$STUB/../pkill"\n' >"$tmp/bin/pkill"
+# The wake sleeper: record the delay, then hold the lock for a moment instead of waiting.
+# shellcheck disable=SC2016
+printf '#!/bin/sh\necho "$1" >>"$STUB/../sleep"\n/usr/bin/sleep 0.5\n' >"$tmp/bin/sleep"
 chmod +x "$tmp/bin"/*
 
 cat >"$tmp/hyprsunset.conf" <<'EOF'
@@ -120,6 +124,27 @@ check "schedule: back to the profile" "$(screen)" "3700 identity=true"
 check "schedule: nothing held" "$(sunset held || echo none)" "none"
 sunset hold
 check "hold with nothing held is a no-op" "$(screen)" "3700 identity=true"
+
+# Wake: refresh the bar just after a change due within 60 s, once.
+wake_at() { # NOW: run `sunset wake`, wait for its sleeper, print "sleep-args|pkill-args"
+  rm -f "$tmp/sleep" "$tmp/pkill"
+  SUNSET_NOW=$1 sunset wake
+  for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s $tmp/pkill ]] && break; /usr/bin/sleep 0.2; done
+  echo "$(paste -sd, "$tmp/sleep" 2>/dev/null)|$(paste -sd, "$tmp/pkill" 2>/dev/null)"
+}
+check "wake 30 s before 20:00" "$(wake_at 19:59:30)" "31|-RTMIN+12 -x waybar"
+check "wake 1 s before 22:30" "$(wake_at 22:29:59)" "2|-RTMIN+12 -x waybar"
+check "wake exactly 60 s before" "$(wake_at 19:59:00)" "61|-RTMIN+12 -x waybar"
+check "no wake 61 s before" "$(wake_at 19:58:59)" "|"
+check "no wake at the change itself" "$(wake_at 20:00:00)" "|"
+check "wake before the 7:00 identity profile" "$(wake_at 6:59:45)" "16|-RTMIN+12 -x waybar"
+check "no wake overnight (next is tomorrow 7:00)" "$(wake_at 23:59:30)" "|"
+rm -f "$tmp/sleep" "$tmp/pkill"
+SUNSET_NOW=19:59:30 sunset wake
+SUNSET_NOW=19:59:31 sunset wake
+/usr/bin/sleep 1.5
+check "two refreshes arm one sleeper" "$(wc -l <"$tmp/pkill")" "1"
+check "next with seconds" "$(SUNSET_NOW=19:59:59 sunset next)" "20:00 4500"
 
 check "identity never sent without an argument" "$(cat "$tmp/misuse" 2>/dev/null || echo never)" "never"
 exit $failed

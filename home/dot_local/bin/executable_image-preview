@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# image-preview — preview an image in a terminal, picking the method from where it runs.
+# Shared by pistol (its image/* line) and ranger (~/.config/ranger/scope.sh).
+#
+#   image-preview FILE [WIDTH HEIGHT]   size in cells; default: fzf's preview window, else
+#                                       the terminal's size
+#
+# Under ranger (RANGER_LEVEL set and stdout not a terminal: ranger reads the output as text):
+# a previewer cannot draw graphics there, so it exits 7 (ranger draws FILE with its own
+# preview_images_method) when RANGER_IMAGES=True (scope.sh passes ranger's preview_images),
+# and prints chafa's block characters as coloured text otherwise.
+# Anywhere else (a terminal, fzf's preview, pistol run directly): kitty graphics in kitty,
+# sixel in Windows Terminal (WSL2) and other sixel terminals, block characters otherwise.
+# IMAGE_PREVIEW_FORMAT=kitty|sixels|symbols overrides the choice.
+set -euo pipefail
+
+file=${1:?usage: image-preview FILE [WIDTH HEIGHT]}
+cols=${2:-${FZF_PREVIEW_COLUMNS:-$(tput cols 2>/dev/null || echo 80)}}
+rows=${3:-${FZF_PREVIEW_LINES:-$(tput lines 2>/dev/null || echo 24)}}
+
+if [[ -n ${RANGER_LEVEL:-} && ! -t 1 ]]; then
+  [[ ${RANGER_IMAGES:-} == True ]] && exit 7
+  # ranger parses the text itself: 256 colours (no 24-bit codes) and no terminal-state escapes.
+  exec chafa --format symbols --colors 256 --polite on --size "${cols}x${rows}" --animate off -- "$file"
+fi
+
+format=${IMAGE_PREVIEW_FORMAT:-}
+if [[ -z $format ]]; then
+  if [[ -n ${KITTY_WINDOW_ID:-} || ${TERM:-} == xterm-kitty ]]; then
+    format=kitty
+  elif [[ -n ${WT_SESSION:-} || ${TERM:-} == foot* || ${TERM_PROGRAM:-} == WezTerm || ${TERM:-} == mlterm* ]]; then
+    format=sixels
+  else
+    format=symbols
+  fi
+fi
+exec chafa --format "$format" --size "${cols}x${rows}" --animate off -- "$file"

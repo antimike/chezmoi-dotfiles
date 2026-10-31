@@ -15,7 +15,7 @@ elif [[ -f $dest ]]; then
                 dest="$gitdir" ||
                 dest="${dest:h}"
 elif ! [[ -e $dest ]]; then
-        dest="$(autojump -- "$dest")"
+        dest="$(zoxide query -- "$dest")" || return 1
 fi
 find "$dest" -name ".git" -prune -o -type f -print \
         | fzf --preview="pistol {}" -m \

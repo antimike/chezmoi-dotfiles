@@ -106,6 +106,7 @@
         "format": "{icon} {capacity}%",
         "format-charging": "󰂄 {capacity}%",
         "format-plugged": "󰚥 {capacity}%",
+        "format-full": "󰚥 {capacity}%",   // on AC and full: the plug, not the plain battery icon
         "format-icons": [
             "󰁺",
             "󰁼",

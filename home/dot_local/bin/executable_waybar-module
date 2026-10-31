@@ -54,6 +54,7 @@ sunset_module() {
     return
   }
   sunset hold
+  sunset wake
   ptime=$(sed -n 's/^Time: //p' <<<"$prof")
   ptemp=$(sed -n 's/^Temperature: //p' <<<"$prof")
   [[ $prof == *"Identity: true"* ]] && identity=true
