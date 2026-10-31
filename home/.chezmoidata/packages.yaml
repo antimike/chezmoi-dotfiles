@@ -43,7 +43,9 @@ packageTargets:
       - { name: fd, dnf: fd-find }
       - { name: fzf, release: fzf }   # ~/.local/bin; zsh's integration is generated from it
       - git
+      - git-annex            # amontillado's git-annex libraries (amo-qnn)
       - git-crypt
+      - git-remote-gcrypt    # encrypted git remotes (amo-qnn)
       - { name: delta, dnf: git-delta }
       - jq
       - name: yq             # mikefarah's Go yq (comment-preserving YAML edits); not the Python jq wrapper
@@ -55,6 +57,7 @@ packageTargets:
       - rlwrap
       - socat
       - tmux
+      - util-linux-script    # `script` (record a terminal session; a pty for probes)
       - { name: vim, dnf: vim-enhanced }
       - { name: wget, dnf: wget2-wget }
       - zoxide               # `j`/`ji` directory jumps (zsh snippet zoxide.zsh)
