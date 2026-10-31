@@ -223,7 +223,7 @@ packageTargets:
       # Pinned-release tools (own installers; inventory entries)
       - { name: uwsm, release: uwsm }
       - { name: wl-clip-persist, release: wl-clip-persist }
-
+      - { name: matugen, release: matugen }   # palette generator (D73); Fedora's 3.1.0 is too old, keep it uninstalled
   work:
     description: Employer-only tooling (work_tooling host key)
     when:

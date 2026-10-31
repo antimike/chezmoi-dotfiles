@@ -1,0 +1,75 @@
+#!/bin/sh
+# run_onchange_install-matugen.sh.tmpl — install matugen (github.com/InioX/matugen)
+# to ~/.local/bin.
+#
+# Pins are in .chezmoidata/matugen.yaml; bumping them re-triggers this
+# installer. Upstream ships one Linux build (x86_64), so other platforms skip.
+# Only runs on Linux hosts whose `display_server` host key is "wayland"
+# (see .chezmoi.yml.tmpl). Skips with a note (exit 0), rather than failing
+# `chezmoi apply`, on other hosts.
+#
+# Fedora's matugen package (3.1.0, /usr/bin) is too old for amontillado v0.2;
+# ~/.local/bin comes first on PATH, and the installer warns while the package
+# is still installed.
+{{- $ds := dig "display_server" "x11" . -}}
+{{- $run := and (eq .chezmoi.os "linux") (eq .chezmoi.arch "amd64") (eq $ds "wayland") -}}
+{{- $v := .matugen.version -}}
+{{- $assetName := printf "matugen-%s-x86_64.tar.gz" $v -}}
+{{- $assetURL := printf "https://github.com/InioX/matugen/releases/download/v%s/%s" $v $assetName }}
+
+set -eu
+
+VERSION={{ $v | quote }}
+ASSET_NAME={{ $assetName | quote }}
+ASSET_URL={{ $assetURL | quote }}
+EXPECTED_SHA={{ .matugen.sha256 | quote }}
+INSTALL_PATH={{ joinPath .chezmoi.homeDir ".local" "bin" "matugen" | quote }}
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+
+if [ "$ENABLED" != 1 ]; then
+  echo "matugen installer: needs Linux x86_64 with display_server=wayland (this host: {{ .chezmoi.os }}/{{ .chezmoi.arch }}, {{ $ds }}); skipping" >&2
+  exit 0
+fi
+
+warn_distro_package() {
+  if command -v rpm >/dev/null 2>&1 && rpm -q matugen >/dev/null 2>&1; then
+    echo "matugen installer: the distro package $(rpm -q matugen) is still installed; remove it: sudo dnf remove matugen" >&2
+  fi
+}
+
+# Idempotency guard: `matugen --version` prints "matugen 4.2.0".
+if [ -x "$INSTALL_PATH" ] \
+    && [ "$("$INSTALL_PATH" --version 2>/dev/null | cut -d' ' -f2)" = "$VERSION" ]; then
+  echo "matugen installer: $VERSION already installed at $INSTALL_PATH" >&2
+  warn_distro_package
+  exit 0
+fi
+
+mkdir -p "$(dirname "$INSTALL_PATH")"
+
+tmp_tar=$(mktemp)
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_tar" "$tmp_dir"' EXIT
+
+echo "matugen installer: downloading $ASSET_URL" >&2
+curl -fsSL -o "$tmp_tar" "$ASSET_URL"
+
+actual=$(sha256sum "$tmp_tar" | awk '{print $1}')
+if [ "$EXPECTED_SHA" != "$actual" ]; then
+  echo "matugen installer: checksum mismatch for $ASSET_NAME" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+tar -xzf "$tmp_tar" -C "$tmp_dir"
+binary="$tmp_dir/matugen"
+if [ ! -f "$binary" ]; then
+  echo "matugen installer: no 'matugen' binary in $ASSET_NAME" >&2
+  exit 1
+fi
+
+chmod u+x "$binary"
+mv "$binary" "$INSTALL_PATH"
+echo "matugen installer: $VERSION installed to $INSTALL_PATH" >&2
+warn_distro_package
