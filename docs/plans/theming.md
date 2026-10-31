@@ -1,7 +1,7 @@
 ---
 summary: Long-running theming project: switchable theme bundles kept uniform across apps, wallpaper fetching and palette-aware selection, palette generation, fonts, pickers, nvim via lush
-status: in progress; library and theme engine moved to the standalone project amontillado (D70, 2026-10-27); v0.1 scaffolded
-updated: 2026-10-27
+status: in progress; library and theme engine moved to the standalone project amontillado (D70, 2026-10-27); v0.1 released, v0.2 design agreed (D73)
+updated: 2026-10-30
 ---
 
 # Theming plan
@@ -20,13 +20,15 @@ them with hand-picked colours first would mean doing them twice. Main-line posit
 hyprsunset widget (STATUS.md, next actions).
 
 **Two profiles (D66): decided 2026-10-27.** One palette for now; the cache layout is per profile anyway
-(`~/.cache/theme/<profile>/` falling back to `current/`, D39).
+(`~/.cache/theme/<profile>/`, with `~/.cache/theme/current` a symlink to the last applied profile, swapped atomically;
+D39, D73).
 
 **amontillado (D70, 2026-10-27).** The wallpaper library (fetcher, metrics, sidecars, index) and, as its v0.2, the theme
 engine (palette format, generator adapters, renderer, reload hooks, cache, contrast checks, per-output selection) are
 built as a standalone public project in `~/.local/src/amontillado`, installed with pipx at a pinned tag. Its
 `docs/design.md` is the design; this plan keeps the chezmoi side. Revised order: amontillado v0.1 → `amo fetch
---test-set` gives the generator comparison images → tinted-theming evaluation → amontillado v0.2 → the chezmoi include
+--test-set` gives the generator comparison images → tinted-theming evaluation (done 2026-10-30: tinty not adopted,
+amontillado renders its own templates from pinned template sources, D73) → amontillado v0.2 → the chezmoi include
 lines, hyprpaper and one theme end to end → riced styling.
 
 ## Goals (MH)
@@ -42,8 +44,10 @@ lines, hyprpaper and one theme end to end → riced styling.
 A runtime switcher must never edit chezmoi-managed files: the next `chezmoi apply` would revert or conflict. So:
 
 - chezmoi manages each app's config, and each config **includes a generated file** from `~/.cache/theme/current/`
-  (the same model as pywal's `~/.cache/wal`).
-- The switcher writes only that cache, then reloads each app.
+  (the same model as pywal's `~/.cache/wal`), or from a fixed profile's directory.
+- The switcher (`amo theme apply`) writes only that cache, then reloads each app. `current` is a symlink swapped
+  atomically (D73), so a **file watcher must watch `~/.cache/theme/` itself**: a watch on a file under `current/`
+  keeps pointing at the old profile's file after the swap.
 - A **theme** is a bundle: palette, fonts, icon theme, GTK theme, cursor. Two sources: **generated** (from a wallpaper)
   or **preset** (hand-made, ignores the wallpaper).
 
@@ -60,7 +64,7 @@ A runtime switcher must never edit chezmoi-managed files: the next `chezmoi appl
 | rofi | `@import` in the theme | read at each launch |
 | GTK3 | `gsettings` (theme, icons, cursor, font) + `gtk.css` | live through gsettings |
 | GTK4 / libadwaita | `~/.config/gtk-4.0/gtk.css` color overrides only | app restart |
-| nvim | lush spec reads the palette file | autocmd on a signal or file change |
+| nvim | lush spec reads `current/palette.lua` (D73) | watcher on `~/.cache/theme/` (not on the file), or a signal |
 
 **Limit:** libadwaita apps ignore `gtk-theme`; only colors can be overridden. "Uniform" means GTK3 fully, libadwaita
 colors only.
@@ -69,9 +73,13 @@ colors only.
 
 - **pywal** is what the X11 wallpaper timer uses. Upstream pywal has been unmaintained for years; the installed pipx
   package reports `pywal 3.8.15`, which looks like the pywal16 fork's numbering (to verify).
-- Candidates with proper template support: **wallust** (Rust, pywal-compatible templates, contrast checks) and
-  **matugen** (packaged in Fedora 44, 3.1.0; Material You tonal palettes). Compare them on a few wallpapers before
-  choosing.
+- Generators (D73): **matugen >= 4.0 first** (Material You tonal palettes; the base16 backend arrived in 4.0, so
+  amontillado refuses Fedora 44's 3.1.0), **wallust** second (Rust, pywal-compatible templates, contrast checks).
+  chezmoi pins matugen 4.2.0 and wallust 3.5.1 (chz-8bg.1). Compare them on the test set before styling (step 1).
+- Templates: amontillado renders them itself (no tinty, no pywal) from optional pinned sources: built-in
+  variables-only templates, tinted-theming repos, matugen-themes, pywal16 templates, a URL with sha256, a local path;
+  `amo theme sync` fetches, `amo theme apply` stays offline. An app can opt into matugen's own rendering
+  (`render_with: matugen`). The palette is base24 plus roles, with dark and light variants (`variant` per run or app).
 - **"Looks good" and contrast (MH asked for the community's accepted answer).** There is no single standard, but the
   common practice is: pick a generator that **enforces contrast** (matugen's tonal palettes pair foreground and
   background tones by design; wallust can check and adjust contrast) and map its color *roles* onto each app, rather
@@ -99,6 +107,8 @@ colors only.
 - **Selection:** the existing wallpaper timer (2 h) moves to Wayland and picks from a cluster: **hyprpaper** per output
   under Hyprland (installed, D63; IPC `hyprctl hyprpaper`), swaybg under SwayFX.
   Random vs deterministic (seeded by date, for example) is undecided.
+  After a theme apply, amontillado runs its `theme.wallpaper.reload` hook (its config, D73; e.g. a `hyprctl hyprpaper`
+  command); which setter that hook calls stays chezmoi's choice.
 - **Picker:** rofi with image thumbnails (rofi 2.0 shows them); picking sets the wallpaper and, if wanted,
   regenerates the theme.
 
@@ -116,16 +126,19 @@ colors only.
 
 ## nvim
 
-A lush.nvim spec that reads the generated palette file (roles, not raw colors) and rebuilds the colorscheme on change.
-The existing LazyVim colorscheme stays the fallback when no palette file exists.
+A lush.nvim spec in the nvim config reads `~/.cache/theme/current/palette.lua`, written by amontillado's built-in
+`nvim` template (base24, roles, variant; D73), and rebuilds the colorscheme on change. The watcher watches
+`~/.cache/theme/` (the `current` symlink is swapped, not the file rewritten); amontillado's docs carry an example
+spec and watcher, not a plugin. The existing LazyVim colorscheme stays the fallback when no palette file exists.
 
 ## Steps (not scheduled)
 
 Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontillado is marked.
 
-1. Choose the palette generator (matugen / wallust; pywal16 dropped as unmaintained) on the `amo fetch --test-set`
-   images; check each with `tools/term-contrast` (the kitty Blazer palette is the current hand-made baseline).
-   matugen 3.1.0 is installed (2026-10-27); open: can it produce usable ANSI 0-15?
+1. Compare the palette generators (matugen 4.2.0 / wallust 3.5.1, chz-8bg.1; pywal16 dropped as unmaintained) on the
+   `amo fetch --test-set` images; check each with `tools/term-contrast` (the kitty Blazer palette is the current
+   hand-made baseline). amontillado already ranks matugen first (D73); the comparison checks ANSI 0-15 quality
+   before styling (chz-8bg.2; MH kept it, 2026-10-30).
    **Test set fetched 2026-10-28** (amontillado v0.1.0: `amo fetch --test-set --atleast 3840x2160 --ratio 16:9`;
    8 kept of 23 thumbnails), records in `~/.local/share/amontillado/library/`: dark `wallhaven-xed63v`, light
    `wallhaven-739r63`, muted `wallhaven-dp2mol`, saturated `wallhaven-43ey53`, busy `wallhaven-3qz176`, sparse
@@ -136,7 +149,7 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.
 5. Fonts: chezmoi subset + nerd-fonts-installer; font pickers.
-6. lush.nvim spec.
+6. lush.nvim spec reading `palette.lua` (D73).
 7. Greeter theme sync (see the greeter section in [wayland-desktop.md](wayland-desktop.md)).
 
 ## Open questions
