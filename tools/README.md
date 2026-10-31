@@ -11,6 +11,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |
 | [term-contrast/](term-contrast/) | Contrast check of shell/CLI colour styles (fsh, autosuggestions, LS_COLORS, less, git, p10k) against a kitty palette |
+| [wallpaper-seeds-test/](wallpaper-seeds-test/) | Tests `run_after_wallpaper-seeds.sh` (hyprpaper's default link to the committed seed; seeds added to the amontillado library) with stubbed `amo` and `curl`: link missing/hand-set/dangling, downloads, checksum mismatch, offline, no amo, non-Wayland: `tools/wallpaper-seeds-test/wallpaper-seeds-test` |
 | [palette-compare/](palette-compare/) | matugen vs wallust settings on wallpapers as terminal palettes: term-contrast failures, accent contrast, distinctness and ANSI hue fidelity next to the live kitty palette, plus an HTML contact sheet: `tools/palette-compare/palette-compare.py` |
 | [lock-screen-test/](lock-screen-test/) | Tests `lock-screen` (hyprlock and swaylock paths, re-lock, leftover hyprlock, concurrent locks) against a throwaway headless sway |
 | [waybar-launch-test/](waybar-launch-test/) | Which monitor `waybar-launch` gives the main bar, for each dock/lid layout (stubbed `hyprctl`): `tools/waybar-launch-test/waybar-launch-test` |
