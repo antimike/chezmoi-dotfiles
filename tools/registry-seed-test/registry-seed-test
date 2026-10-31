@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# registry-seed-test — test home/private_dot_config/modify_projects.yaml (the project registry seed).
+#
+#   tools/registry-seed-test/registry-seed-test
+#
+# Feeds the modify_ script a live ~/.config/projects.yaml on stdin, as chezmoi does, and checks
+# the output: an empty file gets the seed; a live file keeps its local projects, keys written by
+# bd-track, inline comments and its own value on a conflict, gains missing seeded projects and
+# keys, and gets the seed's header; a second run changes nothing; without mikefarah's yq, or with
+# invalid YAML, the file passes through unchanged. Prints one line per case; exits 1 if any fails.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+script=$repo/home/private_dot_config/modify_projects.yaml
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+check() { # NAME GOT WANT
+  if [[ $2 == "$3" ]]; then echo "pass  $1: $2"; else echo "FAIL  $1: got '$2', want '$3'"; failed=1; fi
+}
+run() { sh "$script" 2>"$tmp/stderr"; }
+
+: | run >"$tmp/empty.yaml"
+check "empty: seeded projects" "$(yq '.projects | keys | join(",")' "$tmp/empty.yaml")" "chezmoi,bd-track,amontillado"
+check "empty: header kept" "$(head -1 "$tmp/empty.yaml" | cut -c1-28)" "# Project registry (D72): na"
+
+cat >"$tmp/live.yaml" <<'LIVE'
+# an old header
+projects:
+  chezmoi:
+    remote: someone/chezmoi-fork   # changed on this host
+  bd-track:
+    remote: antimike/bd-track
+    beads:
+      prefix: bd-timew
+      commit_cadence: 12h
+      dolt_push: false
+  localonly:
+    path: ~/Source/x   # marker: a local comment
+LIVE
+run <"$tmp/live.yaml" >"$tmp/out.yaml"
+q() { yq "$1" "$tmp/out.yaml"; }
+check "conflict: the live remote wins" "$(q .projects.chezmoi.remote)" "someone/chezmoi-fork"
+check "missing key added: chezmoi beads.prefix" "$(q .projects.chezmoi.beads.prefix)" "chz"
+check "bd-track keys kept" "$(q '.projects.bd-track.beads.commit_cadence + " " + (.projects.bd-track.beads.dolt_push | tostring)')" "12h false"
+# shellcheck disable=SC2088 # a literal path in the YAML, not a shell path
+check "local project kept" "$(q .projects.localonly.path)" "~/Source/x"
+check "missing project added" "$(q .projects.amontillado.beads.prefix)" "amo"
+check "inline comment kept" "$(grep -c 'marker: a local comment' "$tmp/out.yaml")" "1"
+check "header is the seed's" "$(grep -c 'an old header' "$tmp/out.yaml")/$(grep -c '^# Project registry (D72)' "$tmp/out.yaml")" "0/1"
+run <"$tmp/out.yaml" >"$tmp/out2.yaml"
+check "second run changes nothing" "$(cmp -s "$tmp/out.yaml" "$tmp/out2.yaml" && echo same)" "same"
+
+mkdir -p "$tmp/bin"
+printf '#!/bin/sh\necho "yq 3.4.3 (the Python jq wrapper)"\n' >"$tmp/bin/yq"
+chmod +x "$tmp/bin/yq"
+PATH=$tmp/bin:$PATH run <"$tmp/live.yaml" >"$tmp/noyq.yaml"
+check "no mikefarah yq: unchanged" "$(cmp -s "$tmp/live.yaml" "$tmp/noyq.yaml" && echo same)" "same"
+check "no mikefarah yq: warns" "$(grep -c 'not on PATH' "$tmp/stderr")" "1"
+printf 'projects: [unclosed\n' >"$tmp/bad.yaml"
+run <"$tmp/bad.yaml" >"$tmp/bad-out.yaml"
+check "invalid YAML: unchanged" "$(cmp -s "$tmp/bad.yaml" "$tmp/bad-out.yaml" && echo same)" "same"
+check "invalid YAML: warns" "$(grep -c 'merge failed' "$tmp/stderr")" "1"
+exit $failed

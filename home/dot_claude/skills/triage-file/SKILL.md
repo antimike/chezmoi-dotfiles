@@ -24,8 +24,9 @@ done/              handled tickets (moved there by /triage)
 ```
 
 Project names come from the registry `~/.config/projects.yaml`; `ticket --projects` lists them.
-A project not in the registry cannot receive tickets: ask MH to add it (chezmoi source
-`home/private_dot_config/projects.yaml`) rather than inventing a name.
+A project not in the registry cannot receive tickets: ask MH to add it (to the live file, or for
+an every-machine project to the seed in chezmoi's `home/private_dot_config/modify_projects.yaml`)
+rather than inventing a name.
 
 ## The one rule
 

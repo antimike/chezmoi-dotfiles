@@ -1,0 +1,60 @@
+#!/bin/sh
+# chezmoi modify_ script: merge the every-machine project seed into ~/.config/projects.yaml.
+#
+# The registry is written in place by other tools (bd-track `init-project`, `migrate`) and by
+# hand (projects on one host only), so chezmoi does not own the whole file. The seed below
+# names the projects wanted on every machine (MH, 2026-10-30), with their identity keys only
+# (remote, path, beads.prefix). The live file wins on any conflict: an apply adds missing
+# projects and keys and never reverts a tool's or a local write. Comments in the live file are
+# kept; the header comment is always the seed's. Schema: bd-track's docs/registry-schema.md.
+#
+# Guards: an empty or missing file gets the seed as is; without mikefarah's yq, or if the
+# merge fails (invalid YAML), the file passes through unchanged, with a warning.
+set -eu
+
+seed=$(cat <<'SEED'
+# Project registry (D72): names MH's projects and matches each to its clone by git remote
+# (owner/repo, any host or URL form), or by `path` for a repo without one.
+# Schema, and which tool owns each key: bd-track's docs/registry-schema.md
+# (~/.local/src/bd-track/docs/registry-schema.md); edit it there, not here.
+# Read by: bd-track, ticket, mani-discover. The ticket inbox is ~/.local/state/triage/<name>/.
+# chezmoi seeds the every-machine projects (modify_projects.yaml) and keeps everything else in
+# this file: projects registered on this host only, keys written by bd-track, comments.
+projects:
+  chezmoi:
+    remote: antimike/chezmoi-dotfiles
+    beads: {prefix: chz}
+  bd-track:
+    remote: antimike/bd-track
+    beads: {prefix: bd-timew}
+  amontillado:
+    remote: antimike/amontillado
+    beads: {prefix: amo}
+SEED
+)
+
+live=$(cat)
+if [ -z "$live" ]; then
+  printf '%s\n' "$seed"
+  exit 0
+fi
+
+if ! yq --version 2>/dev/null | grep -q mikefarah; then
+  echo "modify_projects.yaml: mikefarah's yq not on PATH; ~/.config/projects.yaml left unchanged" >&2
+  printf '%s\n' "$live"
+  exit 0
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+printf '%s\n' "$seed" >"$tmp/seed.yaml"
+printf '%s\n' "$live" >"$tmp/live.yaml"
+# `*n` merges only fields the live file lacks. yq's load() drops the seed's head comment, so it
+# is passed in separately.
+if HEAD=$(yq 'head_comment' "$tmp/seed.yaml") SEED="$tmp/seed.yaml" \
+  yq '. *n load(strenv(SEED)) | . head_comment = strenv(HEAD)' "$tmp/live.yaml" >"$tmp/out.yaml"; then
+  cat "$tmp/out.yaml"
+else
+  echo "modify_projects.yaml: merge failed; ~/.config/projects.yaml left unchanged" >&2
+  printf '%s\n' "$live"
+fi
