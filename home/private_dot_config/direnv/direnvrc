@@ -44,3 +44,23 @@ layout_pdm() {
     export PDM_ACTIVE=1
     export VIRTUAL_ENV
 }
+
+layout_uv() {
+    # after https://github.com/direnv/direnv/wiki/Python#uv
+    # Usage: layout uv [PYTHON]   (PYTHON: a version or interpreter for `uv venv --python`)
+    VIRTUAL_ENV="${UV_PROJECT_ENVIRONMENT:-$(pwd)/.venv}"
+
+    if [[ ! -d $VIRTUAL_ENV ]]; then
+        if [[ -f pyproject.toml ]]; then
+            log_status "No virtual environment exists. Executing \`uv sync\` to create one."
+            uv sync ${1:+--python "$1"}
+        else
+            log_status "No virtual environment exists. Executing \`uv venv\` to create one."
+            uv venv ${1:+--python "$1"} "$VIRTUAL_ENV"
+        fi
+    fi
+
+    PATH_add "$VIRTUAL_ENV/bin"
+    export UV_ACTIVE=1
+    export VIRTUAL_ENV
+}
