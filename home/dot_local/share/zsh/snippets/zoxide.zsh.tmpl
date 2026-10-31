@@ -1,0 +1,7 @@
+{{if lookPath "zoxide" -}}
+#!/bin/env zsh
+# Output of `zoxide init zsh --cmd j`: `j` jumps, `ji` picks with fzf. `--cmd j`
+# keeps clear of zinit's own `zi=zinit` alias.
+
+{{output "sh" "-c" (includeTemplate "safe-output.sh") "sh" "zoxide" "init" "zsh" "--cmd" "j"}}
+{{- end}}

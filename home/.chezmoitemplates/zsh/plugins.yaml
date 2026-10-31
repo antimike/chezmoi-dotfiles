@@ -15,8 +15,6 @@ plugins:
         ice:
           - subst'which -> builtin which'
       - url: mafredri/zsh-async
-      - url: rupa/z
-      - url: changyuheng/fz
       - url: molovo/tipz
       - url: mattmc3/zman
   - args:

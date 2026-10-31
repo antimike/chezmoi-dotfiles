@@ -57,6 +57,7 @@ packageTargets:
       - tmux
       - { name: vim, dnf: vim-enhanced }
       - { name: wget, dnf: wget2-wget }
+      - zoxide               # `j`/`ji` directory jumps (zsh snippet zoxide.zsh)
       - zsh
       # Secrets, signing, VPN
       - gh
