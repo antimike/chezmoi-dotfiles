@@ -224,6 +224,7 @@ packageTargets:
       - { name: uwsm, release: uwsm }
       - { name: wl-clip-persist, release: wl-clip-persist }
       - { name: matugen, release: matugen }   # palette generator (D73); Fedora's 3.1.0 is too old, keep it uninstalled
+      - { name: wallust, release: wallust }   # palette generator, second to matugen (D73); built from crates.io
   work:
     description: Employer-only tooling (work_tooling host key)
     when:
