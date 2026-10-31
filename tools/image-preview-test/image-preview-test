@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# image-preview-test — the method `image-preview` and ranger's scope.sh pick, per context.
+#
+#   tools/image-preview-test/image-preview-test
+#
+# Runs the source copies (home/dot_local/bin/executable_image-preview,
+# home/private_dot_config/ranger/executable_scope.sh) with a stub chafa and pistol first on
+# PATH that record their arguments; a pty (util-linux `script`) stands in for a terminal.
+# Covers: kitty, Windows Terminal (WSL2), foot, a plain terminal, the override, fzf's preview
+# size, ranger with and without image preview, a shell inside ranger, scope.sh routing
+# images vs text. Prints one line per case; exits 1 if any fails.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+mkdir -p "$tmp/bin"
+cp "$repo/home/dot_local/bin/executable_image-preview" "$tmp/bin/image-preview"
+cp "$repo/home/private_dot_config/ranger/executable_scope.sh" "$tmp/scope.sh"
+# shellcheck disable=SC2016 # expands in the stubs
+printf '#!/bin/sh\necho "chafa $*" >"$LOG"\n' >"$tmp/bin/chafa"
+# shellcheck disable=SC2016
+printf '#!/bin/sh\necho "pistol $*" >"$LOG"\n' >"$tmp/bin/pistol"
+chmod +x "$tmp/bin"/* "$tmp/scope.sh"
+# A real 1x1 PNG (base64), so file(1) reports image/png.
+base64 -d >"$tmp/pic.png" <<<'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+echo text >"$tmp/notes.txt"
+export LOG=$tmp/log PATH=$tmp/bin:$PATH
+
+check() { # NAME GOT WANT
+  if [[ $2 == "$3" ]]; then echo "pass  $1: $2"; else echo "FAIL  $1: got '$2', want '$3'"; failed=1; fi
+}
+# Run with a clean terminal environment plus VAR=VALUE args; print "exit|what ran".
+piped() {
+  rm -f "$LOG"
+  local rc=0
+  env -u KITTY_WINDOW_ID -u WT_SESSION -u TERM_PROGRAM -u RANGER_LEVEL -u FZF_PREVIEW_COLUMNS \
+    -u FZF_PREVIEW_LINES TERM=dumb "$@" </dev/null >/dev/null 2>&1 || rc=$?
+  echo "$rc|$(cat "$LOG" 2>/dev/null)"
+}
+tty() { # same, but stdout is a pty
+  rm -f "$LOG"
+  local cmd
+  printf -v cmd '%q ' "$@"
+  script -qec "env -u KITTY_WINDOW_ID -u WT_SESSION -u TERM_PROGRAM -u RANGER_LEVEL $cmd" /dev/null >/dev/null 2>&1 || true
+  cat "$LOG" 2>/dev/null || true
+}
+ip=("image-preview" "$tmp/pic.png" 40 20)
+
+check "kitty" "$(tty KITTY_WINDOW_ID=1 TERM=xterm-kitty "${ip[@]}")" "chafa --format kitty --size 40x20 --animate off -- $tmp/pic.png"
+check "Windows Terminal (WSL2)" "$(tty WT_SESSION=x TERM=xterm-256color "${ip[@]}")" "chafa --format sixels --size 40x20 --animate off -- $tmp/pic.png"
+check "foot" "$(tty TERM=foot "${ip[@]}")" "chafa --format sixels --size 40x20 --animate off -- $tmp/pic.png"
+check "plain terminal" "$(tty TERM=xterm-256color "${ip[@]}")" "chafa --format symbols --size 40x20 --animate off -- $tmp/pic.png"
+check "override" "$(tty TERM=xterm-kitty IMAGE_PREVIEW_FORMAT=symbols "${ip[@]}")" "chafa --format symbols --size 40x20 --animate off -- $tmp/pic.png"
+check "fzf preview size, kitty, piped" "$(piped TERM=xterm-kitty FZF_PREVIEW_COLUMNS=33 FZF_PREVIEW_LINES=11 image-preview "$tmp/pic.png")" "0|chafa --format kitty --size 33x11 --animate off -- $tmp/pic.png"
+check "ranger, image preview on" "$(piped RANGER_LEVEL=1 RANGER_IMAGES=True "${ip[@]}")" "7|"
+check "ranger, image preview off" "$(piped RANGER_LEVEL=1 RANGER_IMAGES=False TERM=xterm-kitty "${ip[@]}")" "0|chafa --format symbols --colors 256 --polite on --size 40x20 --animate off -- $tmp/pic.png"
+check "shell inside ranger draws directly" "$(tty RANGER_LEVEL=1 KITTY_WINDOW_ID=1 "${ip[@]}")" "chafa --format kitty --size 40x20 --animate off -- $tmp/pic.png"
+check "scope.sh: image, ranger draws" "$(piped RANGER_LEVEL=1 "$tmp/scope.sh" "$tmp/pic.png" 40 20 /cache True)" "7|"
+check "scope.sh: image, blocks" "$(piped RANGER_LEVEL=1 "$tmp/scope.sh" "$tmp/pic.png" 40 20 /cache False)" "0|chafa --format symbols --colors 256 --polite on --size 40x20 --animate off -- $tmp/pic.png"
+check "scope.sh: text to pistol" "$(piped RANGER_LEVEL=1 "$tmp/scope.sh" "$tmp/notes.txt" 40 20 /cache True)" "0|pistol $tmp/notes.txt"
+exit $failed

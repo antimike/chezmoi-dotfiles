@@ -38,6 +38,7 @@ packageTargets:
       # CLI essentials
       - bat
       - bc
+      - chafa                # image previews in any terminal (image-preview)
       - curl
       - direnv
       - { name: fd, dnf: fd-find }
