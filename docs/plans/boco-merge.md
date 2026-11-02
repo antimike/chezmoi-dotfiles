@@ -279,7 +279,7 @@ Wayland/Sway (preserving the i3 setup via a shared config fragment) is planned i
 1. `tools/compare-trees.py` shows the files moved from only-BOCO to both.
 2. `chezmoi diff` on the new targets is understood; apply those targets only; `chezmoi status` clean (apart from ` R reload-systemd-user.sh`, which runs on every apply).
 3. Guards hold: nothing WSL- or work-only is managed on this host (see Guards acceptance).
-4. `gitleaks dir --no-banner .` finds no leaks (the 2 accepted findings are in `.gitleaksignore`, D30); anything is a stop.
+4. `gitleaks dir --no-banner .` finds no leaks (the accepted finding is in `.gitleaksignore`, D30; two until 2026-11-02); anything is a stop.
 5. Grep changed files with the pattern list in the private `client-terms.md`; expect nothing.
 6. Tick [../bootstrap-debt.md](../bootstrap-debt.md) if a hand-installed tool is now managed; push the branch.
 
