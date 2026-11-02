@@ -12,7 +12,11 @@ stamp="${XDG_STATE_HOME:-$HOME/.local/state}/claude-transcripts-backup/last-chec
 
 trap '[ -x "$notify" ] && "$notify" --urgent "claude-transcripts-backup failed" "see: journalctl --user -u claude-transcripts-backup" || true' ERR
 
-restic cat config >/dev/null 2>&1 || { echo "no restic repo at $RESTIC_REPOSITORY" >&2; false; }
+[ -f "$RESTIC_REPOSITORY/config" ] || { echo "no restic repo at $RESTIC_REPOSITORY" >&2; false; }
+# restic needs to write its lock file; udisks may have mounted the drive read-only.
+[ -w "$RESTIC_REPOSITORY/locks" ] || { echo "repo not writable (read-only mount?): $RESTIC_REPOSITORY" >&2; false; }
+# Show restic's own reason (wrong password, pass/pinentry failure) instead of guessing.
+restic cat config >/dev/null
 
 restic backup --tag scheduled --exclude-caches "$HOME/.claude/projects"
 restic forget --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune
