@@ -62,12 +62,24 @@ A runtime switcher must never edit chezmoi-managed files: the next `chezmoi appl
 | wlogout (planned) | `@import` in `style.css` | read at each launch |
 | waybar | `@import` in `style.css` | `SIGUSR2` |
 | rofi | `@import` in the theme | read at each launch |
-| GTK3 | `gsettings` (theme, icons, cursor, font) + `gtk.css` | live through gsettings |
-| GTK4 / libadwaita | `~/.config/gtk-4.0/gtk.css` color overrides only | app restart |
+| GTK3 | `gsettings` (theme, icons, cursor, font); colours in a theme dir (adw-gtk3 style, `@import`ing the generated file) or in `~/.config/gtk-3.0/gtk.css` | gsettings keys live; a `gtk-theme` toggle re-reads the named theme's files and their `@import`s; user `gtk.css` only at app start |
+| GTK4 / libadwaita | `~/.config/gtk-4.0/gtk.css` color overrides only | `gtk.css` at app start; `color-scheme` and `accent-color` live via gsettings and the settings portal |
 | nvim | lush spec reads `current/palette.lua` (D73) | watcher on `~/.cache/theme/` (not on the file), or a signal |
 
 **Limit:** libadwaita apps ignore `gtk-theme`; only colors can be overridden. "Uniform" means GTK3 fully, libadwaita
 colors only.
+
+**GTK reload (chz-q1k; from amontillado's reading of the gtk3 3.24.52, gtk4 4.22.4 and libadwaita 1.9.1 source, not
+yet tested in a running app):** GTK3 and GTK4 load the user `gtk.css` once per process (a static provider with no file
+monitor), so rewriting it changes nothing in running apps. A `gtk-theme` toggle re-reads only the named theme's files,
+which is why wpgtk and flatcolor put the colours in a theme dir; a live GTK3 plan has to do the same. libadwaita uses
+its own resource stylesheet (dropped if `GTK_THEME` is set), applies user `gtk-4.0/gtk.css` at start only, and follows
+`color-scheme` and `accent-color` live through the settings portal (the accent is rounded to a named colour by OKLCH
+hue). Open with MH: theme dir + toggle vs restart-only (depends on amontillado amo-aqp.21, the libadwaita template);
+optional: `amo theme apply` sets `color-scheme`/`accent-color` in gsettings. Checked 2026-11-02 under Hyprland
+(portals `hyprland;gtk`): the portal relays `color-scheme` but answers "setting not found" for `accent-color`
+(xdg-desktop-portal-gtk 1.15.3 does not serve it; the gnome backend does but is not preferred), so the accent needs
+the gnome backend for `org.freedesktop.impl.portal.Settings` or stays restart-only.
 
 ## Palette generation
 
