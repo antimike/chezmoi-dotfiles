@@ -1,0 +1,5 @@
+{{/* safe-output.sh: a broken poetry renders empty with a warning instead of
+     aborting chezmoi; an empty result makes chezmoi remove the completion file. */ -}}
+{{if lookPath "poetry" -}}
+{{output "sh" "-c" (includeTemplate "safe-output.sh") "sh" "poetry" "completions" "zsh"}}
+{{- end -}}

@@ -8,3 +8,9 @@ repos:
         entry: gitleaks git --pre-commit --staged --redact --no-banner
         language: system
         pass_filenames: false
+      # Machine paths with the username (chz-7zz); history in docs/log/ is exempt.
+      - id: no-home-paths
+        name: no home paths
+        entry: tools/no-home-paths/no-home-paths
+        language: script
+        exclude: ^docs/log/

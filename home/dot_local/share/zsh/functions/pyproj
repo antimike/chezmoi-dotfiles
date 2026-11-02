@@ -48,7 +48,7 @@ if [[ -v opts[--user] ]]; then
   print "export GITHUB_USER='$user'" >>.envrc
   if [[ $user == antimike ]]; then
     print -l \
-      'export GITHUB_TOKEN="$(pass show professional/github/tokens/zbook | head -1)"' \
+      'export GITHUB_TOKEN="$(github-token)"' \
       'export GH_TOKEN="$GITHUB_TOKEN"' >>.envrc
   else
     print -u2 "GitHub username $user not recognized; no token added to .envrc"

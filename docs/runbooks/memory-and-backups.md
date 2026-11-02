@@ -6,12 +6,12 @@ updated: 2026-10-17
 
 # Memory and transcript backups
 
-Two independent mechanisms protect `~/.claude/projects` (one folder per project path, `-home-hseldon-…`):
+Two independent mechanisms protect `~/.claude/projects` (one folder per project path, `-home-<user>-…`):
 
 | | `claude-state` (git) | transcript backup (restic) |
 |---|---|---|
 | What | `memory/` and `reports/` folders only (transcripts gitignored; `reports/` added 2026-10-23 for session reports holding private detail) | everything: transcripts and memory |
-| Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree | `/run/media/hseldon/PortableSSD/backups/zbook/claude-transcripts` (restic repo on the external exFAT SSD) |
+| Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree | `/run/media/$USER/PortableSSD/backups/zbook/claude-transcripts` (restic repo on the external exFAT SSD) |
 | When | `sync-repos.timer`, daily (`claude-state` is its list entry; the dedicated `claude-state-sync` timer was retired 2026-10-17); a failed run retries 3 times, 15 min apart | `claude-transcripts-backup.timer`, daily, `Persistent=true`, only when the SSD is mounted |
 | Secrets | gitleaks scan inside `sync-repos` on every unattended commit (refuses without gitleaks), plus the repo's pre-commit hook for commits by hand | restic encrypts the repo; password in `pass` |
 | Source | `dot_local/bin/executable_sync-repos.tmpl`, list in `.chezmoitemplates/sync-repos-list` | `dot_local/bin/executable_claude-transcripts-backup.tmpl` |
@@ -27,7 +27,7 @@ Units live in `private_dot_config/private_systemd/private_user/`. `cleanupPeriod
 ## Common operations
 
 ```sh
-export RESTIC_REPOSITORY=/run/media/hseldon/PortableSSD/backups/zbook/claude-transcripts
+export RESTIC_REPOSITORY=/run/media/$USER/PortableSSD/backups/zbook/claude-transcripts
 export RESTIC_PASSWORD_COMMAND="pass show backup/restic-zbook"
 restic snapshots                           # list
 restic restore latest --target /tmp/restore --include '*/memory/*'   # restore selected paths

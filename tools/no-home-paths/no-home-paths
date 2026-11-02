@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# no-home-paths — reject files that hard-code this user's machine paths (chz-7zz).
+#
+#   tools/no-home-paths/no-home-paths FILE...     (run by pre-commit on staged files)
+#
+# Flags /home/$USER/, /run/media/$USER/ and the auto-memory slug form -home-$USER-
+# (docs/conventions.md, "Public vs private": write ~, $USER, -home-<user>- or
+# <project-dir> instead). The username is read at run time, so it is not spelled out
+# in this public repo. docs/log/ is excluded in .pre-commit-config.yaml: history
+# stays as recorded. Exit 1 lists the hits.
+set -euo pipefail
+
+user="${USER:-$(id -un)}"
+[[ $# -gt 0 ]] || exit 0
+
+status=0
+for f in "$@"; do
+    [[ -f $f ]] || continue
+    if grep -nIF -e "/home/$user/" -e "/run/media/$user/" -e "-home-$user-" -- "$f" \
+        | sed "s|^|$f:|"; then
+        status=1
+    fi
+done
+[[ $status -eq 0 ]] || echo "no-home-paths: use ~, \$USER, -home-<user>- or <project-dir> (docs/conventions.md)" >&2
+exit "$status"
