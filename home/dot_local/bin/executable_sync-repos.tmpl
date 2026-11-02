@@ -53,6 +53,18 @@ fi
 
 stamp="$(hostname) $(date -u +%Y-%m-%dT%H:%MZ)"
 
+# Why a pull/push probably failed. Asking scdaemon for the card serial needs no
+# PIN, so it tells "key absent" apart from "key present but the PIN prompt went
+# unanswered" (gpg-agent's pinentry times out and the agent refuses to sign).
+auth_hint() {
+    local reply
+    reply="$(gpg-connect-agent 'scd serialno' /bye 2>/dev/null || true)"
+    case "$reply" in
+        *"S SERIALNO"*) echo "network, or YubiKey PIN prompt unanswered: agent refused" ;;
+        *) echo "network, or YubiKey not plugged in" ;;
+    esac
+}
+
 # Prints the reason and returns non-zero on failure.
 sync_one() {
     local repo="$1"
@@ -81,11 +93,11 @@ sync_one() {
             git rebase --abort >&2 || true
             echo "rebase conflict with upstream (aborted); resolve by hand"
         else
-            echo "git pull failed (network or auth; YubiKey plugged in?)"
+            echo "git pull failed ($(auth_hint))"
         fi
         return 1
     fi
-    git push -q >&2 || { echo "git push failed (network or auth; YubiKey plugged in?)"; return 1; }
+    git push -q >&2 || { echo "git push failed ($(auth_hint))"; return 1; }
     log "pushed ${repo}"
 }
 
