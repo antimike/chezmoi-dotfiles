@@ -69,7 +69,7 @@ if [[ -n ${TICKET_PICKER_TERM:-} ]]; then
   read -ra term <<<"$TICKET_PICKER_TERM"
 else
   # In $HOME, so mise reads ~/.tool-versions (the pinned nvim).
-  term=(kitty --class ticket-editor --title "New ticket: $project" --directory "$HOME")
+  term=(kitty -c "$HOME/.config/kitty/popup.conf" --class ticket-editor --title "New ticket: $project" --directory "$HOME")
 fi
 "${term[@]}" sh -c "$script" sh "$project" "$text" "$result" || true
 if [[ -s $result ]]; then

@@ -24,7 +24,7 @@
     "clock": {
         "format": "{:%a %d %b  %H:%M}",
         "tooltip-format": "<tt>{calendar}</tt>",
-        "on-click": "kitty --class bar-popup -e calcurse",
+        "on-click": "kitty -c $HOME/.config/kitty/popup.conf --class bar-popup -e calcurse",
         "calendar": {
             "mode": "month",
             "weeks-pos": "left",
@@ -84,7 +84,7 @@
         "tooltip-format-ethernet": "{ifname} {ipaddr}/{cidr} via {gwaddr}",
         "tooltip-format-wifi": "{ifname} {essid} {signalStrength}% {frequency} GHz\n{ipaddr}/{cidr}",
         "on-click": "networkmanager_dmenu",
-        "on-click-right": "kitty --class bar-popup -e nmtui"
+        "on-click-right": "kitty -c $HOME/.config/kitty/popup.conf --class bar-popup -e nmtui"
     },
     "bluetooth": {
         "format": "󰂯",
@@ -96,7 +96,7 @@
         "tooltip-format-enumerate-connected": "{device_alias} {device_address}",
         "on-click": "rofi-bluetooth -theme bar-menu",
         "on-click-right": "blueman-manager",
-        "on-click-middle": "kitty --class bar-popup -e bluetoothctl"
+        "on-click-middle": "kitty -c $HOME/.config/kitty/popup.conf --class bar-popup -e bluetoothctl"
     },
     "battery": {
         "states": {

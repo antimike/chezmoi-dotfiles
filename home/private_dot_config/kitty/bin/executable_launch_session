@@ -9,9 +9,11 @@ declare -a opts=(
 	--listen-on unix:/tmp/kitty-"$SESSION"
 )
 
+# Floating popups close without a confirmation (popup.conf)
 case "$SESSION" in
 notes)
 	opts+=(
+		--config "${HOME}/.config/kitty/popup.conf"
 		--class floater
 		--override background_opacity=0.8
 		--override tab_bar_style=hidden
@@ -19,6 +21,7 @@ notes)
 	;;
 media)
 	opts+=(
+		--config "${HOME}/.config/kitty/popup.conf"
 		--class dropdown
 		--override background_opacity=0.8
 	)
