@@ -77,7 +77,7 @@ colors only.
   amontillado refuses Fedora 44's 3.1.0), **wallust** second (Rust, pywal-compatible templates, contrast checks).
   chezmoi pins matugen 4.2.0 and wallust 3.5.1 (chz-8bg.1). **Compared 2026-10-30 (step 1): neither one's raw ANSI
   output is usable**; matugen's base16 backend is pywal-style clustering, not Material, so its accents carry no named
-  hue and no contrast. How amontillado builds ANSI 0-15 is open (step 1 below).
+  hue and no contrast. amontillado builds ANSI 0-15 itself (its decision 11, 2026-10-30; step 1 below).
 - Templates: amontillado renders them itself (no tinty, no pywal) from optional pinned sources: built-in
   variables-only templates, tinted-theming repos, matugen-themes, pywal16 templates, a URL with sha256, a local path;
   `amo theme sync` fetches, `amo theme apply` stays offline. An app can opt into matugen's own rendering
@@ -152,11 +152,15 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
      red turns grey on muted pictures.
    - **wallust `-k -c lchansi -p ansidark16`**: 6/6 hues, but the accents are mostly fixed (yellow, magenta, cyan
      identical on all 8 pictures); colour 8 and red still fail 3:1 on some pictures (xed63v: 2.30, 2.42).
-   **Open (MH, 2026-10-30; for the amontillado session):** A, amontillado builds ANSI 0-15 from fixed nominal hues
-   with lightness and chroma from matugen's tonal palettes (Claude's recommendation), or B, wallust's ANSI mode plus
-   amontillado's contrast adjust; C (matugen base16 plus the adjust) does not fix the hues. Handed off as an
-   amontillado ticket (`2026-10-30-matugen-4-2-s-base16-output-does-not-assign-named.md`), with the evidence. No
-   decision recorded here until that session decides.
+   **Outcome (amontillado decision 11, MH 2026-10-30):** option A by default: amontillado assigns base08-base0F
+   (ANSI 1-6, 9-14) from fixed nominal OKLCH hues, chroma from the picture's accent, lightness per variant, then its
+   contrast check; the generator supplies only the ramp, accent and secondary. `theme.hues: generator` (`--hues`)
+   keeps the generator's own colours (matugen `base16`, or wallust `-k -c lchansi -p ansidark16`). Rejected: matugen
+   `custom_colors` with `blend = true` (hues collapse toward the picture's). Recorded in amontillado's
+   `docs/design.md`, "Theme engine (v0.2)" > "Generators" ("Named hues") and "Theme engine: decisions" item 11
+   (`~/.local/src/amontillado/docs/design.md`; the GitHub copy once amontillado's `main` is pushed). Implemented
+   by amo-aqp.20; its calibration run is `palette-compare` on this test set, which first needs to read
+   `amo palette` output (chz-98w, deferred until amo-aqp.12).
    **Test set fetched 2026-10-28** (amontillado v0.1.0: `amo fetch --test-set --atleast 3840x2160 --ratio 16:9`;
    8 kept of 23 thumbnails), records in `~/.local/share/amontillado/library/`: dark `wallhaven-xed63v`, light
    `wallhaven-739r63`, muted `wallhaven-dp2mol`, saturated `wallhaven-43ey53`, busy `wallhaven-3qz176`, sparse
