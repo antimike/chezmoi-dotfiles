@@ -73,7 +73,7 @@ Deferred: hooks in `bd-track`/`claude-config`; chezmoi provisioning of `claude-s
 ## Blockers / watch
 - **SQM decision point (D67; MH torn between options, keep in view):** option A (cake both ways, Shortcut-FE off) pegs the router CPU on big downloads (~30 Mbit/s shaped ceiling). Revisit B (SFE on, upload-only), C (25 Mbit/s down) or cake-autorate if the router moves, download speed starts to matter more, latency under load creeps back, or the router lags: [runbooks/home-network.md](runbooks/home-network.md), "SQM on the router".
 - **No suspend while docked (D61)**: unplug the monitors first. A wedged display: SysRq REISUB (hold Alt, tap Fn+Home, then R E I S U B; installed and tested); holding the power key is a hard power cut.
-- `gitleaks dir .` reports **no leaks**: the 2 accepted findings (D30) are in `.gitleaksignore` by `file:rule:line` fingerprint. If one of those files changes so the finding moves line, it reappears: re-review, then refresh the fingerprint. Anything else is a stop.
+- `gitleaks dir .` reports **no leaks**: the accepted finding (D30; one since chz-71g, 2026-11-02) is in `.gitleaksignore` by `file:rule:line` fingerprint. If that file changes so the finding moves line, it reappears: re-review, then refresh the fingerprint. Anything else is a stop.
 - The YubiKey must be plugged in for pushes, signing tags, `pass`, and the backup/sync timers.
 - Atlassian/Jira items are held until a redaction pass ([plans/boco-merge.md](plans/boco-merge.md), "Held items").
 - No second machine for testing the zsh switch-over; use the scratch-home method in the plan.

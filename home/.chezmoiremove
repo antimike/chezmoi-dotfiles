@@ -21,3 +21,7 @@
 # create_wallpaper/ deployed literally (create_ is a file-only prefix); since 2026-10-30
 # the source is wallpaper/, the X11 timer's library, holding the seed (chz-8bg.3).
 .local/share/create_wallpaper
+# Jupyter notebook config, self-signed cert and key, dropped on 2026-11-02 (chz-71g).
+.jupyter/jupyter_notebook_config.json
+.jupyter/migrated
+.jupyter/certs
