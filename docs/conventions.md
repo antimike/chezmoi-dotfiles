@@ -31,6 +31,10 @@ updated: 2026-10-23
 - This repo, `bd-track`, `claude-config`, `chess_trainer`, `resume-builder` are **public**. Before committing: `gitleaks dir <path>` (`detect` is deprecated; expect no leaks here, see D30) and the client-term grep (pattern list in the private repo: `~/Source/chezmoi-boco/docs/zbook-migration/client-terms.md`). In this repo both run as `tools/public-scan/public-scan`.
 - Do not migrate client-project material. Sensitive inventories are in `~/Source/chezmoi-boco/docs/zbook-migration/`.
 - Never print secrets (`pass show`, `gpg -d`): redirect or pipe, or they land in the transcript.
+- No machine paths with the username: write `~`, `$USER` (`/run/media/$USER/...`), `-home-<user>-...` and
+  `<project-dir>` = this repo's auto-memory project dir, `~/.claude/projects/<repo-path slug>`. History (`docs/log/`,
+  dated results) stays as recorded; the hostname `zbook` is fine where the text is about this host. A pre-commit hook
+  (`no-home-paths`) rejects `/home/<user>/`, `/run/media/<user>/` and `-home-<user>-` outside `docs/log/`.
 
 ## Chezmoi
 - `$PC` = this repo (chezmoi source root `~/.local/share/chezmoi/home` since Phase 0a; docs and `CLAUDE.md` stay at the repo root). Never `chezmoi init/apply` against the reference clone `~/Source/chezmoi-boco`.
