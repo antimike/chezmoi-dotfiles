@@ -1,0 +1,18 @@
+{{- $wsl := .chezmoi.kernel.osrelease | lower | contains "wsl" -}}
+# bd-track host settings (managed by chezmoi: edit
+# home/private_dot_config/bd-track/config.yaml.tmpl, not this file).
+# Schema: bd-track's docs/registry-schema.md, "Host settings". Project settings live in the
+# shared registry ~/.config/projects.yaml, not here. `bd-track init-project` rewrites
+# idle_stop_hours/check_interval here; `chezmoi apply` puts them back (bd-track ticket filed
+# 2026-11-02 to stop that).
+global:
+  check_interval: daily       # systemd timer cadence for bd-track cleanup
+  idle_stop_hours: 4          # 0 disables the idle-stop timer
+  # always | never | true | false (not yes/no/on/off). WSL2's network stack stalls pushes.
+  dolt_push: {{ if $wsl }}never{{ else }}false{{ end }}
+  # Where to find clones of registry projects with a remote but no path; the roots
+  # mani-discover scans. Missing directories are skipped. $BD_TRACK_SCAN_ROOTS overrides.
+  scan_roots: [~/Source, ~/.local/src, ~/Documents]
+  defaults:
+    statuses: []
+    hooks: []
