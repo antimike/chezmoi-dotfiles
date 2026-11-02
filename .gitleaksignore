@@ -1,5 +1,5 @@
-# Accepted gitleaks findings (D30): a weather-API key in a service template and a
-# Jupyter service-key .pem. Fingerprints are file:rule:line, so a finding that moves
-# to another line shows up again and needs a fresh look (and a new fingerprint).
+# Accepted gitleaks finding (D30): a weather-API key in a service template (the
+# Jupyter service-key .pem went with chz-71g, 2026-11-02). Fingerprints are
+# file:rule:line, so a finding that moves to another line shows up again and needs
+# a fresh look (and a new fingerprint).
 home/private_dot_config/private_systemd/private_user/private_polybar-weather.service.tmpl:generic-api-key:8
-home/private_dot_jupyter/private_certs/private_service-key.pem:private-key:1
