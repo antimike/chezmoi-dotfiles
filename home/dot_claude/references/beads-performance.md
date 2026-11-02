@@ -85,7 +85,8 @@ bd-track init-project --no-git-ops --install-systemd
 # Additional projects: bd-track init-project --path ~/Source/Other --days 14
 ```
 
-This writes `~/.config/bd-track/repos.yaml` (multi-project registry) and installs
+This registers the project in `~/.config/projects.yaml` (the shared registry; host
+settings go to `~/.config/bd-track/config.yaml`) and installs
 `~/.config/systemd/user/bd-track-cleanup.{service,timer}` if not already present.
 The timer fires daily (`Persistent=true` catches up missed runs on WSL2 wake).
 
@@ -103,15 +104,24 @@ bd-track cleanup --skip-commit # skip dolt commit if working set is clean
 
 Cleanup logs go to `~/.cache/bd-track/cleanup.log` (1MB rotating, 3 backups).
 
-**Per-repo cadence config** (`~/.config/bd-track/repos.yaml`):
+**Per-project cadence config** (bd-track >= 0.7.0; schema in bd-track's
+`docs/registry-schema.md`). Per project, in `~/.config/projects.yaml`:
+```yaml
+projects:
+  <project>:
+    remote: <owner>/<repo>  # or path: ~/Source/<project>
+    beads:
+      prefix: <prefix>
+      commit_cadence: 1d    # how often to commit
+      compact_days: 7       # rolling history window
+```
+Per host, in `~/.config/bd-track/config.yaml`:
 ```yaml
 global:
   check_interval: daily   # systemd OnCalendar value
-repos:
-  - path: /home/user/Source/<project>
-    commit_cadence: 1d    # how often to commit
-    compact_days: 7       # rolling history window
 ```
+A leftover `~/.config/bd-track/repos.yaml` is moved over by `bd-track migrate registry`
+(dry run, then `--apply`); chezmoi prints that dry run on every apply while the file exists.
 
 The timer fires at `check_interval`; per-repo cadence is enforced by checking
 `~/.cache/bd-track/cleanup-state.json` (last_run timestamps) in the service script.
