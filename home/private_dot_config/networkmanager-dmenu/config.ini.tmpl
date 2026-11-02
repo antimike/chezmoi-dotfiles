@@ -19,7 +19,7 @@ obscure = True
 
 [editor]
 # No nm-connection-editor installed, so "Launch connection editor" runs nmtui here.
-terminal = kitty --class bar-popup
+terminal = kitty -c {{ joinPath .chezmoi.homeDir ".config/kitty/popup.conf" }} --class bar-popup
 gui_if_available = True
 
 [nmdm]
