@@ -65,7 +65,7 @@ Categories (workflow stages):
 
 Status name regex: `[a-z][a-z0-9_-]*` (lowercase only, letter-first, hyphens and underscores OK, no spaces, no caps). Hierarchical-feeling names require hyphens: `review-local:wip`, `review-pr:wip` -- the colon does NOT separate sub-names.
 
-bd-track sidecar mirroring: `~/.config/bd-track/repos.yaml` has `repos[].statuses` as a free-text array. Keep it aligned with bd's `status.custom` (minus the `:category` suffix) so `bd-timew` recognizes the same status names.
+bd-track sidecar mirroring: the registry `~/.config/projects.yaml` has `projects.<name>.beads.statuses` as a free-text array (bd-track >= 0.7.0; the legacy `~/.config/bd-track/repos.yaml` is migrated by `bd-track migrate registry`). Keep it aligned with bd's `status.custom` (minus the `:category` suffix) so `bd-timew` recognizes the same status names.
 
 ## Dependency edge type semantics
 
