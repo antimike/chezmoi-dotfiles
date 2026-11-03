@@ -1,30 +1,74 @@
 {{- if lookPath "restic" -}}
 #!/usr/bin/env bash
-# Back up ~/.claude/projects (transcripts + memory) to a restic repo on the
-# PortableSSD. Run by claude-transcripts-backup.timer, which is conditional on
-# the drive being mounted. The restic password lives in `pass` (backup/restic-zbook).
+# Back up ~/.claude/projects (transcripts + memory) to a restic repo on each backup
+# drive listed in .chezmoidata/backups.yaml that is mounted; unmounted drives are
+# skipped. Run by claude-transcripts-backup.timer, which runs only while at least one
+# of them is mounted. All repos share one restic password, kept in `pass`
+# (backup/restic-{{ .chezmoi.hostname }}); unattended runs read a systemd credential copy
+# of it instead (D74), so no YubiKey PIN prompt.
+# CLAUDE_TRANSCRIPTS_REPO=<path> backs up to that one repo instead; CLAUDE_TRANSCRIPTS_MEDIA
+# replaces /run/media/$USER (tests: tools/claude-transcripts-backup-test).
 set -euo pipefail
 
-export RESTIC_REPOSITORY="${CLAUDE_TRANSCRIPTS_REPO:-/run/media/$USER/PortableSSD/backups/{{ .chezmoi.hostname }}/claude-transcripts}"
-export RESTIC_PASSWORD_COMMAND="${RESTIC_PASSWORD_COMMAND:-pass show backup/restic-{{ .chezmoi.hostname }}}"
+drives=({{ range .backups.claude_transcripts.drives }}{{ . | quote }} {{ end }})
+cred="${CREDENTIALS_DIRECTORY:-}/claude-transcripts-backup.restic"
+if [ -z "${RESTIC_PASSWORD_COMMAND:-}" ] && [ -n "${CREDENTIALS_DIRECTORY:-}" ] && [ -r "$cred" ]; then
+    # restic refuses a password file and a password command together.
+    export RESTIC_PASSWORD_FILE="$cred"
+    echo "using credential claude-transcripts-backup.restic"
+else
+    export RESTIC_PASSWORD_COMMAND="${RESTIC_PASSWORD_COMMAND:-pass show backup/restic-{{ .chezmoi.hostname }}}"
+fi
+media="${CLAUDE_TRANSCRIPTS_MEDIA:-/run/media/$USER}"
 notify="$HOME/.claude/scripts/notify"
-stamp="${XDG_STATE_HOME:-$HOME/.local/state}/claude-transcripts-backup/last-check"
+stamps="${XDG_STATE_HOME:-$HOME/.local/state}/claude-transcripts-backup"
 
 trap '[ -x "$notify" ] && "$notify" --urgent "claude-transcripts-backup failed" "see: journalctl --user -u claude-transcripts-backup" || true' ERR
 
-[ -f "$RESTIC_REPOSITORY/config" ] || { echo "no restic repo at $RESTIC_REPOSITORY" >&2; false; }
-# restic needs to write its lock file; udisks may have mounted the drive read-only.
-[ -w "$RESTIC_REPOSITORY/locks" ] || { echo "repo not writable (read-only mount?): $RESTIC_REPOSITORY" >&2; false; }
-# Show restic's own reason (wrong password, pass/pinentry failure) instead of guessing.
-restic cat config >/dev/null
+# backup_one <name> <repo>: back up, prune, and check at most every 30 days.
+backup_one() {
+    export RESTIC_REPOSITORY="$2"
+    [ -f "$RESTIC_REPOSITORY/config" ] || { echo "no restic repo at $RESTIC_REPOSITORY" >&2; return 1; }
+    # restic needs to write its lock file; udisks may have mounted the drive read-only.
+    [ -w "$RESTIC_REPOSITORY/locks" ] || { echo "repo not writable (read-only mount?): $RESTIC_REPOSITORY" >&2; return 1; }
+    # Show restic's own reason (wrong password, pass/pinentry failure) instead of guessing.
+    restic cat config >/dev/null
 
-restic backup --tag scheduled --exclude-caches "$HOME/.claude/projects"
-restic forget --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune
+    restic backup --tag scheduled --exclude-caches "$HOME/.claude/projects"
+    restic forget --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune
 
-# Integrity check at most every 30 days.
-mkdir -p "$(dirname "$stamp")"
-if [ ! -e "$stamp" ] || [ -n "$(find "$stamp" -mtime +30)" ]; then
-    restic check
-    touch "$stamp"
+    local stamp="$stamps/last-check-$1"
+    mkdir -p "$stamps"
+    if [ ! -e "$stamp" ] || [ -n "$(find "$stamp" -mtime +30)" ]; then
+        restic check
+        touch "$stamp"
+    fi
+}
+
+names=() repos=()
+if [ -n "${CLAUDE_TRANSCRIPTS_REPO:-}" ]; then
+    names=(custom) repos=("$CLAUDE_TRANSCRIPTS_REPO")
+else
+    for d in "${drives[@]}"; do
+        if mountpoint -q "$media/$d"; then
+            names+=("$d") repos+=("$media/$d/backups/{{ .chezmoi.hostname }}/claude-transcripts")
+        else
+            echo "skipping $d: not mounted"
+        fi
+    done
 fi
+# The unit's mount conditions normally keep this from happening.
+[ "${#repos[@]}" -gt 0 ] || { echo "no backup drive mounted"; exit 0; }
+
+# One failing drive must not stop the others. errexit is ignored inside a function
+# called from a condition (`if`, `||`), even in a subshell, so each drive runs in its
+# own bash process; that also keeps the ERR trap (one notification) out of it.
+export -f backup_one
+export stamps
+failed=()
+for i in "${!repos[@]}"; do
+    echo "== ${names[i]}: ${repos[i]}"
+    bash -euo pipefail -c 'backup_one "$@"' _ "${names[i]}" "${repos[i]}" || failed+=("${names[i]}")
+done
+[ "${#failed[@]}" -eq 0 ] || { echo "failed: ${failed[*]}" >&2; false; }
 {{- end }}

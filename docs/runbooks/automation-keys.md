@@ -1,7 +1,7 @@
 # Automation keys (systemd credentials)
 
-Keys that unattended user services use instead of the YubiKey (D74). Today: one GitHub deploy key per repo that
-`sync-repos` pushes. The restic password for `claude-transcripts-backup` is the next candidate (chz-6w5).
+Secrets that unattended user services use instead of the YubiKey (D74): one GitHub deploy key per repo that
+`sync-repos` pushes, and a copy of the restic password for `claude-transcripts-backup` (chz-6w5).
 
 ## How it works
 
@@ -25,6 +25,7 @@ Keys that unattended user services use instead of the YubiKey (D74). Today: one 
 | Credential | Used by | GitHub key |
 |---|---|---|
 | `sync-repos.claude-state` | `sync-repos.service` (`ImportCredential=sync-repos.*`) | deploy key `sync-repos@zbook` on `antimike/claude-state`, write access |
+| `claude-transcripts-backup.restic` | `claude-transcripts-backup.service` (`ImportCredential=claude-transcripts-backup.*`) | none: a copy of `pass` `backup/restic-zbook`, made as in [memory-and-backups.md](memory-and-backups.md) |
 
 ## New key (or a new repo for sync-repos)
 

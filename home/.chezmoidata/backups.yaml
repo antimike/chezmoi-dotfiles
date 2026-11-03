@@ -1,0 +1,14 @@
+# Removable drives that hold backups (chz-6w5). A drive is named by its filesystem label,
+# which udisks uses as the mount point: /run/media/$USER/<label>.
+#
+# claude_transcripts.drives: restic repos at <mount>/backups/<host>/claude-transcripts.
+# claude-transcripts-backup backs up to every listed drive that is mounted and skips the
+# others; claude-transcripts-backup.service runs when at least one is mounted. The first
+# drive is the primary (the one to copy from when a new drive is added). A listed drive
+# that is mounted but has no repo, or is read-only, fails the run (and notifies).
+# Adding a drive: docs/runbooks/memory-and-backups.md, "Add a backup drive".
+backups:
+  claude_transcripts:
+    drives:
+      - PortableSSD # SanDisk Portable SSD 2 TB, primary (MH, 2026-11-03)
+      - Backups # Kingston DataTraveler Elite G2 29 GB stick, second copy (MH, 2026-11-03)
