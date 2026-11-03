@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# sync-repos-deploy-key: give sync-repos its own SSH key for one repo (D74).
+#
+# Usage: sync-repos-deploy-key [--force] <repo-dir>
+#
+# Generates an ed25519 key in $XDG_RUNTIME_DIR (tmpfs), encrypts the private
+# half with user-scoped systemd-creds (TPM2 where present) to
+#   ~/.config/credstore.encrypted/sync-repos.<repo>
+# and deletes the plaintext. sync-repos.service imports it with
+# ImportCredential=, so the key is decrypted only into the unit's private
+# credentials directory while it runs. The public half goes to
+#   ~/.ssh/deploy-keys/sync-repos.<repo>.pub
+# and is printed, to add on GitHub as a deploy key with write access
+# (repo Settings > Deploy keys). <repo> is the remote's repository name.
+# --force replaces an existing credential.
+
+set -euo pipefail
+
+force=0
+if [ "${1:-}" = "--force" ]; then force=1; shift; fi
+[ $# -eq 1 ] || { echo "usage: sync-repos-deploy-key [--force] <repo-dir>" >&2; exit 2; }
+
+repo_dir="$1"
+url="$(git -C "$repo_dir" remote get-url origin)" \
+    || { echo "sync-repos-deploy-key: no origin remote in $repo_dir" >&2; exit 1; }
+slug="${url%.git}"
+slug="${slug##*[:/]}"            # git@host:owner/name.git -> name
+owner="${url%/*}"
+owner="${owner##*[:/]}"
+name="sync-repos.${slug}"
+
+store="${XDG_CONFIG_HOME:-$HOME/.config}/credstore.encrypted"
+cred="${store}/${name}"
+pubdir="${HOME}/.ssh/deploy-keys"
+if [ -e "$cred" ] && [ "$force" -eq 0 ]; then
+    echo "sync-repos-deploy-key: $cred exists; --force replaces it" >&2
+    exit 1
+fi
+
+tmp="$(mktemp -d "${XDG_RUNTIME_DIR:?}/deploy-key.XXXXXX")"
+trap 'rm -rf "$tmp"' EXIT
+ssh-keygen -q -t ed25519 -N '' -C "sync-repos@$(hostname) ${owner}/${slug}" -f "$tmp/key"
+
+mkdir -p "$store" "$pubdir"
+chmod 700 "$store"
+systemd-creds --user --name="$name" encrypt "$tmp/key" "$cred"
+chmod 600 "$cred"
+install -m 644 "$tmp/key.pub" "$pubdir/${name}.pub"
+
+echo "Encrypted: $cred"
+echo "Add this as a deploy key with write access:"
+echo "  https://github.com/${owner}/${slug}/settings/keys/new"
+cat "$tmp/key.pub"

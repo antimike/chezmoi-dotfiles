@@ -58,6 +58,10 @@ stamp="$(hostname) $(date -u +%Y-%m-%dT%H:%MZ)"
 # unanswered" (gpg-agent's pinentry times out and the agent refuses to sign).
 auth_hint() {
     local reply
+    if [ -n "${GIT_SSH_COMMAND:-}" ]; then
+        echo "network, or deploy key rejected (added on GitHub with write access?)"
+        return
+    fi
     reply="$(gpg-connect-agent 'scd serialno' /bye 2>/dev/null || true)"
     case "$reply" in
         *"S SERIALNO"*) echo "network, or YubiKey PIN prompt unanswered: agent refused" ;;
@@ -86,6 +90,18 @@ sync_one() {
     if ! git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
         log "no upstream for ${repo}; committed locally only"
         return 0
+    fi
+
+    # A deploy key from sync-repos-deploy-key (D74), imported by the service,
+    # replaces the YubiKey for this repo; without one, ssh uses the agent.
+    local slug key
+    slug="$(git remote get-url origin 2>/dev/null)" || slug=""
+    slug="${slug%.git}"
+    slug="${slug##*[:/]}"
+    key="${CREDENTIALS_DIRECTORY:-/nonexistent}/sync-repos.${slug}"
+    if [ -n "$slug" ] && [ -r "$key" ]; then
+        local -x GIT_SSH_COMMAND="ssh -i ${key} -o IdentitiesOnly=yes -o IdentityAgent=none"
+        log "using deploy key for ${repo}"
     fi
     if ! git pull --rebase --autostash -q >&2; then
         if [ -d "$(git rev-parse --git-path rebase-merge)" ] \
