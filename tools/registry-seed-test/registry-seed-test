@@ -22,7 +22,7 @@ check() { # NAME GOT WANT
 run() { sh "$script" 2>"$tmp/stderr"; }
 
 : | run >"$tmp/empty.yaml"
-check "empty: seeded projects" "$(yq '.projects | keys | join(",")' "$tmp/empty.yaml")" "chezmoi,bd-track,amontillado"
+check "empty: seeded projects" "$(yq '.projects | keys | join(",")' "$tmp/empty.yaml")" "chezmoi,bd-track,amontillado,claude-state"
 check "empty: header kept" "$(head -1 "$tmp/empty.yaml" | cut -c1-28)" "# Project registry (D72): na"
 
 cat >"$tmp/live.yaml" <<'LIVE'
