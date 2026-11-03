@@ -36,15 +36,14 @@ Chromium keep the card open, so an exclusive connect fails with `sharing violati
 in which pcscd was socket-activated. Restart scdaemon after changing it: `gpgconf --kill scdaemon`. Debug with
 `gpg-connect-agent 'SCD GETINFO reader_list' /bye` (empty = no reader) and a `debug-level guru` + `log-file` run.
 
-**PIN asked on every SSH use (2026-10-23, open).** The card's policy is not the cause (`ykman openpgp info`: PIN for
-signature "Once", touch off), nor USB autosuspend (`/sys/bus/usb/devices/1-5/power/runtime_suspended_time` stayed 0),
-nor pcscd restarts (up continuously). **Hypothesis:** Chromium loads OpenSC through p11-kit
-(`grep opensc /proc/<chromium pid>/maps`; `p11-kit list-modules` lists `opensc`), and OpenSC, sharing the card under
-`pcsc-shared`, selects other applets or resets it, which drops the OpenPGP "PIN verified" state; scdaemon then showed
-`Card error` until `gpgconf --kill scdaemon`. **Test:** quit Chromium fully, `ssh -T git@antimike.github.com` twice a
-minute or two apart: one PIN prompt confirms it. **Fix if confirmed:** a per-user p11-kit override,
-`~/.config/pkcs11/modules/opensc.module` with `disable-in: chromium-browser` (managed by chezmoi, no sudo), or removing
-`opensc` if nothing else needs it.
+**PIN asked on every GPG/SSH use: fixed 2026-11-02 (chz-1fv).** The card's policy was not the cause (`ykman openpgp
+info`: PIN for signature "Once", touch off, 3 tries left), nor USB autosuspend, nor pcscd restarts. A `debug-level guru`
+log showed scdaemon itself (GnuPG 2.4) selecting the YubiKey's **PIV** applet on every `KEYINFO --list`, i.e. at the
+start of every operation; the YubiKey clears the OpenPGP "PIN verified" state on an applet switch. `scdaemon.conf` now
+sets `disable-application piv` (the PIV applet is empty here; other tools can still use it). Verified: two decrypts a
+minute apart, Chromium open, one PIN prompt. The earlier Chromium/OpenSC hypothesis (2026-10-23) was not needed. The
+PIN is still asked after an unplug, a `gpgconf --kill scdaemon`, or running `ykman` (it switches applets too). Test:
+`echo hi | gpg -ear 9F049F34C91F801DEDF87BBF7C1F6727C99C6EA5 | gpg -d`, twice a minute apart.
 
 A "system keyring" unlock prompt on GPG/SSH use is gnome-keyring, not GPG: see D51 and the keyring item in
 [../plans/wayland-desktop.md](../plans/wayland-desktop.md), "Functional daily driver"; diagnose with `keyring-check`. After a `gpg-agent.conf`
