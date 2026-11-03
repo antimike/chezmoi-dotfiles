@@ -1,7 +1,7 @@
 ---
 summary: Every open item across the migration, BOCO merge, Sway and housekeeping, with source and who acts
 status: current
-updated: 2026-10-30
+updated: 2026-11-03
 ---
 
 # Open items
@@ -11,6 +11,8 @@ updated: 2026-10-30
 ## Next up
 | Item | Who | Where |
 |---|---|---|
+| **chz-6w5: check the first unattended transcript backup** (2026-11-03): the timer run on the night of 2026-11-03/04 (~00:33 + up to 1 h random delay) must log `using credential claude-transcripts-backup.restic` and a `snapshot ... saved` for both `PortableSSD` and `Backups` (`journalctl --user -u claude-transcripts-backup`); then close chz-6w5. Done 2026-11-03 (merge `99d3055`): the read-only mounts were a bd-track session's `udisksctl mount -o ro` on 10-29, not the hub (both rw again; MH's fsck of the SSD: clean); restic password from a systemd credential (D74); backups to every drive in `.chezmoidata/backups.yaml` (PortableSSD primary, Kingston `Backups` second, 4 snapshots copied); runbook "Add a backup drive" in [runbooks/memory-and-backups.md](runbooks/memory-and-backups.md); `tools/claude-transcripts-backup-test`. Watch: the SSD links at USB 2 on the hub (no free USB-C port) and logged UAS aborts on 10-29; if they return, the host-side quirk `usb-storage.quirks=0781:55b0:u` (modprobe.d) disables UAS for it | Claude | `bd show chz-6w5` |
+| **chz-8jq: mongod's SELinux denial every second** (found 2026-11-03): mongodb-org 7.0.37 (el9 repo) is enabled and running, unused on zbook (MH: removing it is an option); ~60 AVC lines/min bury real journal events | MH decides, Claude | `bd show chz-8jq` |
 | **Triage leftovers** (2026-10-30): (1) **chz-haz** (new, needs design with MH): `pyproj`'s project template into chezmoi, the python-scripting skill's conventions (uv, ruff, pyproject), optional CLAUDE.md; ruff is not installed on zbook (add it to the package map). (2) MH: try `ji`, `dh`, `f <name>` in a new kitty window (zoxide, chz-4c0); sixel previews on WSL2 untested (chz-y93). | Claude + MH | `bd show chz-tty chz-haz` |
 | **Ticket inboxes (D72), login check** (2026-10-30): after the next Hyprland login, a plain Super+T → project → Alt+Enter must open **nvim** (0.11.7): `~/.config/uwsm/env` now exports `EDITOR`/`VISUAL` and puts mise's shims on the session PATH (`2bf559a`, `3a41afe`), read only at login. Passed so far through `hyprctl dispatch` with that environment set by hand. Also check `systemctl --user show-environment` shows `EDITOR=nvim` | MH | [decisions.md](decisions.md) D72 |
 | **Functional SwayFX daily driver (D50, 2026-10-18; the 2026-10-20 deadline passed, still first priority):** checklist in [plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver". Done: lock/idle/power, external monitors (kanshi, D53), audio defaults, volume/brightness keys, kitty errors, keyring. Screenshots done 2026-10-22 (MH's retry of the save prompt and MX key left). Bar done 2026-10-24, cheat sheet V1 done 2026-10-24 (Hyprland since D62). Left: screen sharing with both monitors, i3 off zbook | Claude + MH | [plans/wayland-desktop.md](plans/wayland-desktop.md) |
