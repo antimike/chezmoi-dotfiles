@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# sync-repos-test — test how sync-repos picks repos from the project registry (D75).
+#
+#   tools/sync-repos-test/sync-repos-test
+#
+# Renders home/dot_local/bin/executable_sync-repos.tmpl with chezmoi and runs it against a
+# scratch registry (SYNC_REPOS_REGISTRY), scratch clones with local bare remotes, and a fake
+# notifier (SYNC_REPOS_NOTIFY). Checks: `sync_repo: true` with a path is committed and pushed;
+# `false` and an absent key are left alone; `yes` (a string in YAML 1.2) and `true` without a
+# path are reported as failures (exit 1, one notification); an empty or missing registry is a
+# no-op (exit 0). Prints one line per case; exits 1 if any fails. Needs chezmoi, git, yq, gitleaks.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+check() { # NAME GOT WANT
+  if [[ $2 == "$3" ]]; then echo "pass  $1: $2"; else echo "FAIL  $1: got '$2', want '$3'"; failed=1; fi
+}
+
+chezmoi execute-template --source "$repo/home" <"$repo/home/dot_local/bin/executable_sync-repos.tmpl" >"$tmp/sync-repos"
+chmod +x "$tmp/sync-repos"
+cat >"$tmp/notify" <<EOF
+#!/bin/sh
+printf '%s\n' "\$@" >>"$tmp/notified"
+EOF
+chmod +x "$tmp/notify"
+
+mkclone() { # NAME: a clone with one commit, pushed to a bare remote, plus an uncommitted file
+  git init -q --bare "$tmp/$1.git"
+  git init -q -b main "$tmp/$1"
+  git -C "$tmp/$1" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
+  git -C "$tmp/$1" remote add origin "$tmp/$1.git"
+  git -C "$tmp/$1" push -q -u origin main
+  echo change >"$tmp/$1/note.txt"
+}
+for n in on off str nopath absent; do mkclone "$n"; done
+
+run() { # REGISTRY -> exit code in $rc
+  rm -f "$tmp/notified"
+  rc=0
+  SYNC_REPOS_REGISTRY=$1 SYNC_REPOS_NOTIFY=$tmp/notify XDG_RUNTIME_DIR=$tmp \
+    GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t \
+    "$tmp/sync-repos" >"$tmp/out" 2>&1 || rc=$?
+}
+pushed() { git -C "$tmp/$1" fetch -q && git -C "$tmp/$1" rev-list --count origin/main; }
+
+cat >"$tmp/reg.yaml" <<EOF
+projects:
+  on:     {path: $tmp/on, sync_repo: true}
+  off:    {path: $tmp/off, sync_repo: false}
+  str:    {path: $tmp/str, sync_repo: yes}
+  nopath: {remote: o/nopath, sync_repo: true}
+  absent: {path: $tmp/absent}
+EOF
+run "$tmp/reg.yaml"
+check "failures exit 1" "$rc" "1"
+check "true + path: pushed" "$(pushed on)" "2"
+check "false: untouched" "$(pushed off)" "1"
+check "yes: untouched" "$(pushed str)" "1"
+check "absent key: untouched" "$(pushed absent)" "1"
+check "one notification" "$(grep -c 'sync-repos failed (2)' "$tmp/notified" || true)" "1"
+check "yes: reported" "$(grep -c "str: sync_repo must be true or false, not 'yes'" "$tmp/notified" || true)" "1"
+check "no path: reported" "$(grep -c 'nopath: sync_repo is true but there is no path' "$tmp/notified" || true)" "1"
+
+printf 'projects:\n  off: {path: %s/off, sync_repo: false}\n' "$tmp" >"$tmp/none.yaml"
+run "$tmp/none.yaml"
+check "nothing enabled: exit 0" "$rc" "0"
+check "nothing enabled: logged" "$(grep -c 'no project with sync_repo: true' "$tmp/out" || true)" "1"
+
+printf 'projects:\n' >"$tmp/empty.yaml"
+run "$tmp/empty.yaml"
+check "empty registry: exit 0" "$rc" "0"
+
+run "$tmp/missing.yaml"
+check "missing registry: exit 0" "$rc" "0"
+check "missing registry: no notification" "$([ -e "$tmp/notified" ] && echo yes || echo no)" "no"
+
+exit "$failed"
