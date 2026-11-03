@@ -31,6 +31,9 @@ projects:
   amontillado:
     remote: antimike/amontillado
     beads: {prefix: amo}
+  project-registry:
+    remote: antimike/project-registry
+    beads: {prefix: prg}
   claude-state:
     remote: antimike/claude-state
     path: ~/.claude/projects
