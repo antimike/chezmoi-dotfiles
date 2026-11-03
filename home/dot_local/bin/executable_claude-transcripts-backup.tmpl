@@ -2,11 +2,19 @@
 #!/usr/bin/env bash
 # Back up ~/.claude/projects (transcripts + memory) to a restic repo on the
 # PortableSSD. Run by claude-transcripts-backup.timer, which is conditional on
-# the drive being mounted. The restic password lives in `pass` (backup/restic-zbook).
+# the drive being mounted. The restic password lives in `pass` (backup/restic-{{ .chezmoi.hostname }});
+# unattended runs read a systemd credential copy of it instead (D74), so no YubiKey PIN prompt.
 set -euo pipefail
 
 export RESTIC_REPOSITORY="${CLAUDE_TRANSCRIPTS_REPO:-/run/media/$USER/PortableSSD/backups/{{ .chezmoi.hostname }}/claude-transcripts}"
-export RESTIC_PASSWORD_COMMAND="${RESTIC_PASSWORD_COMMAND:-pass show backup/restic-{{ .chezmoi.hostname }}}"
+cred="${CREDENTIALS_DIRECTORY:-}/claude-transcripts-backup.restic"
+if [ -z "${RESTIC_PASSWORD_COMMAND:-}" ] && [ -n "${CREDENTIALS_DIRECTORY:-}" ] && [ -r "$cred" ]; then
+    # restic refuses a password file and a password command together.
+    export RESTIC_PASSWORD_FILE="$cred"
+    echo "using credential claude-transcripts-backup.restic"
+else
+    export RESTIC_PASSWORD_COMMAND="${RESTIC_PASSWORD_COMMAND:-pass show backup/restic-{{ .chezmoi.hostname }}}"
+fi
 notify="$HOME/.claude/scripts/notify"
 stamp="${XDG_STATE_HOME:-$HOME/.local/state}/claude-transcripts-backup/last-check"
 

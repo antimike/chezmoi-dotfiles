@@ -11,4 +11,8 @@ Type=oneshot
 ExecStart=%h/.local/bin/claude-transcripts-backup
 Nice=15
 IOSchedulingClass=idle
+# The restic password from ~/.config/credstore.encrypted/ (D74), decrypted for
+# this run only. A missing credential is not an error: the script falls back to
+# `pass`, which needs the YubiKey PIN.
+ImportCredential=claude-transcripts-backup.*
 {{- end }}

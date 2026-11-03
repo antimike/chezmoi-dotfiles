@@ -13,7 +13,7 @@ Two independent mechanisms protect `~/.claude/projects` (one folder per project 
 | What | `memory/` and `reports/` folders only (transcripts gitignored; `reports/` added 2026-10-23 for session reports holding private detail) | everything: transcripts and memory |
 | Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree | `/run/media/$USER/PortableSSD/backups/zbook/claude-transcripts` (restic repo on the external exFAT SSD) |
 | When | `sync-repos.timer`, daily (`claude-state` is its list entry; the dedicated `claude-state-sync` timer was retired 2026-10-17); a failed run retries 3 times, 15 min apart | `claude-transcripts-backup.timer`, daily, `Persistent=true`, only when the SSD is mounted |
-| Secrets | gitleaks scan inside `sync-repos` on every unattended commit (refuses without gitleaks), plus the repo's pre-commit hook for commits by hand | restic encrypts the repo; password in `pass` |
+| Secrets | gitleaks scan inside `sync-repos` on every unattended commit (refuses without gitleaks), plus the repo's pre-commit hook for commits by hand | restic encrypts the repo; password in `pass`, read unattended from a systemd credential (D74) |
 | Source | `dot_local/bin/executable_sync-repos.tmpl`, list: projects with `sync_repo: true` in `~/.config/projects.yaml` (D75; seeded by `modify_projects.yaml`) | `dot_local/bin/executable_claude-transcripts-backup.tmpl` |
 
 Units live in `private_dot_config/private_systemd/private_user/`. `cleanupPeriodDays` is 36500 so Claude never sweeps old transcripts.
@@ -21,8 +21,10 @@ Units live in `private_dot_config/private_systemd/private_user/`. `cleanupPeriod
 ## Passwords and keys
 
 - restic password: `pass show backup/restic-zbook` (the scripts use `RESTIC_PASSWORD_COMMAND`). A hard copy exists off this machine. Losing it loses the backups.
+- The timer run reads a copy of it from the systemd credential `claude-transcripts-backup.restic` (D74, chz-6w5; logs `using credential ...`) and falls back to `pass` without it. Create or refresh it after a password change (the YubiKey PIN is asked once; the whole `pass` output, exactly what `RESTIC_PASSWORD_COMMAND` gives restic):
+  `pass show backup/restic-zbook | systemd-creds --user --name=claude-transcripts-backup.restic encrypt - ~/.config/credstore.encrypted/claude-transcripts-backup.restic`
 - `sync-repos` pushes `claude-state` with its own deploy key since 2026-11-02 (D74, [automation-keys.md](automation-keys.md)), so it no longer needs the YubiKey; a repo without a deploy key falls back to the YubiKey.
-- `pass` decrypts with the GPG key on the YubiKey ([gpg-and-signing.md](gpg-and-signing.md)). **If the key is unplugged, the backup fails** (and so does a `sync-repos` push for any repo without a deploy key). Neither loses data: `sync-repos` retries 3 times 15 min apart and then waits for the next day (each failed run sends one notification); the backup retries on its next run.
+- `pass` decrypts with the GPG key on the YubiKey ([gpg-and-signing.md](gpg-and-signing.md)). **If the key is unplugged, a backup without the credential fails** (and so does a `sync-repos` push for any repo without a deploy key). Neither loses data: `sync-repos` retries 3 times 15 min apart and then waits for the next day (each failed run sends one notification); the backup retries on its next run.
 - Never print the secret: `pass show`/`gpg -d` write it to stdout, which lands in the transcript. Pipe or redirect it.
 
 ## Common operations
@@ -53,3 +55,4 @@ Retention (in the script): keep 14 daily, 8 weekly, 12 monthly snapshots, then p
 - Until 2026-10-17 most daily syncs failed silently-ish: the timer fired on resume before DNS was up (`Could not resolve hostname github.com`) and never retried, stranding commits locally. `sync-repos` now waits up to 120 s for NetworkManager, then retries via the service.
 - gitleaks may flag long hex (e.g. GPG fingerprints) in memory files as a "generic API key"; write key IDs instead of full fingerprints.
 - The SSD is exFAT: no hard links or Unix permissions; restic stores permissions inside snapshots.
+- **Read-only mount** (2026-10-29, chz-6w5): after a dirty unplug or USB resets (the SSD behind the USB-C hub linked at USB 2 and logged UAS aborts), the exFAT volume came up `ro` and every run failed with `repo not writable (read-only mount?)`. Check with `findmnt /run/media/$USER/PortableSSD`; fix: `udisksctl unmount -b /dev/sdX1 && sudo fsck.exfat -y /dev/sdX1 && udisksctl mount -b /dev/sdX1`. Mount paths are by label, so the hub does not move them.
