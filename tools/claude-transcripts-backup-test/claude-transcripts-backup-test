@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# claude-transcripts-backup-test — test claude-transcripts-backup across several backup drives (chz-6w5).
+#
+#   tools/claude-transcripts-backup-test/claude-transcripts-backup-test
+#
+# Renders home/dot_local/bin/executable_claude-transcripts-backup.tmpl with chezmoi for two
+# drives (DriveA, DriveB) and runs it inside a user + mount namespace (unshare -rm, no root), where
+# each "drive" is a tmpfs under a scratch media root (CLAUDE_TRANSCRIPTS_MEDIA), with a fake HOME
+# (small ~/.claude/projects, fake notifier). Checks: both drives backed up; an unmounted drive
+# skipped (exit 0); a failing first drive (no repo) does not stop the second (exit 1, one
+# notification); a read-only drive reported (exit 1); nothing mounted is a no-op (exit 0); the
+# systemd credential is preferred over the password command. Prints one line per case; exits 1 if
+# any fails. Needs chezmoi, restic, jq, unshare (util-linux).
+set -euo pipefail
+
+if [[ ${1:-} != --inner ]]; then
+  repo=$(cd "$(dirname "$0")/../.." && pwd)
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  chezmoi execute-template --source "$repo/home" \
+    --override-data '{"backups":{"claude_transcripts":{"drives":["DriveA","DriveB"]}}}' \
+    <"$repo/home/dot_local/bin/executable_claude-transcripts-backup.tmpl" >"$tmp/backup"
+  chmod +x "$tmp/backup"
+  rc=0
+  unshare -rm "$0" --inner "$tmp" || rc=$?
+  exit "$rc"
+fi
+
+# Inside the namespace: tmpfs mounts here vanish with it.
+tmp=$2
+failed=0
+check() { # NAME GOT WANT
+  if [[ $2 == "$3" ]]; then echo "pass  $1: $2"; else echo "FAIL  $1: got '$2', want '$3'"; failed=1; fi
+}
+
+host=$(uname -n)
+media=$tmp/media
+fakehome=$tmp/home
+mkdir -p "$media/DriveA" "$media/DriveB" "$fakehome/.claude/projects/p" "$fakehome/.claude/scripts"
+echo transcript >"$fakehome/.claude/projects/p/t.jsonl"
+cat >"$fakehome/.claude/scripts/notify" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >>"$tmp/notified"
+EOF
+chmod +x "$fakehome/.claude/scripts/notify"
+echo testpw >"$tmp/pw"
+
+repo_of() { echo "$media/$1/backups/$host/claude-transcripts"; }
+mountdrive() { mount -t tmpfs none "$media/$1"; }
+initdrive() { mountdrive "$1" && RESTIC_PASSWORD_FILE=$tmp/pw restic init -q -r "$(repo_of "$1")" >/dev/null; }
+snaps() { RESTIC_PASSWORD_FILE=$tmp/pw restic -r "$(repo_of "$1")" snapshots --json 2>/dev/null | jq length; }
+
+run() { # [VAR=VALUE...] (override the defaults) -> exit code in $rc, output in $tmp/out
+  rm -f "$tmp/notified"
+  rc=0
+  env -u CREDENTIALS_DIRECTORY HOME="$fakehome" XDG_STATE_HOME="$tmp/state" XDG_CACHE_HOME="$tmp/cache" \
+    CLAUDE_TRANSCRIPTS_MEDIA="$media" RESTIC_PASSWORD_COMMAND="cat $tmp/pw" "$@" \
+    "$tmp/backup" >"$tmp/out" 2>&1 || rc=$?
+}
+notified() { [[ -e $tmp/notified ]] && wc -l <"$tmp/notified" || echo 0; }
+
+initdrive DriveA
+initdrive DriveB
+run
+check "both mounted: exit 0" "$rc" "0"
+check "both mounted: DriveA snapshot" "$(snaps DriveA)" "1"
+check "both mounted: DriveB snapshot" "$(snaps DriveB)" "1"
+check "both mounted: no notification" "$(notified)" "0"
+
+umount "$media/DriveB"
+run
+check "DriveB unmounted: exit 0" "$rc" "0"
+check "DriveB unmounted: skipped" "$(grep -c 'skipping DriveB: not mounted' "$tmp/out" || true)" "1"
+check "DriveB unmounted: DriveA snapshot" "$(snaps DriveA)" "2"
+
+umount "$media/DriveA"
+mountdrive DriveA # empty: no repo on the first drive
+initdrive DriveB
+run
+check "DriveA no repo: exit 1" "$rc" "1"
+check "DriveA no repo: reported" "$(grep -c 'no restic repo at' "$tmp/out" || true)" "1"
+check "DriveA no repo: DriveB still backed up" "$(snaps DriveB)" "1"
+check "DriveA no repo: failed list" "$(grep -c '^failed: DriveA$' "$tmp/out" || true)" "1"
+check "DriveA no repo: one notification" "$(notified)" "1"
+
+# A restic command failing inside the per-drive steps (here: the password) must fail that drive,
+# not fall through to the next step (errexit is ignored in functions called from a condition).
+umount "$media/DriveA"
+mountdrive DriveA
+echo otherpw >"$tmp/pw2"
+RESTIC_PASSWORD_FILE=$tmp/pw2 restic init -q -r "$(repo_of DriveA)" >/dev/null
+run
+check "DriveA wrong password: exit 1" "$rc" "1"
+check "DriveA wrong password: failed list" "$(grep -c '^failed: DriveA$' "$tmp/out" || true)" "1"
+check "DriveA wrong password: stopped at the first error" "$(grep -c 'wrong password' "$tmp/out" || true)" "1"
+
+umount "$media/DriveA"
+mount -o remount,bind,ro "$media/DriveB" # per-mount flag; a tmpfs remount fails in a user namespace
+run
+check "DriveB read-only: exit 1" "$rc" "1"
+check "DriveB read-only: reported" "$(grep -c 'repo not writable' "$tmp/out" || true)" "1"
+check "DriveB read-only: one notification" "$(notified)" "1"
+
+umount "$media/DriveB"
+run
+check "nothing mounted: exit 0" "$rc" "0"
+check "nothing mounted: logged" "$(grep -c 'no backup drive mounted' "$tmp/out" || true)" "1"
+
+initdrive DriveA
+mkdir -p "$tmp/creds"
+cp "$tmp/pw" "$tmp/creds/claude-transcripts-backup.restic"
+run RESTIC_PASSWORD_COMMAND= CREDENTIALS_DIRECTORY="$tmp/creds" # empty = unset to the script
+check "credential: exit 0" "$rc" "0"
+check "credential: used" "$(grep -c 'using credential claude-transcripts-backup.restic' "$tmp/out" || true)" "1"
+check "credential: DriveA snapshot" "$(snaps DriveA)" "1"
+
+exit "$failed"
