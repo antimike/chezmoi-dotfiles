@@ -14,7 +14,7 @@ Two independent mechanisms protect `~/.claude/projects` (one folder per project 
 | Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree | `/run/media/$USER/PortableSSD/backups/zbook/claude-transcripts` (restic repo on the external exFAT SSD) |
 | When | `sync-repos.timer`, daily (`claude-state` is its list entry; the dedicated `claude-state-sync` timer was retired 2026-10-17); a failed run retries 3 times, 15 min apart | `claude-transcripts-backup.timer`, daily, `Persistent=true`, only when the SSD is mounted |
 | Secrets | gitleaks scan inside `sync-repos` on every unattended commit (refuses without gitleaks), plus the repo's pre-commit hook for commits by hand | restic encrypts the repo; password in `pass` |
-| Source | `dot_local/bin/executable_sync-repos.tmpl`, list in `.chezmoitemplates/sync-repos-list` | `dot_local/bin/executable_claude-transcripts-backup.tmpl` |
+| Source | `dot_local/bin/executable_sync-repos.tmpl`, list: projects with `sync_repo: true` in `~/.config/projects.yaml` (D75; seeded by `modify_projects.yaml`) | `dot_local/bin/executable_claude-transcripts-backup.tmpl` |
 
 Units live in `private_dot_config/private_systemd/private_user/`. `cleanupPeriodDays` is 36500 so Claude never sweeps old transcripts.
 
