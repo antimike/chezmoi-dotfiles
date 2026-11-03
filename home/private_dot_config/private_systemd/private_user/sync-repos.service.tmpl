@@ -1,6 +1,6 @@
 {{ if lookPath "git" -}}
 [Unit]
-Description=Daily git auto-commit + push for repos in ~/.config/sync-repos/repos.conf
+Description=Daily git auto-commit + push for projects with sync_repo: true in ~/.config/projects.yaml
 Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_sync-repos.tmpl
 # Retry budget: 4 starts per 2 h (the first run plus 3 retries 15 min apart).
 StartLimitIntervalSec=2h
