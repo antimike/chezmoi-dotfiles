@@ -11,8 +11,8 @@ Two independent mechanisms protect `~/.claude/projects` (one folder per project 
 | | `claude-state` (git) | transcript backup (restic) |
 |---|---|---|
 | What | `memory/` and `reports/` folders only (transcripts gitignored; `reports/` added 2026-10-23 for session reports holding private detail) | everything: transcripts and memory |
-| Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree | `/run/media/$USER/PortableSSD/backups/zbook/claude-transcripts` (restic repo on the external exFAT SSD) |
-| When | `sync-repos.timer`, daily (`claude-state` is its list entry; the dedicated `claude-state-sync` timer was retired 2026-10-17); a failed run retries 3 times, 15 min apart | `claude-transcripts-backup.timer`, daily, `Persistent=true`, only when the SSD is mounted |
+| Where | private GitHub repo `antimike/claude-state`; `~/.claude/projects` *is* the working tree `/run/media/$USER/<drive>/backups/zbook/claude-transcripts` on each drive in `.chezmoidata/backups.yaml` (restic repos; primary: PortableSSD, the external exFAT SSD) |
+| When | `sync-repos.timer`, daily (`claude-state` is its list entry; the dedicated `claude-state-sync` timer was retired 2026-10-17); a failed run retries 3 times, 15 min apart | `claude-transcripts-backup.timer`, daily, `Persistent=true`, only when at least one listed drive is mounted (unmounted ones are skipped) |
 | Secrets | gitleaks scan inside `sync-repos` on every unattended commit (refuses without gitleaks), plus the repo's pre-commit hook for commits by hand | restic encrypts the repo; password in `pass`, read unattended from a systemd credential (D74) |
 | Source | `dot_local/bin/executable_sync-repos.tmpl`, list: projects with `sync_repo: true` in `~/.config/projects.yaml` (D75; seeded by `modify_projects.yaml`) | `dot_local/bin/executable_claude-transcripts-backup.tmpl` |
 
@@ -41,6 +41,34 @@ journalctl --user -u sync-repos -n 20                       # last claude-state 
 systemctl --user start sync-repos.service                  # sync now
 ```
 Retention (in the script): keep 14 daily, 8 weekly, 12 monthly snapshots, then prune.
+
+## Add a backup drive
+
+The transcript backup goes to every drive listed in `home/.chezmoidata/backups.yaml` (`backups.claude_transcripts.drives`)
+that is mounted; PortableSSD is the primary (MH, 2026-11-03). A drive is named by its filesystem label, which udisks
+uses as the mount point. All repos share the one restic password, so the one credential covers them.
+
+1. Give the drive a unique label (exFAT keeps it readable on other systems): `sudo exfatlabel /dev/sdX1 <Label>`
+   (or `sudo mkfs.exfat -L <Label> /dev/sdX1` for a blank drive), then mount it read-write
+   (`udisksctl mount -b /dev/sdX1`; check `findmnt -no OPTIONS /run/media/$USER/<Label>` starts with `rw`).
+2. Add `<Label>` to the list, commit, `chezmoi apply` (renders the script's drive list and one
+   `ConditionPathIsMountPoint=|...` per drive; the `run_after_` reload picks up the unit).
+3. Create the repo with the primary's password and chunker parameters (so `restic copy` deduplicates), and
+   optionally copy the existing history over (the YubiKey PIN is asked once; gpg-agent caches it):
+   ```sh
+   primary=/run/media/$USER/PortableSSD/backups/zbook/claude-transcripts
+   new=/run/media/$USER/<Label>/backups/zbook/claude-transcripts
+   export RESTIC_PASSWORD_COMMAND="pass show backup/restic-zbook" RESTIC_FROM_PASSWORD_COMMAND="pass show backup/restic-zbook"
+   mkdir -p "$(dirname "$new")"
+   restic -r "$new" init --from-repo "$primary" --copy-chunker-params
+   restic -r "$new" copy --from-repo "$primary"      # optional: seed the snapshots
+   ```
+4. Check: `systemctl --user start claude-transcripts-backup.service`, then
+   `journalctl --user -u claude-transcripts-backup -n 30` shows `== <Label>: ...` and `snapshot ... saved` per drive.
+
+A listed drive that is mounted but has no repo, or is mounted read-only, fails the run (one notification; the other
+drives are still backed up). To retire a drive, remove it from the list; its repo stays on the drive. Tests:
+`tools/claude-transcripts-backup-test/claude-transcripts-backup-test`.
 
 ## New machine
 
