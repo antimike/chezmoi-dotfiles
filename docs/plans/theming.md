@@ -172,7 +172,16 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    `docs/design.md`, "Theme engine (v0.2)" > "Generators" ("Named hues") and "Theme engine: decisions" item 11
    (`~/.local/src/amontillado/docs/design.md`; the GitHub copy once amontillado's `main` is pushed). Implemented
    by amo-aqp.20; its calibration run is `palette-compare` on this test set, which first needs to read
-   `amo palette` output (chz-98w, deferred until amo-aqp.12).
+   `amo palette` output (chz-98w, deferred until amontillado v0.2.0 is tagged).
+   **Built and calibrated (amontillado, reported 2026-11-03, unreleased until v0.2.0):** on the 13 library pictures,
+   scored with `palette-compare`'s `score` and `term-contrast`'s sources from a scratch script (amontillado's run,
+   not reproduced here yet), option A beats the Blazer baseline. Dark: 0 term-contrast failures, fg/bg 16.6-16.7,
+   accent min 5.25-5.29, distinct 8.9-11.0, 6/6 hues. Blazer: 0, 13.89, 4.43, 7.9, 6/6. The light variant has 2
+   failures, both fsh styles on 256-colour cube entries (`bg=18`, `fg=113`) that no 16-colour palette sets. matugen
+   base16 + adjust, dark: 1-25 failures, 0-2/6 hues. Getting there took a near-black base00/base01 (tones 5/10) and a
+   foreground at tone 95 (fsh's bracket highlight and less's prompt want fg at 3:1 on blue). palette-compare will
+   import the hue and distinctness metrics from `amontillado.accents` through its uv script header rather than keep
+   a copy (MH 2026-11-03, chz-98w).
    **Test set fetched 2026-10-28** (amontillado v0.1.0: `amo fetch --test-set --atleast 3840x2160 --ratio 16:9`;
    8 kept of 23 thumbnails), records in `~/.local/share/amontillado/library/`: dark `wallhaven-xed63v`, light
    `wallhaven-739r63`, muted `wallhaven-dp2mol`, saturated `wallhaven-43ey53`, busy `wallhaven-3qz176`, sparse
