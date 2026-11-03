@@ -1,7 +1,11 @@
-{{- /* Only where pcscd is installed: without it, disable-ccid leaves scdaemon
-     no way to reach the card. Renders empty (no target file) otherwise, so
-     scdaemon keeps its built-in CCID driver. See D34. */ -}}
-{{- if or (lookPath "pcscd") (stat "/usr/sbin/pcscd") (stat "/usr/bin/pcscd") -}}
+{{- /* pcscd lines only where pcscd is installed: without it, disable-ccid leaves
+     scdaemon no way to reach the card, so scdaemon keeps its built-in CCID
+     driver. See D34. */ -}}
+# Skip the YubiKey's PIV applet. GnuPG 2.3+ probes it on every KEYINFO --list,
+# and switching applets clears the OpenPGP PIN, so every operation asked for
+# the PIN again (chz-1fv).
+disable-application piv
+{{- if or (lookPath "pcscd") (stat "/usr/sbin/pcscd") (stat "/usr/bin/pcscd") }}
 # Talk to the card through the PC/SC daemon (pcscd) instead of scdaemon's
 # built-in CCID driver: when pcscd runs it owns the YubiKey's CCID interface,
 # and the built-in driver then fails with "selecting card failed: No such device".
@@ -9,4 +13,4 @@ disable-ccid
 # Open the card in shared mode. Other PC/SC clients (gsd-smartcard, Chromium)
 # keep it open, so the default exclusive connect fails with "sharing violation".
 pcsc-shared
-{{ end -}}
+{{- end }}
