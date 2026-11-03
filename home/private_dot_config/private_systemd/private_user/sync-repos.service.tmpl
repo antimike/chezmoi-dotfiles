@@ -10,6 +10,10 @@ StartLimitBurst=4
 Type=oneshot
 ExecStart=%h/.local/bin/sync-repos
 Nice=10
+# Per-repo deploy keys from sync-repos-deploy-key (D74), decrypted from
+# ~/.config/credstore.encrypted/ into $CREDENTIALS_DIRECTORY for this run only.
+# A missing key is not an error: that repo falls back to the YubiKey.
+ImportCredential=sync-repos.*
 # Pushes fail while offline (the timer fires right after resume) or while the
 # YubiKey is unplugged; retry instead of waiting for the next day.
 Restart=on-failure
