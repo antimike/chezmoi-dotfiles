@@ -11,3 +11,4 @@ backups:
   claude_transcripts:
     drives:
       - PortableSSD # SanDisk Portable SSD 2 TB, primary (MH, 2026-11-03)
+      - Backups # Kingston DataTraveler Elite G2 29 GB stick, second copy (MH, 2026-11-03)

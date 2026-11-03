@@ -45,7 +45,7 @@ Retention (in the script): keep 14 daily, 8 weekly, 12 monthly snapshots, then p
 ## Add a backup drive
 
 The transcript backup goes to every drive listed in `home/.chezmoidata/backups.yaml` (`backups.claude_transcripts.drives`)
-that is mounted; PortableSSD is the primary (MH, 2026-11-03). A drive is named by its filesystem label, which udisks
+that is mounted; PortableSSD is the primary and the Kingston stick `Backups` the second copy (MH, 2026-11-03). A drive is named by its filesystem label, which udisks
 uses as the mount point. All repos share the one restic password, so the one credential covers them.
 
 1. Give the drive a unique label (exFAT keeps it readable on other systems): `sudo exfatlabel /dev/sdX1 <Label>`
@@ -63,6 +63,9 @@ uses as the mount point. All repos share the one restic password, so the one cre
    restic -r "$new" init --from-repo "$primary" --copy-chunker-params
    restic -r "$new" copy --from-repo "$primary"      # optional: seed the snapshots
    ```
+   Without the PIN: the credential holds the same password, so `pc="systemd-creds --user
+   --name=claude-transcripts-backup.restic decrypt $HOME/.config/credstore.encrypted/claude-transcripts-backup.restic -"`
+   and `export RESTIC_PASSWORD_COMMAND="$pc" RESTIC_FROM_PASSWORD_COMMAND="$pc"` work too (used for Backups, 2026-11-03).
 4. Check: `systemctl --user start claude-transcripts-backup.service`, then
    `journalctl --user -u claude-transcripts-backup -n 30` shows `== <Label>: ...` and `snapshot ... saved` per drive.
 
