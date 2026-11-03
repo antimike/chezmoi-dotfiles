@@ -7,9 +7,9 @@ Keys that unattended user services use instead of the YubiKey (D74). Today: one 
 
 - The private key lives encrypted at `~/.config/credstore.encrypted/<name>` (mode 0600), made by user-scoped
   `systemd-creds --user`. It decrypts only as `hseldon`, on zbook: bound to the user and to the host key
-  `/var/lib/systemd/credential.secret` (root-only). Whether the TPM2 is also involved is **unverified**: an
-  unprivileged encrypt goes through the `io.systemd.Credentials` service, which picks the key type itself; the root
-  check is below.
+  `/var/lib/systemd/credential.secret` (root-only) **and the TPM2** (`host+tpm2`; MH's root check, 2026-11-03). An
+  unprivileged encrypt goes through the `io.systemd.Credentials` service, which picks the key type itself (`auto`
+  here), so only the root check below shows the binding.
 - The unit imports it with `ImportCredential=<glob>`; systemd decrypts it into the unit's private
   `$CREDENTIALS_DIRECTORY` (`/run/user/1000/credentials/<unit>/`, tmpfs) for that run and removes it when the unit
   stops. A missing credential is not an error.
