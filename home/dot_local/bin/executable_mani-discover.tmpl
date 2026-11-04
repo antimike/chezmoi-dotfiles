@@ -20,7 +20,7 @@
 set -euo pipefail
 
 OUT="${HOME}/mani.yaml"
-read -r -a roots <<<"${MANI_DISCOVER_ROOTS:-$HOME/Source $HOME/.local/src $HOME/Documents}"
+read -r -a roots <<<"${MANI_DISCOVER_ROOTS:-{{ range $i, $r := .registry.scan_roots }}{{ if $i }} {{ end }}{{ $r | replace "~/" "$HOME/" }}{{ end }}}"
 fixed=("{{ .chezmoi.workingTree }}" "$HOME/.claude/projects")
 
 REGISTRY="${XDG_CONFIG_HOME:-$HOME/.config}/projects.yaml"

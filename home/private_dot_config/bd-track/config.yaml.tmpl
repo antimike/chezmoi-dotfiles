@@ -12,7 +12,10 @@ global:
   dolt_push: {{ if $wsl }}never{{ else }}false{{ end }}
   # Where to find clones of registry projects with a remote but no path; the roots
   # mani-discover scans. Missing directories are skipped. $BD_TRACK_SCAN_ROOTS overrides.
-  scan_roots: [~/Source, ~/.local/src, ~/Documents]
+  # Both values come from .chezmoidata/registry.yaml (shared with mani-discover and pproj).
+  scan_roots: [{{ .registry.scan_roots | join ", " }}]
+  # Clone URL of an owner/repo shorthand remote = this prefix + owner/repo (bd-track >= 0.8.0).
+  default_url_prefix: {{ .registry.default_url_prefix | quote }}
   defaults:
     statuses: []
     hooks: []
