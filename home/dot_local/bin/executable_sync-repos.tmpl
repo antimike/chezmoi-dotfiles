@@ -1,12 +1,14 @@
 {{ if lookPath "git" -}}
 #!/usr/bin/env bash
 # sync-repos: daily git auto-commit + push for every project in the registry
-# ~/.config/projects.yaml with `sync_repo: true` (D75). Invoked by
+# ~/.config/projects.yaml with `sync: {enabled: true}` (D75). Invoked by
 # sync-repos.service (systemd user unit), triggered by sync-repos.timer.
 #
 # A synced project needs a `path:` (D36: only data repos with a fixed, known
-# path). `sync_repo` must be a YAML boolean; anything else (including `yes`,
-# a string in YAML 1.2) is reported as a failure and that project is skipped.
+# path). `sync` is sync-repos' namespace in the registry (one block per client,
+# D75); `sync.enabled` must be a YAML boolean, and anything else (including `yes`,
+# a string in YAML 1.2), a `sync` that is not a mapping, or the old flat key
+# `sync_repo` is reported as a failure and that project is skipped.
 #
 # Per-repo behavior (D36):
 #   - `git add -A`; if anything is staged, scan it with gitleaks *here* (never
@@ -119,11 +121,14 @@ sync_one() {
 
 failures=()
 
-# One TSV line per project that sets sync_repo: name, YAML tag, value, path.
+# One TSV line per project that sets sync or the old sync_repo: name, whether sync_repo
+# is set, the YAML tags of sync and sync.enabled, enabled's value, path.
 # (mikefarah yq: explicit null tests; see mani-discover.)
 if ! entries="$(yq -r '(.projects | select(. != null) | to_entries[])
-        | select(.value.sync_repo != null)
-        | [.key, (.value.sync_repo | tag), (.value.sync_repo | tostring),
+        | select(.value.sync_repo != null or .value.sync != null)
+        | [.key, ((.value.sync_repo != null) | tostring), (.value.sync | tag),
+           ((.value.sync | select(tag == "!!map") | .enabled | tag) // "!!null"),
+           ((.value.sync | select(tag == "!!map") | .enabled | tostring) // ""),
            ((.value.path | select(. != null)) // "")] | @tsv' "$REGISTRY")"; then
     log "cannot parse $REGISTRY"
     failures+=("${REGISTRY/#"$HOME"/\~}: cannot parse")
@@ -131,22 +136,31 @@ if ! entries="$(yq -r '(.projects | select(. != null) | to_entries[])
 fi
 
 repos=()
-while IFS=$'\t' read -r name tag value path; do
+while IFS=$'\t' read -r name old sync_tag tag value path; do
     [ -z "$name" ] && continue
+    if [ "$old" = "true" ]; then
+        failures+=("${name}: sync_repo is renamed to sync.enabled (sync: {enabled: true})")
+        continue
+    fi
+    if [ "$sync_tag" != "!!map" ]; then
+        failures+=("${name}: sync must be a mapping (sync: {enabled: true}), not ${sync_tag#!!}")
+        continue
+    fi
+    [ "$tag" = "!!null" ] && continue
     if [ "$tag" != "!!bool" ]; then
-        failures+=("${name}: sync_repo must be true or false, not '${value}'")
+        failures+=("${name}: sync.enabled must be true or false, not '${value}'")
         continue
     fi
     [ "$value" = "true" ] || continue
     if [ -z "$path" ]; then
-        failures+=("${name}: sync_repo is true but there is no path")
+        failures+=("${name}: sync.enabled is true but there is no path")
         continue
     fi
     repos+=("${path/#\~/$HOME}")
 done <<<"$entries"
 
 [ "${#repos[@]}" -gt 0 ] || [ "${#failures[@]}" -gt 0 ] \
-    || { log "no project with sync_repo: true in $REGISTRY; nothing to do"; exit 0; }
+    || { log "no project with sync.enabled: true in $REGISTRY; nothing to do"; exit 0; }
 
 for repo in "${repos[@]}"; do
     if [ ! -d "$repo/.git" ]; then
