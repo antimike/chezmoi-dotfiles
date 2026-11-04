@@ -5,7 +5,9 @@
 #   tools/mani-discover-test/mani-discover-test
 #
 # Renders home/dot_local/bin/executable_mani-discover.tmpl from this source tree, then checks:
-# a clone named by its remote (scp-like and https URLs), a clone without a remote keyed by path,
+# a clone named by its remote (scp-like and https URLs), registry remotes written as full URLs
+# (any host, case-insensitive, nested paths not matching a shorthand), an invalid remote ignored
+# with a warning, a clone without a remote keyed by path,
 # a second clone of a named remote keyed by path, a `path:` entry pinning one of two clones,
 # a registry name with no clone reported, no registry at all, and that mani parses the output.
 # Exit 1 if any check fails.
@@ -30,6 +32,8 @@ clone loose ""
 clone old/alpha-copy git@github.com:me/alpha.git
 clone gamma-1 git@github.com:me/gamma.git
 clone gamma-2 git@github.com:me/gamma.git
+clone delta https://gitlab.com/grp/sub/delta.git
+clone eps git@github.com:Me/Eps.git
 
 run() { MANI_DISCOVER_ROOTS="$HOME/Source" bash "$work/mani-discover" "$@"; }
 check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
@@ -43,6 +47,10 @@ projects:
   beta: { remote: me/beta }
   gamma: { remote: me/gamma, path: ~/Source/gamma-2 }
   ghost: { remote: me/ghost }
+  delta: { remote: "git@gitlab.example:grp/sub/delta.git" }
+  subonly: { remote: sub/delta }
+  eps: { remote: "https://github.com/me/eps" }
+  bad: { remote: nope }
 YAML
 out=$(run --dry-run --report 2>"$work/err")
 err=$(cat "$work/err")
@@ -54,8 +62,11 @@ check "second clone of a named remote: keyed by path" "$(key_for old/alpha-copy)
 check "second clone reported" "$err" "is a second clone of 'alpha'"
 check "path pins one of two clones" "$(key_for gamma-2)" '"gamma":'
 check "the other clone keyed by path" "$(key_for gamma-1)" '"Source/gamma-1":'
-check "registry name without a clone reported" "$err" "no clone here for: ghost"
-check "summary counts" "$err" "3 of 4 registry project(s) found"
+check "full-URL remote, nested path, other host" "$(key_for delta)" '"delta":'
+check "full-URL remote matches case-insensitively" "$(key_for eps)" '"eps":'
+check "nested path does not match a shorthand" "$err" "no clone here for: ghost subonly bad"
+check "invalid remote warned" "$err" "bad: remote 'nope' is not a git URL or owner/repo; ignored"
+check "summary counts" "$err" "5 of 8 registry project(s) found"
 check "--report lists unnamed clones" "$err" "unnamed: Source/loose"
 
 printf '%s\n' "$out" >"$HOME/mani.yaml"
