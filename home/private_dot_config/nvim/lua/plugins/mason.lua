@@ -96,7 +96,7 @@ return {
         "bashls",
         "lua_ls",
         "jsonls",
-        "stylua",
+        -- not stylua: mise installs it, so the shell and nvim run one version (chz-7ze)
         "taplo",
         "texlab",
         "yamlls",
@@ -111,6 +111,16 @@ return {
       { "mason-org/mason.nvim", opts = {} },
       "neovim/nvim-lspconfig",
     },
+  },
+  -- stylua comes from mise (~/.config/mise/config.toml), not mason: one version for the shell and
+  -- nvim (conform and the stylua LSP find it on PATH). LazyVim adds it to mason's list; drop it.
+  {
+    "mason-org/mason.nvim",
+    opts = function(_, opts)
+      opts.ensure_installed = vim.tbl_filter(function(tool)
+        return tool ~= "stylua"
+      end, opts.ensure_installed or {})
+    end,
   },
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
