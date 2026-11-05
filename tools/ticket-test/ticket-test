@@ -4,7 +4,8 @@
 #   tools/ticket-test/ticket-test
 #
 # Runs home/dot_local/bin/executable_ticket from this source tree with a fake $HOME and checks:
-# --projects; the default project from the current repo (by remote, by pinned path); unknown and
+# --projects; the default project from the current repo (by remote, by pinned path, by a registry
+# remote written as a full URL, case-insensitively; a nested path does not match a shorthand); unknown and
 # missing projects refused (with close matches); frontmatter, title, body and sections; stdin with
 # --title; a repeated title gets a suffix; $EDITOR input (an empty file cancelling, --edit
 # prefilling it); --quick
@@ -41,15 +42,19 @@ status_is() {  # $1 = label, $2 = expected exit status, rest = ticket args (run 
 git init -q "$HOME/Source/alpha" && git -C "$HOME/Source/alpha" remote add origin git@host-alias.github.com:me/alpha.git
 git init -q "$HOME/Source/beta-old" && git -C "$HOME/Source/beta-old" remote add origin https://github.com/me/other
 git init -q "$HOME/Source/loose"
+git init -q "$HOME/Source/delta" && git -C "$HOME/Source/delta" remote add origin git@github.com:Me/Delta.git
+git init -q "$HOME/Source/eps" && git -C "$HOME/Source/eps" remote add origin https://gitlab.com/grp/sub/eps.git
 cat >"$XDG_CONFIG_HOME/projects.yaml" <<'YAML'
 projects:
   alpha: { remote: me/alpha }
   beta: { remote: me/beta, path: ~/Source/beta-old }
   gamma: { remote: me/gamma, beads: { prefix: gam } }
+  delta: { remote: "https://github.example/me/delta.git" }
+  eps: { remote: sub/eps }
 YAML
 
 cd "$HOME/elsewhere"
-check "--projects lists the registry" "$(python3 "$ticket" --projects)" $'alpha\nbeta\ngamma'
+check "--projects lists the registry" "$(python3 "$ticket" --projects)" $'alpha\nbeta\ndelta\neps\ngamma'
 
 cd "$HOME/Source/alpha"
 path=$(python3 "$ticket" --type bug --urgency high -s Ask "Make it so" -s "Done when" "it is" \
@@ -68,9 +73,14 @@ check "repeated title gets a suffix" "$path2" "clock-drifts-2.md"
 cd "$HOME/Source/beta-old"
 check "default project from a pinned path" "$(python3 "$ticket" --from tester@x "Beta thing")" "$inbox/beta/triage/"
 
+cd "$HOME/Source/delta"
+check "default project from a full-URL registry remote" "$(python3 "$ticket" --quick "full url")" "$inbox/delta/triage/inbox.md"
+cd "$HOME/Source/eps"
+status_is "nested path does not match a shorthand" 2 "Nested"
+
 cd "$HOME/Source/loose"
 status_is "unregistered repo without -p refused" 2 "No remote"
-check "... and names the projects" "$(cat "$work/err")" "pass -p NAME (alpha, beta, gamma)"
+check "... and names the projects" "$(cat "$work/err")" "pass -p NAME (alpha, beta, delta, eps, gamma)"
 cd "$HOME/elsewhere"
 status_is "outside a repo without -p refused" 2 "No repo"
 status_is "unknown project refused" 2 -p alpah "Typo"

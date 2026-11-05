@@ -1,0 +1,12 @@
+# Host settings for the project registry ~/.config/projects.yaml (D72, D76): where clones are
+# found and how an owner/repo shorthand `remote:` becomes a clone URL. One source for every
+# reader's host config: bd-track's `global:` (config.yaml.tmpl), mani-discover's scan roots, and
+# pproj's config.yaml once a client switches to pproj (chz-c0m). Per-host values go in a
+# template condition where they are read; today every host shares these.
+registry:
+  # Roots scanned for clones of registry projects with a remote but no path. Missing
+  # directories are skipped.
+  scan_roots: ["~/Source", "~/.local/src", "~/Documents"]
+  # Prepended to an owner/repo shorthand to clone it (bd-track restore). The ssh host alias in
+  # ~/.ssh/config (not templated, so the same on every host). Must end in ':' or '/'.
+  default_url_prefix: "git@antimike.github.com:"

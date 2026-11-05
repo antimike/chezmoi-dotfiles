@@ -153,11 +153,27 @@ def load_registry(path: Path) -> dict[str, dict]:
     return {name: entry or {} for name, entry in projects.items()}
 
 
-def owner_repo(url: str) -> str:
-    """owner/repo of a git URL, any host or form (scp-like, https, ssh)."""
-    url = url.strip().rstrip("/").removesuffix(".git")
-    rest, _, repo = url.rpartition("/")
-    return f"{re.split(r'[/:]', rest)[-1]}/{repo}"
+SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+SCP = re.compile(r"^(?:[^@/:\s]+@)?[^/:\s]+:(?!//)(?P<path>.*)$")
+
+
+def remote_key(remote: str) -> str | None:
+    """The match key of a remote (bd-track's registry-schema.md, "Remotes"): its path,
+    lowercased, without .git or edge slashes, host ignored. Takes a URL in any form git
+    accepts, a local path, or the owner/repo shorthand; nested paths keep every component.
+    None for fewer than two path components or whitespace."""
+    text = remote.strip().removeprefix("git+")
+    if not text or any(c.isspace() for c in text):
+        return None
+    if SCHEME.match(text):
+        path = text.split("://", 1)[1].partition("/")[2]
+    elif (match := SCP.match(text)) and not text.startswith(("/", "~", ".")):
+        path = match["path"]
+    else:
+        path = text
+    path = path.strip("/").removesuffix(".git").removeprefix("~/").strip("/")
+    parts = [part for part in path.split("/") if part not in ("", ".")]
+    return "/".join(parts).lower() if len(parts) >= 2 else None
 
 
 def git(*args: str, cwd: Path | None = None) -> str:
@@ -175,10 +191,9 @@ def current_project(projects: dict[str, dict], cwd: Path | None = None) -> str |
         if entry.get("path") and Path(os.path.expanduser(entry["path"])).resolve() == top_path:
             return name
     url = git("remote", "get-url", "origin", cwd=cwd)
-    if url:
-        remote = owner_repo(url)
+    if url and (remote := remote_key(url)):
         for name, entry in projects.items():
-            if entry.get("remote") == remote:
+            if isinstance(entry.get("remote"), str) and remote_key(entry["remote"]) == remote:
                 return name
     return None
 

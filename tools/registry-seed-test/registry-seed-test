@@ -6,7 +6,8 @@
 # Feeds the modify_ script a live ~/.config/projects.yaml on stdin, as chezmoi does, and checks
 # the output: an empty file gets the seed; a live file keeps its local projects, keys written by
 # bd-track, inline comments and its own value on a conflict, gains missing seeded projects and
-# keys, and gets the seed's header; a second run changes nothing; without mikefarah's yq, or with
+# keys, and gets the seed's header; the old key sync_repo moves to sync.enabled (an existing
+# sync.enabled wins); a second run changes nothing; without mikefarah's yq, or with
 # invalid YAML, the file passes through unchanged. Prints one line per case; exits 1 if any fails.
 set -euo pipefail
 
@@ -38,6 +39,14 @@ projects:
       dolt_push: false
   localonly:
     path: ~/Source/x   # marker: a local comment
+  claude-state:
+    remote: antimike/claude-state
+    path: ~/.claude/projects
+    sync_repo: true
+  both:
+    path: ~/Source/both
+    sync_repo: true
+    sync: {enabled: false}
 LIVE
 run <"$tmp/live.yaml" >"$tmp/out.yaml"
 q() { yq "$1" "$tmp/out.yaml"; }
@@ -48,6 +57,9 @@ check "bd-track keys kept" "$(q '.projects.bd-track.beads.commit_cadence + " " +
 check "local project kept" "$(q .projects.localonly.path)" "~/Source/x"
 check "missing project added" "$(q .projects.amontillado.beads.prefix)" "amo"
 check "inline comment kept" "$(grep -c 'marker: a local comment' "$tmp/out.yaml")" "1"
+check "sync_repo moved to sync.enabled" "$(q '.projects.claude-state.sync.enabled')" "true"
+check "sync_repo gone" "$(grep -c 'sync_repo' "$tmp/out.yaml" || true)" "0"
+check "existing sync.enabled wins" "$(q '.projects.both.sync.enabled')" "false"
 check "header is the seed's" "$(grep -c 'an old header' "$tmp/out.yaml")/$(grep -c '^# Project registry (D72)' "$tmp/out.yaml")" "0/1"
 run <"$tmp/out.yaml" >"$tmp/out2.yaml"
 check "second run changes nothing" "$(cmp -s "$tmp/out.yaml" "$tmp/out2.yaml" && echo same)" "same"

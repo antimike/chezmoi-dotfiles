@@ -5,10 +5,10 @@
 #
 # Renders home/dot_local/bin/executable_sync-repos.tmpl with chezmoi and runs it against a
 # scratch registry (SYNC_REPOS_REGISTRY), scratch clones with local bare remotes, and a fake
-# notifier (SYNC_REPOS_NOTIFY). Checks: `sync_repo: true` with a path is committed and pushed;
-# `false` and an absent key are left alone; `yes` (a string in YAML 1.2) and `true` without a
-# path are reported as failures (exit 1, one notification); an empty or missing registry is a
-# no-op (exit 0). Prints one line per case; exits 1 if any fails. Needs chezmoi, git, yq, gitleaks.
+# notifier (SYNC_REPOS_NOTIFY). Checks: `sync: {enabled: true}` with a path is committed and
+# pushed; `false`, an absent key and an empty `sync: {}` are left alone; `yes` (a string in YAML
+# 1.2), `true` without a path, a scalar `sync: true` and the old key `sync_repo` are reported as
+# failures (exit 1, one notification); an empty or missing registry is a no-op (exit 0). Prints one line per case; exits 1 if any fails. Needs chezmoi, git, yq, gitleaks.
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/../.." && pwd)
@@ -36,7 +36,7 @@ mkclone() { # NAME: a clone with one commit, pushed to a bare remote, plus an un
   git -C "$tmp/$1" push -q -u origin main
   echo change >"$tmp/$1/note.txt"
 }
-for n in on off str nopath absent; do mkclone "$n"; done
+for n in on off str nopath absent scalar old emptymap; do mkclone "$n"; done
 
 run() { # REGISTRY -> exit code in $rc
   rm -f "$tmp/notified"
@@ -49,11 +49,14 @@ pushed() { git -C "$tmp/$1" fetch -q && git -C "$tmp/$1" rev-list --count origin
 
 cat >"$tmp/reg.yaml" <<EOF
 projects:
-  on:     {path: $tmp/on, sync_repo: true}
-  off:    {path: $tmp/off, sync_repo: false}
-  str:    {path: $tmp/str, sync_repo: yes}
-  nopath: {remote: o/nopath, sync_repo: true}
-  absent: {path: $tmp/absent}
+  on:       {path: $tmp/on, sync: {enabled: true}}
+  off:      {path: $tmp/off, sync: {enabled: false}}
+  str:      {path: $tmp/str, sync: {enabled: yes}}
+  nopath:   {remote: o/nopath, sync: {enabled: true}}
+  absent:   {path: $tmp/absent}
+  scalar:   {path: $tmp/scalar, sync: true}
+  old:      {path: $tmp/old, sync_repo: true}
+  emptymap: {path: $tmp/emptymap, sync: {}}
 EOF
 run "$tmp/reg.yaml"
 check "failures exit 1" "$rc" "1"
@@ -61,14 +64,19 @@ check "true + path: pushed" "$(pushed on)" "2"
 check "false: untouched" "$(pushed off)" "1"
 check "yes: untouched" "$(pushed str)" "1"
 check "absent key: untouched" "$(pushed absent)" "1"
-check "one notification" "$(grep -c 'sync-repos failed (2)' "$tmp/notified" || true)" "1"
-check "yes: reported" "$(grep -c "str: sync_repo must be true or false, not 'yes'" "$tmp/notified" || true)" "1"
-check "no path: reported" "$(grep -c 'nopath: sync_repo is true but there is no path' "$tmp/notified" || true)" "1"
+check "empty sync map: untouched" "$(pushed emptymap)" "1"
+check "scalar sync: untouched" "$(pushed scalar)" "1"
+check "old key: untouched" "$(pushed old)" "1"
+check "one notification" "$(grep -c 'sync-repos failed (4)' "$tmp/notified" || true)" "1"
+check "yes: reported" "$(grep -c "str: sync.enabled must be true or false, not 'yes'" "$tmp/notified" || true)" "1"
+check "no path: reported" "$(grep -c 'nopath: sync.enabled is true but there is no path' "$tmp/notified" || true)" "1"
+check "scalar sync: reported" "$(grep -c 'scalar: sync must be a mapping (sync: {enabled: true}), not bool' "$tmp/notified" || true)" "1"
+check "old key: reported" "$(grep -c 'old: sync_repo is renamed to sync.enabled' "$tmp/notified" || true)" "1"
 
-printf 'projects:\n  off: {path: %s/off, sync_repo: false}\n' "$tmp" >"$tmp/none.yaml"
+printf 'projects:\n  off: {path: %s/off, sync: {enabled: false}}\n' "$tmp" >"$tmp/none.yaml"
 run "$tmp/none.yaml"
 check "nothing enabled: exit 0" "$rc" "0"
-check "nothing enabled: logged" "$(grep -c 'no project with sync_repo: true' "$tmp/out" || true)" "1"
+check "nothing enabled: logged" "$(grep -c 'no project with sync.enabled: true' "$tmp/out" || true)" "1"
 
 printf 'projects:\n' >"$tmp/empty.yaml"
 run "$tmp/empty.yaml"
