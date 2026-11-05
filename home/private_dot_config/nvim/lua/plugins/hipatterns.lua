@@ -12,8 +12,9 @@ return {
     },
     config = function(_, opts)
       local hipatterns = require("mini.hipatterns")
-      -- Highlight hex color strings (`#rrggbb`) using that color
-      opts["hex_color"] = hipatterns.gen_highlighter.hex_color()
+      -- Highlight hex color strings (`#rrggbb`) using that color. It belongs under
+      -- `highlighters`; set at the top level of opts it was ignored.
+      opts.highlighters.hex_color = hipatterns.gen_highlighter.hex_color()
       hipatterns.setup(opts)
     end,
   },
