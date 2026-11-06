@@ -69,7 +69,7 @@ Before invoking the Agent tool, use the `spawn-agents` skill — predict tools e
 
 ### Beads (bd) Performance
 
-- **Slow `bd` commands** (5-30s): caused by journal bloat or commit history growth in the embedded Dolt store. Fix: `bd compact --days 7 --force && bd gc --skip-decay --force`. Nuclear reset: `bd flatten --force && bd gc --skip-decay --force`. See `~/.claude/references/beads-performance.md`.
+- **Slow `bd` commands** (5-30s): caused by journal bloat or commit history growth in the embedded Dolt store. Fix: `bd dolt commit; bd compact --days 7 --force && bd gc --skip-decay --force`. Nuclear reset: `bd dolt commit; bd flatten --force && bd gc --skip-decay --force`. **Always `bd dolt commit` first** (or `bd-track cleanup --commit`, never plain `bd-track cleanup`): compact/flatten discard uncommitted changes under `dolt.auto-commit batch` (a whole triage session lost, 2026-11-05). See `~/.claude/references/beads-performance.md`.
 - **New project setup**: always run `bd config set dolt.auto-commit batch` and `bd config set no-push true` after `bd init`. Add the daily maintenance cron (commit + compact + gc). Details in the reference file.
 
 ### Beads (bd) Gotchas
