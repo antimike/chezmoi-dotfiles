@@ -1,0 +1,31 @@
+#!/bin/sh
+# chezmoi modify_ script: bd's user-wide config, ~/.config/bd/config.yaml (all projects).
+#
+# Keeps bd's anonymous usage metrics off (MH, 2026-11-06): `metrics.disabled: true`, the key
+# `bd metrics off` writes. bd writes this file itself (`metrics.notice_shown`, the endpoint,
+# future keys), so chezmoi owns only that one key: every other key and comment passes through,
+# and `bd metrics on` is reverted by the next apply. To turn metrics back on, change this script.
+#
+# Guards: an empty or missing file gets just the key; without mikefarah's yq, or if the edit
+# fails (invalid YAML), the file passes through unchanged, with a warning.
+set -eu
+
+live=$(cat)
+if [ -z "$live" ]; then
+  printf 'metrics:\n    disabled: true\n'
+  exit 0
+fi
+
+if ! yq --version 2>/dev/null | grep -q mikefarah; then
+  echo "modify_config.yaml (bd): mikefarah's yq not on PATH; ~/.config/bd/config.yaml left unchanged" >&2
+  printf '%s\n' "$live"
+  exit 0
+fi
+
+# -I4: bd writes 4-space indents; matching them keeps `chezmoi diff` quiet after bd's own writes.
+if out=$(printf '%s\n' "$live" | yq -I4 '.metrics.disabled = true'); then
+  printf '%s\n' "$out"
+else
+  echo "modify_config.yaml (bd): edit failed; ~/.config/bd/config.yaml left unchanged" >&2
+  printf '%s\n' "$live"
+fi
