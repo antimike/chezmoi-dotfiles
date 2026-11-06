@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# idle-allowed-test — check `idle-allowed` (hypridle's condition_cmd) against stubbed data.
+#
+#   tools/idle-allowed-test/idle-allowed-test
+#
+# Runs the source copy (home/dot_local/bin/executable_idle-allowed) with stubs for hyprctl,
+# pw-dump and fuser first on PATH, fed from per-case files: the clients (inhibitingIdle,
+# fullscreen), PipeWire nodes (Chromium streams, running or not) and a busy camera.
+# Never touches the running session. Covers the rule (chz-cr5): non-Chromium inhibitors
+# count; Chromium's counts only with a running audio/capture stream or a fullscreen
+# window; a busy camera counts. Prints one line per case; exits 1 if any fails. Needs jq.
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/../.." && pwd)
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+failed=0
+
+mkdir -p "$tmp/bin"
+cp "$repo/home/dot_local/bin/executable_idle-allowed" "$tmp/bin/idle-allowed"
+cat >"$tmp/bin/hyprctl" <<'STUB'
+#!/usr/bin/env bash
+cat "$CASE/clients.json"
+STUB
+cat >"$tmp/bin/pw-dump" <<'STUB'
+#!/usr/bin/env bash
+if [[ -f $CASE/pw.json ]]; then cat "$CASE/pw.json"; else echo '[]'; fi
+STUB
+cat >"$tmp/bin/fuser" <<'STUB'
+#!/usr/bin/env bash
+[[ -f $CASE/camera-busy ]]
+STUB
+chmod +x "$tmp/bin"/*
+
+client() { # class fullscreen inhibiting
+  printf '{"class":"%s","title":"t","fullscreen":%s,"inhibitingIdle":%s}' "$1" "$2" "$3"
+}
+node() { # binary media.class state
+  printf '{"type":"PipeWire:Interface:Node","info":{"state":"%s","props":{"application.process.binary":"%s","application.name":"%s","media.class":"%s"}}}' "$3" "$1" "$1" "$2"
+}
+
+# check <name> <expected rc> <clients json> [pw json] [camera-busy]
+check() {
+  local name=$1 want=$2 c
+  c=$tmp/case-$name
+  mkdir -p "$c"
+  echo "$3" >"$c/clients.json"
+  if [[ -n ${4:-} ]]; then echo "$4" >"$c/pw.json"; fi
+  if [[ -n ${5:-} ]]; then touch "$c/camera-busy"; fi
+  local rc=0 out
+  out=$(CASE=$c PATH="$tmp/bin:$PATH" idle-allowed -v 2>&1) || rc=$?
+  if [[ $rc == "$want" ]]; then
+    echo "ok   $name (rc $rc)"
+  else
+    echo "FAIL $name: rc $rc, want $want"
+    while IFS= read -r line; do echo "     $line"; done <<<"$out"
+    failed=1
+  fi
+}
+
+kitty=$(client kitty 0 false)
+chrome=$(client chromium-browser 0 true)
+chrome_fs=$(client chromium-browser 2 true)
+chrome_max=$(client chromium-browser 1 true)
+mpv=$(client mpv 0 true)
+
+check no-inhibitor 0 "[$kitty]"
+check mpv-inhibits 1 "[$kitty,$mpv]"
+check chromium-idle-only 0 "[$kitty,$chrome]"
+check chromium-paused-stream 0 "[$chrome]" "[$(node chromium-browser Stream/Output/Audio suspended)]"
+check chromium-audio 1 "[$chrome]" "[$(node chromium-browser Stream/Output/Audio running)]"
+check chromium-mic 1 "[$chrome]" "[$(node chromium-browser Stream/Input/Audio running)]"
+check chromium-screen-share 1 "[$chrome]" "[$(node chromium-browser Stream/Input/Video running)]"
+check chromium-fullscreen 1 "[$chrome_fs]"
+check chromium-maximized 0 "[$chrome_max]"
+check other-app-audio-only 0 "[$chrome]" "[$(node spotify_player Stream/Output/Audio running)]"
+check camera-busy 1 "[$kitty]" "" busy
+check hyprctl-fails 0 "not json"
+
+exit $failed

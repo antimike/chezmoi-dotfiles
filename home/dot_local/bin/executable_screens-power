@@ -3,7 +3,8 @@
 #
 #   screens-power off|on
 #
-# swayidle runs this after the lock timeout and on resume. The compositor comes
+# The idle chain (hypridle in Hyprland, swayidle in SwayFX) runs this after the lock
+# timeout and on resume. The compositor comes
 # from XDG_CURRENT_DESKTOP (set by uwsm); an unknown one is a no-op, not an error,
 # so the idle chain keeps working there.
 set -euo pipefail

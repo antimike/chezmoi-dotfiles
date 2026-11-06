@@ -1,0 +1,68 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# hypridle: the idle chain in Hyprland sessions (chz-cr5, 2026-11-05; SwayFX keeps
+# ~/.config/swayidle/config, same timings). Run by hypridle.service; idle-toggle swaps
+# it for hypridle-paused.service (./hypridle-paused.conf: lock handlers + safety net).
+#
+# Every listener ignores inhibitors and asks `idle-allowed` instead (condition_cmd), so
+# a stray inhibitor (a paused video page in Chromium, 2026-11-04/05) cannot hold the
+# chain off: video players, calls and fullscreen windows still do (rule in idle-allowed).
+# A deferred timeout is retried every 30 s while idle; its on-resume is skipped.
+# Keep the general block and the safety net in sync with ./hypridle-paused.conf.
+
+general {
+    # Every lock goes through logind (loginctl lock-session, $mod+Escape) to lock-screen,
+    # which picks hyprlock and returns once locked.
+    lock_cmd = lock-screen
+    before_sleep_cmd = loginctl lock-session
+    after_sleep_cmd = screens-power on
+    # 3: hold sleep until the session is locked (hyprland-lock-notify).
+    inhibit_sleep = 3
+}
+
+# 5 min: dim the laptop panel (the external monitors have no backlight control)
+listener {
+    timeout = 300
+    ignore_inhibit = true
+    condition_cmd = idle-allowed
+    condition_retry = 30
+    on-timeout = brightnessctl -q -s set 10%
+    on-resume = brightnessctl -q -r
+}
+
+# 6 min: lock
+listener {
+    timeout = 360
+    ignore_inhibit = true
+    condition_cmd = idle-allowed
+    condition_retry = 30
+    on-timeout = loginctl lock-session
+}
+
+# 7 min: all screens off
+listener {
+    timeout = 420
+    ignore_inhibit = true
+    condition_cmd = idle-allowed
+    condition_retry = 30
+    on-timeout = screens-power off
+    on-resume = screens-power on
+}
+
+# 20 min: suspend, on battery only (builds and downloads run on AC); docked on battery
+# it warns first (dock-awake idle-suspend, D61)
+listener {
+    timeout = 1200
+    ignore_inhibit = true
+    condition_cmd = idle-allowed
+    condition_retry = 30
+    on-timeout = dock-awake idle-suspend
+}
+
+# 3 h safety net: lock and screens off whatever holds an inhibitor (MH, 2026-11-05).
+listener {
+    timeout = 10800
+    ignore_inhibit = true
+    on-timeout = loginctl lock-session; screens-power off
+    on-resume = screens-power on
+}
+{{- end }}

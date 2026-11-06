@@ -112,7 +112,7 @@ versions checked 2026-10-08 and 2026-10-17.
 | Bar + tray | **waybar** 0.15 (tray is a built-in module: no stalonetray) | ironbar, eww, quickshell (none packaged) | waybar has sway, hyprland, niri and river modules, CSS styling and a tray; the others are more programmable but heavier to maintain. Rebuild the polybar modules (workspaces, clock, battery, network, volume, weather) here. |
 | Notifications | **dunst** 1.13.2 (installed; D29 confirmed by MH 2026-10-17) | SwayNotificationCenter 0.12.6, mako | dunst: global keybindings act on the current popup (`dunstctl action`, `dunstctl context` opens a rofi menu of its actions and links, `close`, `close-all`, `history-pop`); works in i3 and SwayFX, so the shared fragment keeps one set of bindings; runtime-toggled rules (`dunstctl rule`) and graded pause levels; theming through `dunstctl reload <files>` with a generated file. History: a rofi/fuzzel **history browser** (step 8). Waybar status: a custom module on `dunstctl count history` / `is-paused`. swaync was considered: a clickable panel with widgets and inline reply, but Wayland-only, and its README documents no command to act on the latest popup from a keybinding. |
 | Lock screen | **swaylock** 1.8.6 | gtklock 4.0 (packaged, CSS-themed), swaylock-effects (blur/clock; not packaged), hyprlock (COPR) | swaylock is minimal and robust; gtklock looks better and stays packaged. Both use ext-session-lock, so either works across compositors. |
-| Idle / DPMS | **swayidle** 1.9 | hypridle (COPR) | swayidle drives dim, lock and output power off from timeouts, plus `before-sleep` lock. |
+| Idle / DPMS | **swayidle** 1.9 (SwayFX); **hypridle** 0.1.8 in Hyprland since D77 | hypridle (COPR) | swayidle drives dim, lock and output power off from timeouts, plus `before-sleep` lock. In Hyprland, hypridle runs the same chain with every listener ignoring inhibitors and asking `idle-allowed` (D77, chz-cr5), plus a 3 h safety net. |
 | Launcher, dmenu prompts | **rofi** 2.0 (keep) | fuzzel 1.14, wofi | rofi keeps all existing themes and modi. fuzzel is faster and simpler; keep it in mind for prompts. |
 | Night light | **gammastep** (D29) | wlsunset | Needs the wlr gamma-control protocol; check Hyprland (has its own `hyprsunset`) and niri in their minimal configs. |
 | Outputs | **kanshi** 1.9 | wdisplays (GUI), `wlr-randr` | niri configures outputs itself; kanshi may be unnecessary there. |
@@ -298,7 +298,8 @@ functional part of its step, not the whole step; scripts from `i3-config-mbp` ar
       `swayidle.service` (`swayidle -w`, under `wm-helpers-wayland.target`); `~/.local/bin/lock-screen` (`swaylock -f`,
       returns once locked, so suspend waits for the lock), `screens-power` (per compositor), `idle-toggle`
       (`$mod+Shift+Escape`: swaps in `swayidle-locking.service`, which keeps only the lock handlers, so a paused chain
-      still locks before sleep); `~/.config/swaylock/config`; sway `bindswitch` for the lid and `inhibit_idle
+      still locks before sleep); **since D77 (2026-11-05) Hyprland runs `hypridle.service` (`~/.config/hypr/hypridle.conf`, same
+      timings, `idle-allowed` as condition, 3 h safety net) and `idle-toggle` swaps in `hypridle-paused.service`;** `~/.config/swaylock/config`; sway `bindswitch` for the lid and `inhibit_idle
       fullscreen` for all windows; logind drop-in `/etc/systemd/logind.conf.d/50-chezmoi-power.conf` from
       `run_onchange_install-logind-power.sh` (overrides the 2023 `HandleLidSwitch=ignore` in `logind.conf`; applies
       to GNOME too, except while an external monitor is connected). `$mod+Escape` (`loginctl lock-session`) now

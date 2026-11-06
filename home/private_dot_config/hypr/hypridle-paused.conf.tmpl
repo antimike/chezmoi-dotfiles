@@ -1,0 +1,20 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+# hypridle with the idle timeouts paused (idle-toggle, hypridle-paused.service): lock
+# handlers, so $mod+Escape and the lock before sleep still work, and the 3 h safety net,
+# so a forgotten pause cannot leave the screen unlocked overnight. Keep in sync with
+# ./hypridle.conf.
+
+general {
+    lock_cmd = lock-screen
+    before_sleep_cmd = loginctl lock-session
+    after_sleep_cmd = screens-power on
+    inhibit_sleep = 3
+}
+
+listener {
+    timeout = 10800
+    ignore_inhibit = true
+    on-timeout = loginctl lock-session; screens-power off
+    on-resume = screens-power on
+}
+{{- end }}

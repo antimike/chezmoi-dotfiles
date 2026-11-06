@@ -6,7 +6,7 @@
 #                            $mod+Ctrl+Escape in i3, SwayFX and Hyprland
 #   dock-awake power-key     the compositor's XF86PowerOff binding (logind ignores a short
 #                            press, HandlePowerKey=ignore): like `suspend`
-#   dock-awake idle-suspend  swayidle's idle timeout: suspend on battery only; docked on
+#   dock-awake idle-suspend  the idle chain's 20 min timeout (hypridle/swayidle): suspend on battery only; docked on
 #                            battery it suspends with the docked-suspend warning
 #   dock-awake status        docked, AC, locks (sleep, handle-lid-switch), grace timer
 #
@@ -17,10 +17,10 @@
 #
 # Locks (systemd-inhibit --mode=block): handle-lid-switch whenever docked, whatever the
 # power (D64): logind counts an external screen only while its connector is "enabled", and
-# DPMS off (swayidle's screens-off step) disables them all, so with the lid closed logind
+# DPMS off (the idle chain's screens-off step) disables them all, so with the lid closed logind
 # saw "undocked" and suspended, and its lid path ignores sleep locks. Docked means a
 # connected output (sysfs status, which DPMS leaves alone). And sleep while docked on AC,
-# which refuses every suspend request from the session, swayidle's and stray ones alike
+# which refuses every suspend request from the session, the idle chain's and stray ones alike
 # (`systemctl suspend -i` needs admin: polkit suspend-ignore-inhibit). AC lost while
 # docked: the sleep lock goes at once with a critical notification; if the screen is
 # locked (nobody there), suspend after $DOCK_AWAKE_AC_GRACE seconds unless AC returns or

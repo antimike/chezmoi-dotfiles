@@ -1,0 +1,16 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Idle timeouts paused: lock handlers and the 3 h safety net only (hypridle)
+Documentation=file://%h/.config/hypr/hypridle-paused.conf
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+Conflicts=hypridle.service
+
+[Service]
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/hypridle -c %h/.config/hypr/hypridle-paused.conf
+Restart=on-failure
+RestartSec=2
+{{- end }}
