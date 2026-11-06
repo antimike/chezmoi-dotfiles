@@ -1,13 +1,31 @@
 #!/usr/bin/env bash
 # idle-toggle — pause or resume the idle timeouts (dim, lock, screens off, suspend).
 #
-#   idle-toggle        bound to $mod+Shift+Escape in SwayFX
+#   idle-toggle            bound to $mod+Shift+Escape; waybar's custom/idle on-click
+#   idle-toggle --status   print "active" or "paused" (exit 0 / 1); changes nothing
 #
 # For calls and presentations where the browser does not inhibit idle itself.
 # Pausing swaps swayidle.service for swayidle-locking.service (they conflict),
 # which keeps only the lock handlers: $mod+Escape and the lock before sleep (lid,
 # power key) still work. The next login starts the full chain again.
 set -euo pipefail
+
+case "${1-}" in
+  "") ;;
+  --status)
+    if systemctl --user --quiet is-active swayidle.service; then echo active; exit 0; fi
+    echo paused
+    exit 1
+    ;;
+  -h | --help)
+    sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  *)
+    echo "idle-toggle: unknown argument '$1' (usage: idle-toggle [--status])" >&2
+    exit 2
+    ;;
+esac
 
 if systemctl --user --quiet is-active swayidle.service; then
   systemctl --user start swayidle-locking.service
