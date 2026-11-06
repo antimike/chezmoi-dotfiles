@@ -102,6 +102,7 @@ packageTargets:
       - openssl-devel
       - pipx
       - podman
+      - portaudio            # libportaudio for sounddevice (pywhisper-dictation); Debian/Ubuntu: libportaudio2
       - python3-pip
       - readline-devel
       - sqlite
