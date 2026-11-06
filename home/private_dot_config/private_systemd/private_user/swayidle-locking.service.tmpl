@@ -5,6 +5,8 @@ Documentation=man:swayidle(1) file://%h/.config/swayidle/locking
 PartOf=wm-helpers-wayland.target
 After=graphical-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
+# Not in Hyprland: hypridle.service runs there (chz-cr5).
+ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland
 Conflicts=swayidle.service
 
 [Service]

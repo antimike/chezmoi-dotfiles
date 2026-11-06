@@ -5,15 +5,25 @@
 #   idle-toggle --status   print "active" or "paused" (exit 0 / 1); changes nothing
 #
 # For calls and presentations where the browser does not inhibit idle itself.
-# Pausing swaps swayidle.service for swayidle-locking.service (they conflict),
-# which keeps only the lock handlers: $mod+Escape and the lock before sleep (lid,
-# power key) still work. The next login starts the full chain again.
+# Pausing swaps the chain's service for its paused twin (they conflict), which keeps
+# the lock handlers: $mod+Escape and the lock before sleep (lid, power key) still work.
+# Hyprland: hypridle.service -> hypridle-paused.service (also keeps the 3 h safety net);
+# SwayFX: swayidle.service -> swayidle-locking.service. The next login starts the full
+# chain again.
 set -euo pipefail
+
+if [[ ${XDG_CURRENT_DESKTOP:-} == Hyprland ]]; then
+  full=hypridle.service paused=hypridle-paused.service
+  paused_text="No dim, lock, screens off or suspend on timeout (the 3 h safety net stays)."
+else
+  full=swayidle.service paused=swayidle-locking.service
+  paused_text="No dim, lock, screens off or suspend on timeout."
+fi
 
 case "${1-}" in
   "") ;;
   --status)
-    if systemctl --user --quiet is-active swayidle.service; then echo active; exit 0; fi
+    if systemctl --user --quiet is-active "$full"; then echo active; exit 0; fi
     echo paused
     exit 1
     ;;
@@ -27,12 +37,11 @@ case "${1-}" in
     ;;
 esac
 
-if systemctl --user --quiet is-active swayidle.service; then
-  systemctl --user start swayidle-locking.service
-  notify-send -a idle-toggle -u critical "Idle paused" \
-    "No dim, lock, screens off or suspend on timeout. \$mod+Shift+Escape resumes."
+if systemctl --user --quiet is-active "$full"; then
+  systemctl --user start "$paused"
+  notify-send -a idle-toggle -u critical "Idle paused" "$paused_text \$mod+Shift+Escape resumes."
 else
-  systemctl --user start swayidle.service
+  systemctl --user start "$full"
   notify-send -a idle-toggle "Idle resumed" "Dim 5 min, lock 6, screens off 7, suspend 20 on battery."
 fi
 # Refresh waybar's idle module (custom/idle, signal 8).

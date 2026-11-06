@@ -86,7 +86,8 @@ sunset_module() {
 
 case ${1:-} in
   idle)
-    if systemctl --user --quiet is-active swayidle-locking.service; then
+    # idle-toggle's paused twins: hypridle-paused (Hyprland), swayidle-locking (SwayFX).
+    if systemctl --user --quiet is-active hypridle-paused.service swayidle-locking.service; then
       out $'\U000f0176 idle paused' paused 'No dim, lock, screens off or suspend on timeout. Click to resume.'
     else
       out '' '' ''

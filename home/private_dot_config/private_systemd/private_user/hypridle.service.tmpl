@@ -1,0 +1,19 @@
+{{ if eq (dig "display_server" "x11" .) "wayland" -}}
+[Unit]
+Description=Idle chain: dim, lock, screens off, suspend; 3 h safety net (hypridle)
+Documentation=https://wiki.hyprland.org/Hypr-Ecosystem/hypridle/ file://%h/.config/hypr/hypridle.conf
+PartOf=wm-helpers-wayland.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+# Hyprland only (chz-cr5); SwayFX runs swayidle.service.
+ConditionEnvironment=XDG_CURRENT_DESKTOP=Hyprland
+# idle-toggle swaps this for hypridle-paused.service (lock handlers + safety net).
+Conflicts=hypridle-paused.service
+
+[Service]
+# The commands in ~/.config/hypr/hypridle.conf call helpers in ~/.local/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/hypridle -c %h/.config/hypr/hypridle.conf
+Restart=on-failure
+RestartSec=2
+{{- end }}

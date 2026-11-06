@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # lock-screen — lock the Wayland session; returns once it is locked.
 #
-#   lock-screen        what swayidle runs on logind's lock event and before sleep
+#   lock-screen        what hypridle/swayidle run on logind's lock event and before sleep
 #
 # Lock through `loginctl lock-session` (bound to $mod+Escape) rather than calling
 # this directly, so every lock goes through one path. Returning only once the lock
-# surface is up lets `swayidle -w` hold suspend until the screen is locked.
+# surface is up lets `swayidle -w` hold suspend until the screen is locked (hypridle
+# waits for the lock itself: inhibit_sleep = 3).
 #
 # The locker follows the compositor (XDG_CURRENT_DESKTOP, set by uwsm; D63):
 #   Hyprland   hyprlock (~/.config/hypr/hyprlock.conf). It has no fork-after-lock

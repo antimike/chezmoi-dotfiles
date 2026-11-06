@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# idle-allowed — may the idle chain act now? hypridle's condition_cmd (chz-cr5).
+#
+#   idle-allowed        exit 0: no inhibitor that counts, go ahead (dim, lock, screens off,
+#                       suspend); exit 1: one counts, hypridle retries later
+#   idle-allowed -v     same, and print each inhibitor and the verdict
+#
+# hypridle's listeners ignore every inhibitor (ignore_inhibit = true) and ask this
+# instead, so a stray inhibitor cannot keep the screen unlocked all night (2026-11-04/05:
+# a paused video page in Chromium did). The rule (MH, 2026-11-05):
+#   - a window that inhibits idle counts (mpv, a fullscreen window via the Hyprland
+#     rule `idle-inhibit-fullscreen`, any other app that asks);
+#   - Chromium's inhibitor counts only while Chromium plays audio (a running PipeWire
+#     output stream), captures (mic, camera or screen stream), or has a fullscreen
+#     window. Its inhibitor is browser-wide, attached to one window, and a paused or
+#     muted video in any tab can hold it, so the window it sits on says nothing;
+#   - a camera in use (/dev/video*) counts, as a call in progress.
+# Not seen: D-Bus ScreenSaver inhibitors (hypridle owns that service; e.g. VLC when not
+# fullscreen). The 3 h safety-net listener in ~/.config/hypr/hypridle.conf has no
+# condition at all.
+set -euo pipefail
+
+verbose=0
+case "${1-}" in
+  "") ;;
+  -v) verbose=1 ;;
+  *)
+    echo "usage: idle-allowed [-v]" >&2
+    exit 2
+    ;;
+esac
+
+say() { if ((verbose)); then echo "$*"; fi; }
+
+clients=$(hyprctl clients -j 2>/dev/null) || clients='[]'
+mapfile -t inhibitors < <(jq -r '.[] | select(.inhibitingIdle) | [.class, .fullscreen, .title] | @tsv' <<<"$clients")
+
+counts=0
+chromium=0
+for row in "${inhibitors[@]}"; do
+  IFS=$'\t' read -r class fullscreen title <<<"$row"
+  if [[ ${class,,} == *chrom* ]]; then
+    chromium=1
+    say "inhibitor: $class \"$title\" (Chromium: checked below)"
+  else
+    counts=1
+    say "inhibitor: $class \"$title\" (fullscreen $fullscreen): counts"
+  fi
+done
+
+if ((chromium && !counts)); then
+  if jq -e '.[] | select((.class | ascii_downcase | contains("chrom")) and .fullscreen == 2)' \
+    <<<"$clients" >/dev/null; then
+    counts=1
+    say "Chromium: a fullscreen window: counts"
+  fi
+fi
+
+if ((chromium && !counts)); then
+  streams=$(pw-dump 2>/dev/null | jq -r '
+    .[] | select(.type == "PipeWire:Interface:Node") | .info
+    | select(.state == "running")
+    | select(((.props["application.process.binary"] // "") + " " + (.props["application.name"] // ""))
+             | ascii_downcase | contains("chrom"))
+    | select(.props["media.class"] | IN("Stream/Output/Audio", "Stream/Input/Audio", "Stream/Input/Video"))
+    | .props["media.class"]' 2>/dev/null) || streams=
+  if [[ -n $streams ]]; then
+    counts=1
+    say "Chromium: running stream(s): $(tr '\n' ' ' <<<"$streams")- counts"
+  else
+    say "Chromium: no running audio or capture stream, not fullscreen: ignored"
+  fi
+fi
+
+if ((!counts)) && compgen -G '/dev/video*' >/dev/null && fuser -s /dev/video* 2>/dev/null; then
+  counts=1
+  say "camera in use: counts"
+fi
+
+if ((counts)); then
+  say "verdict: wait"
+  exit 1
+fi
+say "verdict: go ahead"
+exit 0

@@ -5,6 +5,8 @@ Documentation=man:swayidle(1) file://%h/.local/share/chezmoi/docs/plans/wayland-
 PartOf=wm-helpers-wayland.target
 After=graphical-session.target
 ConditionEnvironment=WAYLAND_DISPLAY
+# Not in Hyprland: hypridle.service runs there (chz-cr5).
+ConditionEnvironment=!XDG_CURRENT_DESKTOP=Hyprland
 # idle-toggle swaps this for swayidle-locking.service (lock handlers only).
 Conflicts=swayidle-locking.service
 
