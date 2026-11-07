@@ -45,6 +45,9 @@ bindswitch --reload --locked lid:off exec ~/.local/bin/lid-panel-sync --opened
 # for calls ($mod+Escape locks: shared body).
 for_window [all] inhibit_idle fullscreen
 bindsym $mod+Shift+Escape exec ~/.local/bin/idle-toggle
+# bd-track timers (chz-dg6): pause all open / resume the paused; with Shift, a picker.
+bindsym $mod+Ctrl+t exec ~/.local/bin/bd-timers toggle
+bindsym $mod+Ctrl+Shift+t exec ~/.local/bin/bd-timers pick
 
 # Placeholder until waybar (step 7).
 bar {
