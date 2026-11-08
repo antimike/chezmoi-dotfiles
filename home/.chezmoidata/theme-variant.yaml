@@ -1,0 +1,7 @@
+# Clock-driven dark/light theme variant (D78, chz-2hj): theme-variant.timer switches at these
+# times (H:MM, local), rendered into ~/.config/theme-variant.conf for the theme-variant helper.
+# Same times as hyprsunset's daytime profile (hypr/hyprsunset.conf: identity at 7:00, warm at
+# 20:00); change both together.
+theme_variant:
+  light_at: "7:00"
+  dark_at: "20:00"

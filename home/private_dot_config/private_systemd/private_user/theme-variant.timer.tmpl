@@ -1,0 +1,15 @@
+{{ if lookPath "gsettings" -}}
+{{- $light := splitList ":" .theme_variant.light_at -}}
+{{- $dark := splitList ":" .theme_variant.dark_at -}}
+[Unit]
+Description=Theme variant switches (light at {{ .theme_variant.light_at }}, dark at {{ .theme_variant.dark_at }}; .chezmoidata/theme-variant.yaml, D78)
+
+[Timer]
+OnCalendar=*-*-* {{ index $light 0 }}:{{ index $light 1 }}:00
+OnCalendar=*-*-* {{ index $dark 0 }}:{{ index $dark 1 }}:00
+# Catches a switch missed while powered off; an ad-hoc toggle holds until the next one.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+{{- end }}
