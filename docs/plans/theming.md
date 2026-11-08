@@ -81,6 +81,13 @@ optional: `amo theme apply` sets `color-scheme`/`accent-color` in gsettings. Che
 (xdg-desktop-portal-gtk 1.15.3 does not serve it; the gnome backend does but is not preferred), so the accent needs
 the gnome backend for `org.freedesktop.impl.portal.Settings` or stays restart-only.
 
+**Dark/light by the clock (D78, chz-2hj, 2026-11-07):** `theme-variant` (`~/.local/bin`) sets `color-scheme` in
+gsettings and runs `amo theme apply --variant <v>`; `theme-variant.timer` switches at 7:00 (light) and 20:00 (dark),
+the times in `.chezmoidata/theme-variant.yaml` (shared with hyprsunset's daytime profile; change both together);
+`$mod+Ctrl+d` toggles until the next switch. Verified live 2026-11-07: the portal's `org.freedesktop.appearance
+color-scheme` follows (1 dark, 2 light). The amo step is skipped until the profile has a palette (chz-8bg.4); then
+amontillado's own `theme.variant` must follow the clock too, or a wallpaper change re-renders in `auto` (open, D78).
+
 ## Palette generation
 
 - **pywal** is what the X11 wallpaper timer uses. Upstream pywal has been unmaintained for years; the installed pipx

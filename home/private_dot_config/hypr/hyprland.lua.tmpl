@@ -229,6 +229,7 @@ bind(mod .. " + o", run("fuzzel --launch-prefix='uwsm app -- '"), "App launcher"
 bind(mod .. " + t", app("ticket-picker"), "File a ticket (project, then Enter: quick note, Alt+Enter: editor)")
 bind(mod .. " + CTRL + t", run(bin .. "bd-timers toggle"), "bd-track timers: pause all open, or resume the paused")
 bind(mod .. " + CTRL + SHIFT + t", run(bin .. "bd-timers pick"), "bd-track timers: pause/resume one (picker)")
+bind(mod .. " + CTRL + d", run(bin .. "theme-variant toggle"), "Theme: dark/light until the next scheduled switch (D78)")
 local window_switcher = run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window")
 bind("XF86LaunchA", window_switcher, "Window switcher")
 bind(mod .. " + grave", window_switcher, "Window switcher: all workspaces")

@@ -1,0 +1,9 @@
+{{ if lookPath "gsettings" -}}
+[Unit]
+Description=Theme variant by the clock: dark/light color-scheme and amontillado palette (D78)
+Documentation=file://%h/.local/share/chezmoi/home/dot_local/bin/executable_theme-variant
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/theme-variant schedule
+{{- end }}

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# theme-variant-test — tests ~/.local/bin/theme-variant (D78, chz-2hj) with fake gsettings, amo
+# and notify-send and a fixed clock; nothing touches the real color-scheme or theme.
+#
+#   tools/theme-variant-test/theme-variant-test
+#
+# Checks: schedule picks light inside [LIGHT_AT, DARK_AT) and dark outside, at both edges;
+# toggle flips the current variant ('default' counts as light) and names the next switch;
+# amo gets the same variant; a profile without a palette and a missing amo are skipped
+# (exit 0); another amo failure exits 1 with a critical notification; the conf file sets the
+# times. Exit 1 if any check fails.
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+fails=0
+
+# Fake gsettings: `get` prints $work/scheme, `set` stores it; fake amo logs its arguments and
+# fails with $work/amo-out when that file exists.
+cat >"$work/gsettings" <<EOF
+#!/usr/bin/env bash
+case \$1 in
+  get) echo "'\$(cat "$work/scheme")'" ;;
+  set) echo "\$4" >"$work/scheme" ;;
+esac
+EOF
+cat >"$work/amo" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$work/amo-calls"
+[[ -e $work/amo-out ]] && { cat "$work/amo-out"; exit 1; }
+exit 0
+EOF
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>%q\n' "$work/notes" >"$work/notify"
+chmod +x "$work/gsettings" "$work/amo" "$work/notify"
+printf 'LIGHT_AT=7:00\nDARK_AT=20:00\n' >"$work/conf"
+export THEME_VARIANT_GSETTINGS=$work/gsettings THEME_VARIANT_AMO=$work/amo \
+  THEME_VARIANT_NOTIFY=$work/notify THEME_VARIANT_CONF=$work/conf
+
+ok() { echo "ok    $1"; }
+fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
+check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
+  if [[ $2 == *"$3"* ]]; then ok "$1"; else fail "$1: missing '$3' in '$2'"; fi
+}
+same() {  # $1 = label, $2 = got, $3 = want
+  if [[ $2 == "$3" ]]; then ok "$1"; else fail "$1: got '$2', want '$3'"; fi
+}
+run() {  # $1 = expected exit, $2 = clock H:MM, $3 = scheme before, rest = args
+  local want=$1 clock=$2 got=0
+  echo "$3" >"$work/scheme"
+  shift 3
+  rm -f "$work/amo-calls" "$work/notes"
+  THEME_VARIANT_NOW=$clock bash "$src/executable_theme-variant" "$@" >"$work/out" 2>"$work/err" || got=$?
+  [[ $got == "$want" ]] || fail "exit $got, want $want for: $* at $clock ($(cat "$work/err"))"
+  touch "$work/amo-calls" "$work/notes"
+}
+sched() {  # $1 = clock, $2 = expected variant
+  run 0 "$1" default schedule
+  same "schedule at $1 -> $2" "$(cat "$work/scheme")" "prefer-$2"
+}
+
+for t in 6:59:dark 7:00:light 12:30:light 19:59:light 20:00:dark 23:45:dark 0:10:dark; do
+  sched "${t%:*}" "${t##*:}"
+done
+same "schedule passes the variant to amo" "$(cat "$work/amo-calls")" "theme apply --variant dark"
+same "schedule is silent" "$(cat "$work/notes")" ""
+
+run 0 12:00 default toggle
+same "toggle: 'default' counts as light, goes dark" "$(cat "$work/scheme")" "prefer-dark"
+check "... until the next switch" "$(cat "$work/notes")" "Theme: dark until the scheduled switch at 20:00"
+run 0 21:00 prefer-dark toggle
+same "toggle: dark goes light" "$(cat "$work/scheme")" "prefer-light"
+check "... next switch in the morning" "$(cat "$work/notes")" "until the scheduled switch at 7:00"
+run 0 21:00 prefer-light dark
+check "an explicit variant matching the schedule says so" "$(cat "$work/notes")" "Theme: dark as scheduled; next switch at 7:00"
+
+run 0 12:00 default status
+same "status" "$(cat "$work/out")" "light (scheduled: light, next switch 20:00)"
+
+echo "amontillado: profile default has no palette yet: give --palette" >"$work/amo-out"
+run 0 12:00 prefer-dark schedule
+same "no palette yet: color-scheme still set" "$(cat "$work/scheme")" "prefer-light"
+check "... amo skipped with a log line" "$(cat "$work/err")" "no palette yet: skipping"
+echo "amontillado: render error" >"$work/amo-out"
+run 1 12:00 prefer-dark schedule
+check "another amo failure notifies" "$(cat "$work/notes")" "-u critical Theme variant: amo theme apply failed"
+rm -f "$work/amo-out"
+
+THEME_VARIANT_AMO=$work/no-such-amo run 0 12:00 prefer-dark schedule
+check "missing amo is skipped" "$(cat "$work/err")" "amo not found"
+
+printf 'LIGHT_AT=8:30\nDARK_AT=18:15\n' >"$work/conf"
+sched 8:29 dark
+sched 8:30 light
+sched 18:15 dark
+
+run 2 12:00 default bogus
+ok "unknown mode exits 2"
+
+echo
+if ((fails)); then echo "$fails check(s) failed"; exit 1; fi
+echo "all checks passed"
