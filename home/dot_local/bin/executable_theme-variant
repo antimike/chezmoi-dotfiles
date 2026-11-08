@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# theme-variant — dark/light theme variant by the clock (D78, chz-2hj).
+#
+#   theme-variant schedule      the variant the schedule wants now (theme-variant.timer, at
+#                               LIGHT_AT and DARK_AT); silent
+#   theme-variant toggle        the other variant until the next scheduled switch  $mod+Ctrl+d
+#   theme-variant dark|light    that variant until the next scheduled switch
+#   theme-variant status        "<current> (scheduled: <variant>, next switch H:MM)"
+#
+# Setting a variant does two things:
+#   1. gsettings org.gnome.desktop.interface color-scheme prefer-dark|prefer-light: libadwaita
+#      and GTK4 apps follow, live through the settings portal (Hyprland's portals relay it).
+#   2. `amo theme apply --variant <v>`: amontillado re-renders the profile's palette in that
+#      variant. Skipped (one log line) while the profile has no palette yet (before chz-8bg.4)
+#      or amo is missing.
+# The current variant is gsettings' color-scheme ('default' counts as light). An ad-hoc switch
+# needs no state: the next timer run puts the schedule back.
+#
+# Schedule: ${XDG_CONFIG_HOME:-~/.config}/theme-variant.conf (LIGHT_AT=H:MM, DARK_AT=H:MM, from
+# .chezmoidata/theme-variant.yaml); default 7:00 / 20:00. For tests: THEME_VARIANT_CONF,
+# THEME_VARIANT_NOW (H:MM), and THEME_VARIANT_GSETTINGS / _AMO / _NOTIFY replace the commands.
+# Exit status: 0 = done, 1 = a step failed, 2 = usage.
+set -euo pipefail
+
+gsettings_cmd=${THEME_VARIANT_GSETTINGS:-gsettings}
+amo_cmd=${THEME_VARIANT_AMO:-amo}
+notify_cmd=${THEME_VARIANT_NOTIFY:-notify-send}
+conf=${THEME_VARIANT_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/theme-variant.conf}
+
+LIGHT_AT=7:00
+DARK_AT=20:00
+# shellcheck source=/dev/null
+[[ -r $conf ]] && . "$conf"
+
+usage() { echo "usage: theme-variant schedule|toggle|dark|light|status" >&2; exit 2; }
+notify() { "$notify_cmd" -a theme-variant "$@" 2>/dev/null || true; }
+log() { echo "theme-variant: $*" >&2; }
+
+minutes() { local h m; IFS=: read -r h m <<<"$1"; echo $((10#$h * 60 + 10#$m)); }
+now=$(minutes "${THEME_VARIANT_NOW:-$(date +%H:%M)}")
+light=$(minutes "$LIGHT_AT")
+dark=$(minutes "$DARK_AT")
+
+scheduled() { if ((now >= light && now < dark)); then echo light; else echo dark; fi; }
+next_switch() { if ((now >= light && now < dark)); then echo "$DARK_AT"; else echo "$LIGHT_AT"; fi; }
+current() {
+  case $("$gsettings_cmd" get org.gnome.desktop.interface color-scheme) in
+    *prefer-dark*) echo dark ;;
+    *) echo light ;;
+  esac
+}
+
+set_variant() { # set_variant dark|light; 0 = done, 1 = a step failed
+  local v=$1 rc=0 out
+  if ! out=$("$gsettings_cmd" set org.gnome.desktop.interface color-scheme "prefer-$v" 2>&1); then
+    log "gsettings failed: $out"
+    notify -u critical "Theme variant: gsettings failed" "$out"
+    rc=1
+  fi
+  if ! command -v "$amo_cmd" >/dev/null 2>&1; then
+    log "amo not found: skipping the palette re-render"
+  elif ! out=$("$amo_cmd" theme apply --variant "$v" 2>&1); then
+    if [[ $out == *"has no palette yet"* ]]; then
+      log "amontillado profile has no palette yet: skipping the palette re-render"
+    else
+      log "amo theme apply failed: $out"
+      notify -u critical "Theme variant: amo theme apply failed" "$out"
+      rc=1
+    fi
+  fi
+  return "$rc"
+}
+
+[[ $# -eq 1 ]] || usage
+case $1 in
+  schedule)
+    set_variant "$(scheduled)"
+    ;;
+  toggle | dark | light)
+    if [[ $1 == toggle ]]; then
+      if [[ $(current) == dark ]]; then v=light; else v=dark; fi
+    else
+      v=$1
+    fi
+    rc=0
+    set_variant "$v" || rc=$?
+    if [[ $v == "$(scheduled)" ]]; then
+      notify "Theme: $v" "as scheduled; next switch at $(next_switch)"
+    else
+      notify "Theme: $v" "until the scheduled switch at $(next_switch)"
+    fi
+    exit "$rc"
+    ;;
+  status)
+    echo "$(current) (scheduled: $(scheduled), next switch $(next_switch))"
+    ;;
+  *) usage ;;
+esac

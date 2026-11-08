@@ -15,6 +15,6 @@ timeout 420 'screens-power off' resume 'screens-power on'
 timeout 1200 'dock-awake idle-suspend'
 after-resume 'screens-power on'
 
-lock 'lock-screen'
-before-sleep 'lock-screen'
+lock 'bd-timers pause-all; lock-screen'
+before-sleep 'bd-timers pause-all; lock-screen'
 {{- end }}

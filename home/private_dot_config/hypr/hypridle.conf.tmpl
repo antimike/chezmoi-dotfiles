@@ -11,9 +11,10 @@
 
 general {
     # Every lock goes through logind (loginctl lock-session, $mod+Escape) to lock-screen,
-    # which picks hyprlock and returns once locked.
-    lock_cmd = lock-screen
-    before_sleep_cmd = loginctl lock-session
+    # which picks hyprlock and returns once locked. Every lock and every sleep first pauses
+    # the open bd-track timers (bd-timers pause-all, chz-dg6; resume: $mod+Ctrl+t).
+    lock_cmd = bd-timers pause-all; lock-screen
+    before_sleep_cmd = bd-timers pause-all; loginctl lock-session
     after_sleep_cmd = screens-power on
     # 3: hold sleep until the session is locked (hyprland-lock-notify).
     inhibit_sleep = 3

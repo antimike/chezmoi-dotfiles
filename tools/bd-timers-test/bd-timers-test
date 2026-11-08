@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# bd-timers-test — tests ~/.local/bin/bd-timers (chz-dg6) with a fake bd-track, a scripted fake
+# rofi and a fake notify-send; nothing touches the real bd-track log.
+#
+#   tools/bd-timers-test/bd-timers-test
+#
+# Checks: toggle pauses all when any interval is open; with none open it resumes only what bulk
+# pauses paused (a timer paused alone in the picker stays paused), else every paused one, one
+# bd-track call per project; does nothing with none; pause-all is silent with nothing open and never fails; pick lists
+# both states and pauses or resumes the chosen one in its own project; Escape does nothing; a
+# failing bd-track gives a critical notification. Exit 1 if any check fails.
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+fails=0
+
+# Fake bd-track: `active --json` prints $work/active; every other call is logged to $work/calls
+# and exits with $work/rc (default 0).
+cat >"$work/bd-track" <<EOF
+#!/usr/bin/env bash
+if [[ "\$*" == "--global active --json" ]]; then cat "$work/active"; exit 0; fi
+printf '%s\n' "\$*" >>"$work/calls"
+[[ -s $work/rc ]] && { echo "boom" >&2; exit "\$(cat $work/rc)"; }
+exit 0
+EOF
+# Fake rofi: logs its menu, prints $work/answer's output and exits with its status ("exit|out").
+cat >"$work/rofi" <<EOF
+#!/usr/bin/env bash
+cat >"$work/menu"
+a=\$(cat "$work/answer"); printf '%s' "\${a#*|}"; exit "\${a%%|*}"
+EOF
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>%q\n' "$work/notes" >"$work/notify"
+chmod +x "$work/bd-track" "$work/rofi" "$work/notify"
+export XDG_STATE_HOME=$work/state
+export BD_TIMERS_BDTRACK=$work/bd-track BD_TIMERS_ROFI=$work/rofi BD_TIMERS_NOTIFY=$work/notify
+
+open1='{"state":"open","project":"/p/alpha","session":"s1","bead":"a-1","title":"First","interval":"01A","since":"2026-11-07T09:05:00-06:00","tags":[]}'
+open2='{"state":"open","project":"/p/beta","session":"s2","bead":"b-2","title":"Second","interval":"01B","since":"2026-11-07T10:15:00-06:00","tags":[]}'
+paused3='{"state":"paused","project":"/p/beta","session":"s3","bead":"b-3","title":"Third","interval":"01C","since":"2026-11-07T11:30:00-06:00","tags":[]}'
+
+ok() { echo "ok    $1"; }
+fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
+check() {  # $1 = label, $2 = haystack, $3 = needle (fixed string)
+  if [[ $2 == *"$3"* ]]; then ok "$1"; else fail "$1: missing '$3' in '$2'"; fi
+}
+same() {  # $1 = label, $2 = got, $3 = want
+  if [[ $2 == "$3" ]]; then ok "$1"; else fail "$1: got '$2', want '$3'"; fi
+}
+run() {  # $1 = expected exit, $2 = active JSON, rest = bd-timers args
+  local want=$1 got=0
+  printf '%s\n' "$2" >"$work/active"
+  shift 2
+  rm -f "$work/calls" "$work/notes" "$work/menu"
+  bash "$src/executable_bd-timers" "$@" >/dev/null 2>"$work/err" || got=$?
+  [[ $got == "$want" ]] || fail "exit $got, want $want for: $* ($(cat "$work/err"))"
+  touch "$work/calls" "$work/notes"
+}
+
+: >"$work/rc"
+run 0 "[$open1,$paused3,$open2]" toggle
+same "toggle with open intervals pauses all" "$(cat "$work/calls")" "--global pause --all"
+check "... and names the open beads" "$(cat "$work/notes")" "Timers paused a-1, b-2"
+
+rm -rf "$XDG_STATE_HOME"
+run 0 "[$paused3]" toggle
+same "toggle with nothing recorded resumes every paused one" "$(cat "$work/calls")" "--project /p/beta resume --all b-3"
+check "... and names them" "$(cat "$work/notes")" "Timers resumed b-3"
+
+# MH's case (2026-11-07): a-1 paused alone in the picker, b-2 and c-4 open; toggle twice.
+paused1=${open1/\"open\"/\"paused\"}
+paused2=${open2/\"open\"/\"paused\"}
+open4='{"state":"open","project":"/p/gamma","session":"s4","bead":"c-4","title":"Fourth","interval":"01D","since":"2026-11-07T12:00:00-06:00","tags":[]}'
+paused4=${open4/\"open\"/\"paused\"}
+run 0 "[$paused1,$open2,$open4]" toggle
+same "toggle pauses the open ones" "$(cat "$work/calls")" "--global pause --all"
+run 0 "[$paused1,$paused2,$paused4]" toggle
+same "toggle resumes only what it paused, per project" "$(cat "$work/calls")" $'--project /p/beta resume --all b-2\n--project /p/gamma resume --all c-4'
+check "... and names them" "$(cat "$work/notes")" "Timers resumed b-2, c-4"
+same "... and clears the record" "$(cat "$XDG_STATE_HOME/bd-timers/bulk-paused" 2>/dev/null)" ""
+
+# A lock (pause-all) records a-1 and b-2; the picker resumes a-1 (out of the record), then
+# pauses it alone (not recorded); the toggle resumes b-2 only.
+run 0 "[$open1,$open2]" pause-all
+echo "0|0" >"$work/answer"
+run 0 "[$paused1,$paused2]" pick
+run 0 "[$open1,$paused2]" pick
+run 0 "[$paused1,$paused2]" toggle
+same "pause-all records; picker actions stay out of the record" "$(cat "$work/calls")" "--project /p/beta resume --all b-2"
+
+run 0 "[]" toggle
+same "toggle with nothing does nothing" "$(cat "$work/calls")" ""
+check "... and says so" "$(cat "$work/notes")" "No timers"
+
+run 0 "[$paused3]" pause-all
+same "pause-all with nothing open does nothing" "$(cat "$work/calls")" ""
+same "... silently" "$(cat "$work/notes")" ""
+run 0 "[$open1]" pause-all
+same "pause-all pauses" "$(cat "$work/calls")" "--global pause --all"
+
+echo 1 >"$work/rc"
+run 0 "[$open1]" pause-all
+check "pause-all never fails, but warns" "$(cat "$work/notes")" "-u critical bd-track pause failed"
+run 1 "[$open1]" toggle
+check "toggle reports a bd-track failure" "$(cat "$work/notes")" "-u critical bd-track pause failed"
+: >"$work/rc"
+
+echo "0|1" >"$work/answer"
+run 0 "[$open1,$paused3]" pick
+check "picker lists open intervals" "$(cat "$work/menu")" "▶  a-1          First  · alpha 09:05"
+check "picker lists paused intervals" "$(cat "$work/menu")" "⏸  b-3          Third  · beta 11:30"
+same "picking a paused one resumes it in its project" "$(cat "$work/calls")" "--project /p/beta resume --all b-3"
+check "... and notifies" "$(cat "$work/notes")" "Timer resumed b-3  Third"
+
+echo "0|0" >"$work/answer"
+run 0 "[$open1,$paused3]" pick
+same "picking an open one pauses it" "$(cat "$work/calls")" "--project /p/alpha pause --all a-1"
+
+echo "1|" >"$work/answer"
+run 1 "[$open1]" pick
+same "Escape does nothing" "$(cat "$work/calls")" ""
+
+run 2 "[]" bogus
+ok "unknown mode exits 2"
+
+echo
+if ((fails)); then echo "$fails check(s) failed"; exit 1; fi
+echo "all checks passed"

@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# bd-timers — pause and resume bd-track timers from the desktop (chz-dg6).
+#
+#   bd-timers toggle      $mod+Ctrl+t   any open interval: pause every open one (all projects);
+#                                       none open: resume the set the last bulk pauses paused
+#                                       (every paused one if none of that set is paused)
+#   bd-timers pick        $mod+Ctrl+Shift+t   rofi list of open (▶) and paused (⏸) intervals;
+#                                       Enter pauses or resumes the chosen one
+#   bd-timers pause-all   idle and sleep hooks (lock_cmd / before_sleep_cmd in hypridle,
+#                                       lock / before-sleep in swayidle); no notification
+#                                       when nothing was open, never fails
+#
+# Bulk pauses (toggle, pause-all) add what they paused to a record; the toggle's resume takes
+# it back and clears it, so a timer paused on its own in the picker stays paused (MH,
+# 2026-11-07). A picker resume drops its bead from the record. Record: one "project<TAB>bead"
+# per line in $XDG_STATE_HOME/bd-timers/bulk-paused.
+#
+# Every mode notifies what changed. Data: `bd-track --global active --json`; actions:
+# `bd-track --global pause --all`, `bd-track --project <path> resume --all <bead>...` and, for
+# one interval, `bd-track --project <path> pause|resume --all <bead>`.
+# For tests, BD_TIMERS_BDTRACK and BD_TIMERS_ROFI replace `bd-track` and `rofi` (called with
+# the same arguments), and BD_TIMERS_NOTIFY replaces `notify-send`.
+# Exit status: 0 = done (or nothing to do), 1 = cancelled or bd-track failed, 2 = usage.
+set -euo pipefail
+
+bdt=${BD_TIMERS_BDTRACK:-bd-track}
+rofi_cmd=${BD_TIMERS_ROFI:-rofi}
+notify_cmd=${BD_TIMERS_NOTIFY:-notify-send}
+
+notify() { "$notify_cmd" -a bd-timers "$@" 2>/dev/null || true; }
+usage() { echo "usage: bd-timers toggle|pick|pause-all" >&2; exit 2; }
+
+# active intervals as TSV: state, project, bead, title, since (HH:MM)
+active() {
+  "$bdt" --global active --json 2>/dev/null |
+    jq -r '.[] | [.state, .project, .bead, (.title // "" | gsub("\t"; " ")),
+                  (.since // "" | .[11:16])] | @tsv'
+}
+
+# beads of the given state, comma-separated
+beads_in() { awk -F'\t' -v s="$1" '$1 == s { print $3 }' <<<"$2" | paste -sd, - | sed 's/,/, /g'; }
+
+record=${XDG_STATE_HOME:-$HOME/.local/state}/bd-timers/bulk-paused
+
+# "project<TAB>bead" lines of the given state
+pairs() { awk -F'\t' -v s="$1" '$1 == s { print $2 "\t" $3 }' <<<"$2" | sort -u; }
+
+pause_open() { # pause_open <rows>: pause every open interval, add them to the record
+  local rows=$1 out
+  if ! out=$("$bdt" --global pause --all 2>&1); then
+    notify -u critical "bd-track pause failed" "$out"
+    return 1
+  fi
+  mkdir -p "${record%/*}"
+  { pairs open "$rows"; cat "$record" 2>/dev/null || true; } | sort -u >"$record.tmp"
+  mv "$record.tmp" "$record"
+  notify "Timers paused" "$(beads_in open "$rows")"
+}
+
+resume_set() { # resume_set <rows>: resume the recorded set still paused, else every paused one
+  local rows=$1 set project beads out failed=0
+  set=$(comm -12 <(pairs paused "$rows") <(sort -u "$record" 2>/dev/null || true))
+  [[ -n $set ]] || set=$(pairs paused "$rows")
+  while IFS= read -r project; do
+    mapfile -t beads < <(awk -F'\t' -v p="$project" '$1 == p { print $2 }' <<<"$set")
+    if ! out=$("$bdt" --project "$project" resume --all "${beads[@]}" 2>&1); then
+      notify -u critical "bd-track resume failed" "$out"
+      failed=1
+    fi
+  done < <(cut -f1 <<<"$set" | sort -u)
+  rm -f "$record"
+  notify "Timers resumed" "$(cut -f2 <<<"$set" | paste -sd, - | sed 's/,/, /g')"
+  return "$failed"
+}
+
+cmd=${1:-}
+[[ $# -le 1 ]] || usage
+case $cmd in
+  toggle)
+    rows=$(active)
+    if grep -q $'^open\t' <<<"$rows"; then
+      pause_open "$rows"
+    elif grep -q $'^paused\t' <<<"$rows"; then
+      resume_set "$rows"
+    else
+      notify "No timers" "nothing open or paused"
+    fi
+    ;;
+  pause-all)
+    rows=$(active)
+    grep -q $'^open\t' <<<"$rows" || exit 0
+    pause_open "$rows" || true
+    ;;
+  pick)
+    command -v "$rofi_cmd" >/dev/null 2>&1 || { notify "bd-timers" "'$rofi_cmd' not found"; exit 1; }
+    rows=$(active)
+    if [[ -z $rows ]]; then
+      notify "No timers" "nothing open or paused"
+      exit 0
+    fi
+    # One line per interval; rofi returns the index (-format i), so titles never get parsed back.
+    menu=$(awk -F'\t' '{ printf "%s  %-12s %s  · %s %s\n", ($1 == "open" ? "▶" : "⏸"), $3, $4,
+                         gensub(".*/", "", 1, $2), $5 }' <<<"$rows")
+    idx=$(printf '%s\n' "$menu" | "$rofi_cmd" -theme bar-menu \
+      -theme-str 'window { location: center; anchor: center; x-offset: 0; y-offset: 0; width: 60em; }' \
+      -dmenu -i -no-custom -format i -p "Timers" \
+      -mesg "Enter: pause ▶ / resume ⏸ the chosen timer") || exit 1
+    [[ $idx =~ ^[0-9]+$ ]] || exit 1
+    IFS=$'\t' read -r state project bead title _ < <(sed -n "$((idx + 1))p" <<<"$rows")
+    if [[ $state == open ]]; then verb=pause; else verb=resume; fi
+    if ! out=$("$bdt" --project "$project" "$verb" --all "$bead" 2>&1); then
+      notify -u critical "bd-track $verb failed" "$out"
+      exit 1
+    fi
+    if [[ $verb == pause ]]; then
+      notify "Timer paused" "$bead  $title"
+    else
+      if [[ -s $record ]]; then
+        grep -Fxv -- "$project"$'\t'"$bead" "$record" >"$record.tmp" || true
+        mv "$record.tmp" "$record"
+      fi
+      notify "Timer resumed" "$bead  $title"
+    fi
+    ;;
+  *) usage ;;
+esac

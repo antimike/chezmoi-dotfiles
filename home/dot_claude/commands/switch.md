@@ -24,6 +24,10 @@ timestamps:
     at: 2026-04-27T22:00:00-05:00
     actor: Michael Haynes
     note: "Always resolve the outgoing bead ID before stopping and pass it to bd-timew stop <id> via --from. Prevents concurrent-session cross-contamination (bd-timew stop with no args stops ALL active timew intervals)."
+  - action: updated
+    at: 2026-11-06T19:00:00-06:00
+    actor: Michael Haynes
+    note: "Paused session (bd-track 0.8.1): a Paused: line names the outgoing bead; bd-track stop <bead> clears the pause (chz-2ra)."
 comments:
   - "Source: Wave 1 time-tracking bundle (2026-04-20). Companion to /start, /stop, /status."
   - "Motivation: stopping the current interval and starting a new one were two commands with a window for forgetting the second step. /switch fuses the pair."
@@ -58,8 +62,9 @@ Arguments: $ARGUMENTS
    If both positional ID and `--jira` are present → usage error and stop. If any unrecognized tokens remain after removing the above → usage error and stop.
 
 2. **Stop the current interval, with optional status transition.**
-   - **Always** run `bd-track status` first to get the outgoing bead ID (`outgoing_id`).
-   - If no active interval and `--status` was given, print:
+   - **Always** run `bd-track status` first to get the outgoing bead ID (`outgoing_id`) from its `Tracking:` line.
+   - **Paused session:** if there is no `Tracking:` line but there is a `Paused:` line (`Paused:   <bead>  (since Nm ago; ...)`), that bead is `outgoing_id`: `bd-track stop <outgoing_id>` clears the pause, and `--status` applies to it as usual.
+   - If no active or paused interval and `--status` was given, print:
      ```
      /switch: --status requires an active bd-track interval with a bead tag.
      ```

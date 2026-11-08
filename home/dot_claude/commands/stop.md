@@ -25,6 +25,10 @@ timestamps:
     at: 2026-04-28T21:30:00-05:00
     actor: Michael Haynes
     note: "Step 2 now exits early for both 'no interval' and 'untagged interval' cases, with explicit instruction never to call bd-timew stop without an ID. Removes the bare fallback that could stop all sessions."
+  - action: updated
+    at: 2026-11-06T19:00:00-06:00
+    actor: Michael Haynes
+    note: "Paused session (bd-track 0.8.1 pause/resume): with no Tracking: line but a Paused: line, use that bead; bd-track stop <bead> clears the pause, then --status applies (chz-2ra)."
 comments:
   - "Source: Wave 1 time-tracking bundle (2026-04-20). Companion to /start, /switch, /status."
   - "Motivation: breaks, end-of-day, context-switching to non-bead work all need a clean timer stop. Independent of bead status so that in-progress beads stay in-progress when the user steps away. --status added 2026-04-21 for the common pattern 'this chunk of work is done, move it to review/testing' — previously required a separate bd update after /stop."
@@ -48,7 +52,8 @@ Arguments: $ARGUMENTS
    and stop. If no arguments, proceed to step 2 with `target_status` unset.
 
 2. **Resolve the active bead.** Run `bd-track status` via Bash and parse the `Tracking:` line to extract the bead ID. Save it as `active_id`.
-   - If the output contains "no active interval" → `active_id = None` (no interval running at all).
+   - **Paused session:** if there is no `Tracking:` line but there is a `Paused:` line (`Paused:   <bead>  (since Nm ago; ...)`, printed after "no active interval"), use that bead as `active_id`. A pause already closed the interval; step 3's `bd-track stop <active_id>` clears the pause ("Cleared pause on <bead>"), and step 4 applies `--status` as usual.
+   - If the output contains "no active interval" and no `Paused:` line → `active_id = None` (no interval running at all).
    - If the output contains "no bead tag found" → `active_id = None` (interval running but untagged).
    - If `active_id` is None for any reason, print:
      ```

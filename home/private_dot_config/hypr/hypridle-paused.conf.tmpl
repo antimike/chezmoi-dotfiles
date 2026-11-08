@@ -5,8 +5,8 @@
 # ./hypridle.conf.
 
 general {
-    lock_cmd = lock-screen
-    before_sleep_cmd = loginctl lock-session
+    lock_cmd = bd-timers pause-all; lock-screen
+    before_sleep_cmd = bd-timers pause-all; loginctl lock-session
     after_sleep_cmd = screens-power on
     inhibit_sleep = 3
 }
