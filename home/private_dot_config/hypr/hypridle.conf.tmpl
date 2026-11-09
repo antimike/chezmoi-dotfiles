@@ -15,7 +15,9 @@ general {
     # the open bd-track timers (bd-timers pause-all, chz-dg6; resume: $mod+Ctrl+t).
     lock_cmd = bd-timers pause-all; lock-screen
     before_sleep_cmd = bd-timers pause-all; loginctl lock-session
-    after_sleep_cmd = screens-power on
+    # --force: wait for logind to give the session its devices back, then cycle DPMS
+    # (a resume that raced it left the panel black, chz-iod)
+    after_sleep_cmd = screens-power on --force
     # 3: hold sleep until the session is locked (hyprland-lock-notify).
     inhibit_sleep = 3
 }

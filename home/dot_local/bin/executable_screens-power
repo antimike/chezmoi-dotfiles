@@ -2,22 +2,128 @@
 # screens-power — turn all outputs off or on in the running Wayland compositor.
 #
 #   screens-power off|on
+#   screens-power on --force     after a resume: wait for the session, then force a modeset
+#   screens-power recover        from a text console, revive a black Hyprland screen
+#   screens-power recover --unlock    then: unlock a hyprlock stuck after a good password
 #
 # The idle chain (hypridle in Hyprland, swayidle in SwayFX) runs this after the lock
-# timeout and on resume. The compositor comes
-# from XDG_CURRENT_DESKTOP (set by uwsm); an unknown one is a no-op, not an error,
-# so the idle chain keeps working there.
+# timeout and on resume. The compositor comes from XDG_CURRENT_DESKTOP (set by uwsm);
+# an unknown one is a no-op, not an error, so the idle chain keeps working there.
+#
+# --force (hypridle's after_sleep_cmd only, chz-iod): on resume, hypridle can run before
+# logind hands the DRM devices back to the session ("Enabling seat"). Aquamarine then
+# rejects the commit ("drm: Session inactive") but Hyprland records dpmsStatus 1, so every
+# later "on" is a no-op and the panel stays black behind a hyprlock that never draws
+# (2026-11-07). So --force waits up to 5 s for the graphical session to be Active, then
+# cycles DPMS off -> on in Hyprland, which modesets whatever Hyprland believes. Not used on
+# idle resumes (the session never went inactive; the cycle would blink the screen).
+# SwayFX: the wait applies, no off/on cycle; it has not shown the race and keeps swayidle,
+# which does not use --force (decision 2026-11-08, revisit if SwayFX ever blacks out).
+#
+# recover: the manual fix for the same state, run from a text console (Ctrl+Alt+F3):
+# it starts a background job, you switch back (Ctrl+Alt+F2), and once the graphical
+# session is Active again (up to 60 s) the job cycles DPMS. If the screen returns but
+# hyprlock takes no password, come back and run `recover --unlock` (SIGUSR1 to hyprlock).
+# Log: $XDG_RUNTIME_DIR/screens-power-recover.log.
 set -euo pipefail
 
+log() { echo "screens-power: $*" >&2; }
+
+# The user's graphical session: XDG_SESSION_ID when set (not in systemd user services such
+# as hypridle.service), else logind's "display" session for this user.
+graphical_session() {
+  if [[ -n ${XDG_SESSION_ID:-} ]] &&
+    [[ $(loginctl show-session "$XDG_SESSION_ID" -p Type --value 2>/dev/null) == wayland ]]; then
+    echo "$XDG_SESSION_ID"
+  else
+    loginctl show-user "$(id -u)" -p Display --value 2>/dev/null
+  fi
+}
+
+# wait_active <seconds>: poll every 0.1 s until the graphical session is Active; 1 on timeout.
+wait_active() {
+  local session tries=$(($1 * 10))
+  session=$(graphical_session)
+  if [[ -z $session ]]; then
+    log "no graphical session found; not waiting"
+    return 1
+  fi
+  while ((tries-- > 0)); do
+    [[ $(loginctl show-session "$session" -p Active --value 2>/dev/null) == yes ]] && return 0
+    sleep 0.1
+  done
+  log "session $session still inactive after $1 s"
+  return 1
+}
+
+hypr_dpms() { hyprctl -q dispatch "hl.dsp.dpms({ action = \"$1\" })"; }
+
+# A text console has no Hyprland environment: point hyprctl at the newest instance.
+hypr_env() {
+  export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+  if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    # shellcheck disable=SC2012  # instance names are plain hex/underscore
+    HYPRLAND_INSTANCE_SIGNATURE=$(ls -t "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1)
+    [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]] || { log "no running Hyprland found"; exit 1; }
+    export HYPRLAND_INSTANCE_SIGNATURE
+  fi
+}
+
+recover() {
+  hypr_env
+  if [[ ${1:-} == --unlock ]]; then
+    if pkill -USR1 -x hyprlock; then log "sent SIGUSR1 to hyprlock (unlock)"; else log "no hyprlock running"; fi
+    return 0
+  fi
+  local out=$XDG_RUNTIME_DIR/screens-power-recover.log
+  # The job outlives this console's shell (setsid) and waits for the switch back.
+  setsid "$0" _recover-job >"$out" 2>&1 </dev/null &
+  echo "Switch back to the graphical session now (Ctrl+Alt+F2): the screen is reset once"
+  echo "the session is active (up to 60 s). Log: $out"
+  echo "If it comes back locked and takes no password, return here and run:"
+  echo "  screens-power recover --unlock"
+}
+
+recover_job() {
+  date '+%F %T recover job started'
+  wait_active 60 || exit 1
+  sleep 0.5  # let the compositor see the seat come back before the cycle
+  hypr_dpms disable
+  sleep 1
+  hypr_dpms enable
+  date '+%F %T DPMS cycled'
+}
+
+force=false
 case ${1:-} in
   on | off) state=$1 ;;
-  *) echo "usage: screens-power off|on" >&2; exit 2 ;;
+  recover) shift; recover "$@"; exit ;;
+  _recover-job) hypr_env; recover_job; exit ;;
+  *) echo "usage: screens-power off|on [--force] | recover [--unlock]" >&2; exit 2 ;;
 esac
+case ${2:-} in
+  "") ;;
+  --force) [[ $state == on ]] || { log "--force only applies to 'on'"; exit 2; }; force=true ;;
+  *) echo "usage: screens-power off|on [--force] | recover [--unlock]" >&2; exit 2 ;;
+esac
+
+if $force; then
+  # Go on after a timeout: a late "on" is still better than none.
+  wait_active 5 || true
+fi
 
 case ${XDG_CURRENT_DESKTOP:-} in
   *sway*) swaymsg -q "output * power $state" ;;
   # Hyprland >= 0.55 (Lua config): dispatchers are Lua expressions.
-  *Hyprland*) hyprctl -q dispatch "hl.dsp.dpms({ action = \"$([[ $state == on ]] && echo enable || echo disable)\" })" ;;
-  *niri*) [[ $state == off ]] && niri msg action power-off-monitors ;;  # niri wakes them on input
-  *) echo "screens-power: no method for '${XDG_CURRENT_DESKTOP:-}'; skipping" >&2 ;;
+  *Hyprland*)
+    if $force; then
+      hypr_dpms disable
+      sleep 0.2
+      hypr_dpms enable
+    else
+      hypr_dpms "$([[ $state == on ]] && echo enable || echo disable)"
+    fi
+    ;;
+  *niri*) if [[ $state == off ]]; then niri msg action power-off-monitors; fi ;;  # niri wakes them on input
+  *) log "no method for '${XDG_CURRENT_DESKTOP:-}'; skipping" ;;
 esac

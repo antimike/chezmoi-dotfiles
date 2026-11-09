@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# screens-power-test — tests `screens-power` (chz-iod: `on --force`, `recover`) against
+# stubbed loginctl, hyprctl, swaymsg and pkill. Nothing touches the real session.
+#
+#   tools/screens-power-test/screens-power-test
+#
+# Cases: plain on/off (one dpms call, no wait); on --force with the session active at
+# once, after a delay, never (gives up after 5 s and still cycles); the session from
+# XDG_SESSION_ID or from logind's Display session; SwayFX waits but does not cycle;
+# off --force refused; recover's background job waits, then cycles; recover --unlock.
+# Exit 1 if any case fails.
+# ok() always succeeds, so `check && ok || bad` is safe; the stubs' $* expands at their run time.
+# shellcheck disable=SC2015,SC2016
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin/executable_screens-power
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+fails=0
+
+mkdir -p "$work/bin" "$work/run/hypr/SIG_TEST"
+export STATE=$work/state
+# loginctl: session "3" is the Display session; Active turns "yes" on poll $ACTIVE_AFTER
+# (0 = at once, -1 = never). Every call is logged.
+cat >"$work/bin/loginctl" <<'STUB'
+#!/usr/bin/env bash
+echo "loginctl $*" >>"$STATE/calls"
+case "$1 $3 $4" in
+  "show-user -p Display") echo 3 ;;
+  "show-session -p Type") echo wayland ;;
+  "show-session -p Active")
+    n=$(( $(cat "$STATE/polls" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$STATE/polls"
+    if (( ACTIVE_AFTER >= 0 && n > ACTIVE_AFTER )); then echo yes; else echo no; fi ;;
+esac
+STUB
+for cmd in hyprctl swaymsg pkill; do
+  printf '#!/usr/bin/env bash\necho "%s $*" >>"$STATE/calls"\n' "$cmd" >"$work/bin/$cmd"
+done
+chmod +x "$work/bin"/*
+cp "$src" "$work/bin/screens-power" && chmod +x "$work/bin/screens-power"
+
+# run <name> <desktop> <args...>: fresh state, captures rc and stderr.
+run() {
+  local name=$1 desktop=$2; shift 2
+  rm -rf "$STATE"; mkdir -p "$STATE"; : >"$STATE/calls"
+  set +e
+  env -u XDG_SESSION_ID -u HYPRLAND_INSTANCE_SIGNATURE PATH="$work/bin:$PATH" \
+    XDG_CURRENT_DESKTOP="$desktop" XDG_RUNTIME_DIR="$work/run" ACTIVE_AFTER="${ACTIVE_AFTER:-0}" \
+    ${SESSION:+XDG_SESSION_ID=$SESSION} screens-power "$@" 2>"$STATE/err"
+  rc=$?
+  set -e
+  case_name=$name
+}
+ok() { echo "ok    $case_name"; }
+bad() { echo "FAIL  $case_name: $*"; sed 's/^/      /' "$STATE/calls" "$STATE/err"; fails=$((fails + 1)); }
+dpms_calls() { grep -o 'action = "[a-z]*"' "$STATE/calls" | cut -d'"' -f2 | paste -sd' '; }
+polls() { cat "$STATE/polls" 2>/dev/null || echo 0; }
+
+run "plain on: one enable, no wait" Hyprland on
+[[ $rc == 0 && $(dpms_calls) == enable && $(polls) == 0 ]] && ok || bad "rc=$rc dpms='$(dpms_calls)' polls=$(polls)"
+
+run "plain off: one disable" Hyprland off
+[[ $rc == 0 && $(dpms_calls) == disable ]] && ok || bad "rc=$rc dpms='$(dpms_calls)'"
+
+ACTIVE_AFTER=0 run "on --force, session active: cycle disable enable" Hyprland on --force
+[[ $rc == 0 && $(dpms_calls) == "disable enable" && $(polls) == 1 ]] && ok || bad "rc=$rc dpms='$(dpms_calls)' polls=$(polls)"
+
+ACTIVE_AFTER=7 run "on --force, active after 7 polls: waits, then cycles" Hyprland on --force
+[[ $rc == 0 && $(dpms_calls) == "disable enable" && $(polls) == 8 ]] && ok || bad "rc=$rc dpms='$(dpms_calls)' polls=$(polls)"
+
+start=$SECONDS
+ACTIVE_AFTER=-1 run "on --force, never active: gives up after ~5 s, still cycles" Hyprland on --force
+took=$((SECONDS - start))
+[[ $rc == 0 && $(dpms_calls) == "disable enable" && $took -ge 4 && $took -le 9 ]] &&
+  grep -q 'still inactive after 5 s' "$STATE/err" && ok || bad "rc=$rc dpms='$(dpms_calls)' took=${took}s"
+
+run "no XDG_SESSION_ID: logind's Display session" Hyprland on --force
+grep -q 'show-user .* -p Display' "$STATE/calls" && grep -q 'show-session 3 -p Active' "$STATE/calls" &&
+  ok || bad "Display session not used"
+
+SESSION=42 run "XDG_SESSION_ID of a wayland session is used" Hyprland on --force
+grep -q 'show-session 42 -p Active' "$STATE/calls" && ! grep -q show-user "$STATE/calls" &&
+  ok || bad "XDG_SESSION_ID not used"
+
+run "SwayFX on --force: waits, one power on, no cycle" sway on --force
+[[ $rc == 0 && $(polls) == 1 ]] && grep -qx 'swaymsg -q output \* power on' "$STATE/calls" &&
+  ! grep -q hyprctl "$STATE/calls" && ok || bad "rc=$rc"
+
+run "off --force refused" Hyprland off --force
+[[ $rc == 2 && ! -s $STATE/calls ]] && ok || bad "rc=$rc"
+
+run "unknown argument refused" Hyprland on --now
+[[ $rc == 2 ]] && ok || bad "rc=$rc"
+
+ACTIVE_AFTER=3 run "recover: background job waits for the session, then cycles" "" recover
+for _ in $(seq 50); do grep -q 'DPMS cycled' "$work/run/screens-power-recover.log" 2>/dev/null && break; sleep 0.1; done
+[[ $rc == 0 && $(dpms_calls) == "disable enable" && $(polls) == 4 ]] &&
+  grep -q 'DPMS cycled' "$work/run/screens-power-recover.log" && ok || bad "rc=$rc dpms='$(dpms_calls)' polls=$(polls)"
+
+run "recover --unlock: SIGUSR1 to hyprlock" "" recover --unlock
+[[ $rc == 0 ]] && grep -qx 'pkill -USR1 -x hyprlock' "$STATE/calls" && ok || bad "rc=$rc"
+
+rm -rf "$work/run/hypr/SIG_TEST"
+run "recover without a running Hyprland fails" "" recover
+[[ $rc == 1 ]] && grep -q 'no running Hyprland' "$STATE/err" && ok || bad "rc=$rc"
+
+if ((fails)); then echo "$fails failed"; exit 1; fi
+echo "all passed"
