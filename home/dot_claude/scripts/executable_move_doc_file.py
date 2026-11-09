@@ -47,8 +47,8 @@ from dataclasses import asdict, dataclass
 from logging import getLogger
 from pathlib import Path
 
+from rich.console import Console
 from rich.logging import RichHandler
-
 
 logger = getLogger(__name__)
 
@@ -71,7 +71,9 @@ REMOTE_SCHEMES = ("http://", "https://", "mailto:", "ftp://", "file://")
 
 
 def setup_logger(loglevel: str) -> None:
-    handler = RichHandler(level=loglevel, show_time=False, show_path=False)
+    handler = RichHandler(
+        level=loglevel, show_time=False, show_path=False, console=Console(stderr=True)
+    )
     logger.addHandler(handler)
     logger.setLevel(loglevel)
 
@@ -235,9 +237,7 @@ def rewrite_file_for_move(
 
 def cmd_move(args: argparse.Namespace) -> int:
     repo_root = find_repo_root(Path.cwd())
-    context_root = (
-        Path(args.context_root).resolve() if args.context_root else repo_root
-    )
+    context_root = Path(args.context_root).resolve() if args.context_root else repo_root
     source = Path(args.source).resolve()
     dest = Path(args.dest).resolve()
 
@@ -306,9 +306,7 @@ def cmd_move(args: argparse.Namespace) -> int:
             if len(samples) > 3:
                 logger.debug("  ... and %d more", len(samples) - 3)
 
-    logger.info(
-        "Summary: %d files touched, %d substitutions", total_files, total_subs
-    )
+    logger.info("Summary: %d files touched, %d substitutions", total_files, total_subs)
     return 0
 
 
@@ -328,9 +326,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
     skip_patterns = ("/.git/", "/node_modules/")
     files = sorted(
-        p
-        for p in root.rglob("*.md")
-        if not any(s in str(p) for s in skip_patterns)
+        p for p in root.rglob("*.md") if not any(s in str(p) for s in skip_patterns)
     )
 
     broken: list[BrokenLink] = []

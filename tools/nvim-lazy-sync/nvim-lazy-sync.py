@@ -39,6 +39,7 @@ import tempfile
 from logging import getLogger
 from pathlib import Path
 
+from rich.console import Console
 from rich.logging import RichHandler
 from rich_argparse import RawDescriptionRichHelpFormatter
 
@@ -123,7 +124,7 @@ def get_cli_arguments() -> argparse.Namespace:
 
 
 def setup_logger(args: argparse.Namespace) -> None:
-    handler = RichHandler(level=args.loglevel)
+    handler = RichHandler(level=args.loglevel, console=Console(stderr=True))
     logger.addHandler(handler)
     logger.setLevel(args.loglevel)
 
