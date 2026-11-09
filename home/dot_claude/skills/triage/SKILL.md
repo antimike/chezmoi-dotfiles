@@ -38,7 +38,7 @@ moves the file to done/. Use it, as below. Without it, do the same by hand (the 
 lines). Either way the decisions and the bead text are yours and MH's.
 
 - It works on the inbox of the current git repo. For another project, add
-  `--project-dir <clone>` (where beads are created; the registry gives the path), or
+  `--project <name-or-path>` (a registry name or a clone; where beads are created), or
   `--inbox ~/.local/state/triage/<project>` for a project without a clone here.
 - Every action takes `--dry-run`: use it the first time on an unfamiliar inbox.
 - `ticket --list` stays the quick overview (MH, 2026-11-02); the split between `ticket` and

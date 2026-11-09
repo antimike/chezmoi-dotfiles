@@ -92,13 +92,13 @@ The timer fires daily (`Persistent=true` catches up missed runs on WSL2 wake).
 
 **Manual cleanup:**
 ```bash
-bd-track cleanup               # defaults: --days 7
-bd-track cleanup --days 14 --project-dir ~/Source/Other
-bd-track cleanup --skip-commit # skip dolt commit if working set is clean
+bd-track cleanup               # defaults: --days 7; commits first, aborts if that fails
+bd-track cleanup --days 14 --project Other   # registry name or a directory
+bd-track cleanup --no-commit   # skip bd dolt commit: compact then DROPS uncommitted changes
 ```
 
 **What cleanup does:**
-1. `bd dolt commit` — seals the day's batch into one commit
+1. `bd dolt commit` — seals the day's batch into one commit (bd-track >= 0.10.1 stops here, exit 1, if the commit fails; older releases compacted anyway and lost the uncommitted batch)
 2. `bd compact --days N --force` — squashes commits older than N days; keeps oldgen small
 3. `bd gc --skip-decay --force` — compacts the journal into `.darc` chunk tables
 
@@ -129,6 +129,7 @@ The timer fires at `check_interval`; per-repo cadence is enforced by checking
 ## Emergency recovery (already slow)
 
 ```bash
+bd dolt commit                         # first: flatten discards uncommitted changes
 bd flatten --force                     # nuclear: squash all history to 1 commit
 bd gc --skip-decay --force             # compact journal after flatten
 ```
