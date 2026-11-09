@@ -62,6 +62,7 @@ Arguments: $ARGUMENTS
      and stop. Do not guess the bead from recent activity.
 
 3. **Stop the interval.** Run `bd-track stop <active_id>`. Report the output (the interval summary — start, end, duration, tags).
+   - **Long-interval warning** (bd-track >= 0.10.1): if stderr says the interval `ran ..., longer than long_interval_hours`, quote it to the user and point at the fixes (`bd-track amend <id> --split-at <t1> --resume-at <t2>` for an idle gap; `bd-track add` for a stretch after trimming; the time-tracking skill, "Fixing intervals"). Do not amend unasked: only the user knows when the idle time was.
 
 4. **Transition the bead (only if `--status` was given and step 2 found a bead).** Run `bd update <active_id> --status=<state>` via Bash. Report the output. If bd rejects the status (invalid for this workspace — e.g., not a built-in and not in `status.custom`), surface the error verbatim so the user can correct it or register the custom status. Do not retry with a fallback.
 

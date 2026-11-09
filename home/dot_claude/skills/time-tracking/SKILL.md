@@ -59,6 +59,17 @@ Svc:      <service item> | none | (none)
 - `Svc: (none)` (parenthesised) means the tuple field was unresolved — investigate the sidecar or bead labels.
 - `Case: area:<label>` means the resolver fell through to a default that uses the raw Beads area label; this is expected for non-client work buckets.
 
+## Fixing intervals (bd-track >= 0.10.1)
+
+A session left open overnight, or an interval that kept running through a break, records idle time. Fix it rather than leave it:
+
+- **Warning on stop:** when a stop closes an interval longer than the host's `long_interval_hours` (default 8; `bd-track config set long_interval_hours <h>`, 0 disables), bd-track logs a warning naming the interval. Surface it to the user; don't fix it unasked, since only they know when they stopped working.
+- **Stopped too late, noticed now:** `bd-track stop <bead> --at <time>` (in the past, after the start).
+- **Idle gap inside a closed interval:** `bd-track amend <interval-id> --split-at <t1> --resume-at <t2>` ends the interval at `t1` and starts its second part at `t2`. `--start`/`--stop` move either end.
+- **Work that was never tracked:** `bd-track add <bead> --start <t1> --stop <t2>` appends a closed, backdated interval with the bead's tuple; it does not claim the bead or touch an open interval. `--dry-run` previews; it warns on an overlap with the same bead.
+
+Interval IDs: `bd-track list` / `bd-track report --bead <id>` (the warning prints the first 8 characters). Times accept natural language or ISO-8601.
+
 ## Variance and reporting
 
 `bd-track` does not yet ship a dedicated variance subcommand. To compare actual time to an `est-h:N` estimate, use `bd-track report --bead <bead-id>` to list intervals for that bead, then compare to the `est-h:` label via `bd show <bead-id>`. See the follow-up bead for automating this (tracked under Wave 2: variance reporting).

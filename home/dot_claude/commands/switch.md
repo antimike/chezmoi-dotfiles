@@ -69,7 +69,7 @@ Arguments: $ARGUMENTS
      /switch: --status requires an active bd-track interval with a bead tag.
      ```
      and stop — do not proceed to start the new interval.
-   - Run `bd-track stop <outgoing_id>` (or `bd-track stop` if `outgoing_id` is None) and report.
+   - Run `bd-track stop <outgoing_id>` (or `bd-track stop` if `outgoing_id` is None) and report. A long-interval warning on stderr is surfaced as in `/stop` step 3 (don't amend unasked).
    - If `--status` was given and `outgoing_id` was resolved, run `bd update <outgoing_id> --status=<state>`.
 
 3. **Start the new interval.** Follow the instructions of `/start` with the bead-identification portion of `$ARGUMENTS` (strip out `--status <state>` / `--status=<state>` before delegating — /start doesn't recognize it). This means the full /start flow: Jira key resolution (if `--jira` was given), bridge invocation, tuple-correctness check, task-dir scaffold prompt, and proceed-to-implementation.
