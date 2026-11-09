@@ -42,6 +42,7 @@ import time
 from logging import getLogger
 from pathlib import Path
 
+from rich.console import Console
 from rich.logging import RichHandler
 from rich_argparse import RawDescriptionRichHelpFormatter
 
@@ -426,7 +427,9 @@ def get_cli_arguments() -> argparse.Namespace:
 
 
 def setup_logger(args: argparse.Namespace) -> None:
-    handler = RichHandler(level=args.loglevel, show_path=False)
+    handler = RichHandler(
+        level=args.loglevel, show_path=False, console=Console(stderr=True)
+    )
     logger.addHandler(handler)
     logger.setLevel(args.loglevel)
 
