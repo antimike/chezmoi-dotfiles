@@ -255,7 +255,7 @@ After any commit on a `feature` or `clone` repo, the coordinator may invoke the 
 
 Triggered by: all beads closed, time cap reached, pause signal, or user interrupt. Coordinator responsibilities:
 
-1. Stop any open bd-track interval (`bd-track stop` if active).
+1. Stop any open bd-track interval (`bd-track stop` if active). If it warns that the interval ran longer than `long_interval_hours`, record the warning in the execution log for the user (fixes: time-tracking skill, "Fixing intervals"); never amend intervals autonomously.
 2. For each `in-place + current` repo: commit + push if pre-authorized.
 3. For each `feature`-branch repo (any location): push the feature branch (never merge).
 4. For each `clone` repo: push feature branch to canonical; leave the clone in place for user review.
