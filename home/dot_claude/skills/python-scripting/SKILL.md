@@ -81,18 +81,20 @@ def get_cli_arguments() -> argparse.Namespace:
 ## Logging (not `print` for diagnostics)
 
 - **`logging` module**, not `print`, for progress, warnings, and errors. `print` is reserved for script *output* (data written to stdout for pipes).
-- **Use `rich.logging.RichHandler`** instead of `logging.basicConfig`. It gives you colorized levels, readable tracebacks, and proper stderr routing with no format-string boilerplate.
+- **Use `rich.logging.RichHandler`** instead of `logging.basicConfig`. It gives you colorized levels and readable tracebacks with no format-string boilerplate. **Always pass `console=Console(stderr=True)`**: with no `console=`, RichHandler uses rich's global console, which writes to **stdout** (rich 15.0.0) and would mix log lines into the script's data output.
 - Module-level `logger = getLogger(__name__)`. Configure once in `main()` via a small `setup_logger()` helper called after argparse:
 
 ```python
 from logging import getLogger
+from rich.console import Console
 from rich.logging import RichHandler
 
 logger = getLogger(__name__)
 
 
 def setup_logger(args: argparse.Namespace) -> None:
-    handler = RichHandler(level=args.loglevel)
+    # stderr: RichHandler's default console writes to stdout
+    handler = RichHandler(level=args.loglevel, console=Console(stderr=True))
     logger.addHandler(handler)
     logger.setLevel(args.loglevel)
 ```
