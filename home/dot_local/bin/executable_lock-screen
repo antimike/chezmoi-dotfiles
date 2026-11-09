@@ -14,7 +14,9 @@
 #              "locked" log line; if it exits first, swaylock locks instead.
 #   otherwise  swaylock -f, which forks once locked (~/.config/swaylock/config).
 # Stuck behind a hyprlock that takes no password: from a text console,
-# `pkill -USR1 hyprlock` unlocks.
+# `pkill -USR1 hyprlock` unlocks. Black panel after a resume (hyprlock never draws,
+# chz-iod): from a text console run `screens-power recover`, switch back, and if it
+# stays locked, `screens-power recover --unlock`.
 set -euo pipefail
 
 log=${XDG_RUNTIME_DIR:-/tmp}/lock-screen-hyprlock.log
