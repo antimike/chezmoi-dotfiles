@@ -26,6 +26,8 @@ asus_right=$(mon DP-4 "Ancor Communications Inc ASUS PB287Q 0x0001EC1B" 4480 fal
 unknown=$(mon HDMI-A-1 "Some Vendor Monitor 0x0000" 1920 false)
 unknown_left=$(mon HDMI-A-1 "Some Vendor Monitor 0x0000" 0 false)
 unknown_far=$(mon HDMI-A-1 "Some Vendor Monitor 0x0000" 7040 false)
+headless_far=$(mon AMO-LIVE-TEST "" 7040 false)   # hyprctl output create headless (chz-vac)
+headless_n=$(mon HEADLESS-2 "" 1920 false)
 
 case_() { # NAME EXPECTED MONITOR-JSON...
   local name=$1 want=$2 got
@@ -50,4 +52,7 @@ case_ "unknown + ASUS + Dell, lid closed (3: middle)" DP-4 "$panel_off" "$unknow
 case_ "four monitors (left of the middle two)" DP-4 "$panel" "$asus" "$dell" "$unknown_far"
 # Position decides, not hyprctl's order., not from hyprctl's listing order.
 case_ "listed out of order (3: middle)" DP-4 "$dell" "$panel" "$asus"
+case_ "docked, lid closed + headless output (chz-vac)" DP-4 "$panel_off" "$asus" "$dell" "$headless_far"
+case_ "undocked + HEADLESS-n output" eDP-1 "$panel" "$headless_n"
+case_ "docked, lid open + headless output" DP-4 "$panel" "$asus" "$dell" "$headless_far"
 exit "$failed"
