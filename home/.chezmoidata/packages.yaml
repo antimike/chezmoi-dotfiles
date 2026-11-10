@@ -124,6 +124,7 @@ packageTargets:
       - { name: dolt, release: dolt }
       - { name: dstask, release: dstask }
       - { name: nb, release: nb }
+      - { name: pproj, release: project-registry }  # project registry CLI (D76); pinned tag, checkout left alone
       - { name: the-way, release: the-way }
 
   python-tools:
@@ -147,7 +148,7 @@ packageTargets:
       - { name: ruff, pipx: true }           # formatter and linter (python-scripting skill); the wheel is upstream's binary
       - { name: tox, pipx: true }
       - { name: ufmt, pipx: true }
-      # Not here on purpose: bd-track and amontillado (their own run_onchange installers,
+      # Not here on purpose: bd-track, amontillado and project-registry (their own run_onchange installers,
       # pinned tags; .chezmoitemplates/install/pinned-pipx-tool.sh), apyanki (chess-trainer's tooling installs it).
 
   x11:
