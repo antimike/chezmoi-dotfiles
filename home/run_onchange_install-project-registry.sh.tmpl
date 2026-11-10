@@ -1,0 +1,11 @@
+#!/bin/sh
+# run_onchange_install-project-registry.sh.tmpl — install project-registry (`pproj`) at a pinned release.
+# Pin: .chezmoidata/project_registry.yaml. Logic: .chezmoitemplates/install/pinned-pipx-tool.sh.
+# project-registry {{ .projectRegistry.ref }}
+{{ includeTemplate "install/pinned-pipx-tool.sh" (dict
+     "name" "project-registry"
+     "package" "project-registry"
+     "repo_url" .projectRegistry.repo_url
+     "ref" .projectRegistry.ref
+     "clone_dir" (joinPath .chezmoi.homeDir .projectRegistry.clone_dir)
+     "requires" "") }}

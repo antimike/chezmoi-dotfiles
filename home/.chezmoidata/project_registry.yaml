@@ -1,0 +1,15 @@
+# Pinned project-registry release (the `pproj` CLI and library for ~/.config/projects.yaml;
+# D76), consumed by run_onchange_install-project-registry.sh.tmpl.
+#
+# project-registry (https://github.com/antimike/project-registry) reads and resolves the
+# shared project registry. The installer (.chezmoitemplates/install/pinned-pipx-tool.sh)
+# leaves a developer checkout in `clone_dir` alone: if it is at or past `ref`, it is
+# installed with the repo's own `just install-dev` (editable); with no checkout, `ref` is
+# installed from git. It never checks out the tag (no detached HEAD). Tags are never moved;
+# never pin a branch.
+#
+# To bump: tag a release in the project-registry repo, change `ref`, commit.
+projectRegistry:
+  repo_url: "https://github.com/antimike/project-registry.git"
+  ref: "v0.2.0"
+  clone_dir: ".local/src/project-registry"
