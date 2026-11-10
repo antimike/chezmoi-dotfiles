@@ -12,6 +12,11 @@ go = "1.21.7"
 glow = "1.5.1"
 # Lua formatter for the shell (just lint-lua) and nvim alike; mason no longer installs it (chz-7ze).
 stylua = "2.6.0"
+# GitHub Actions workflow linter (bd-track's actionlint-system pre-commit hook; nvim-lint
+# runs it on .github/workflows/*.y(a)ml). Not in Fedora; aqua backend (chz-7g5).
+actionlint = "1.7.12"
+# JSON/YAML diff and RFC 6902 patches, for manual diffs (chz-7g5).
+jd = "2.5.0"
 groovy = "4.0.19"
 java = "23-loom+2-48.0.0"
 purescript = "0.15.14"
