@@ -92,6 +92,14 @@ packageTargets:
       - mpv                  # default video player
       - vlc
       - vlc-cli              # cvlc/nvlc: VLC without the Qt GUI
+      # Image editors (amontillado's `amo edit`, amo-2mf) and diffs
+      - darktable            # raw development; ships darktable-cli
+      - gimp
+      - inkscape
+      - krita
+      - pinta
+      - rawtherapee          # raw development; ships rawtherapee-cli
+      - meld                 # graphical diff and merge
       # Dev toolchain and python build deps (for mise-built interpreters)
       - bzip2-devel
       - cargo
@@ -200,6 +208,8 @@ packageTargets:
       - name: hyprsunset       # colour temperature (CTM protocol); schedule in ~/.config/hypr/hyprsunset.conf
         copr: hyprland
       - name: hyprlock         # lock screen under Hyprland (lock-screen picks it)
+        copr: hyprland
+      - name: hypridle         # idle chain under Hyprland (D77; SwayFX keeps swayidle)
         copr: hyprland
       - name: hyprpaper        # wallpaper daemon (for the wallpaper picker)
         copr: hyprland
