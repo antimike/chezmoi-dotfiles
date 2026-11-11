@@ -20,7 +20,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 export HOME=$work/home XDG_CONFIG_HOME=$work/home/.config XDG_STATE_HOME=$work/home/.local/state
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
-unset TICKET_FROM TICKET_REGISTRY TICKET_ROOT VISUAL
+unset TICKET_FROM PPROJ_REGISTRY TICKET_ROOT VISUAL
 inbox=$XDG_STATE_HOME/triage
 mkdir -p "$XDG_CONFIG_HOME" "$HOME/Source" "$HOME/elsewhere"
 fails=0
@@ -153,6 +153,21 @@ status_is "--summary with an empty inbox: exit 0" 0 --summary -p empty --registr
 if [[ -s $work/out ]]; then fail "... and silent"; else ok "... and silent"; fi
 status_is "--summary without a registry: exit 0" 0 --summary --registry "$work/none.yaml"
 if [[ -s $work/out || -s $work/err ]]; then fail "... and silent"; else ok "... and silent"; fi
+
+# The registry path comes from `pproj where registry` (chz-37d): PPROJ_REGISTRY moves it, and
+# without pproj on PATH ticket refuses (exit 2) but --summary stays silent.
+cd "$HOME/elsewhere"
+printf 'projects:\n  zeta: { remote: me/zeta }\n' >"$work/alt.yaml"
+check "PPROJ_REGISTRY picks the registry" "$(PPROJ_REGISTRY=$work/alt.yaml python3 "$ticket" --projects)" "zeta"
+pproj_dir=$(dirname "$(command -v pproj)")
+mkdir -p "$work/nopproj"
+for f in "$pproj_dir"/*; do [[ ${f##*/} == pproj ]] || ln -s "$f" "$work/nopproj/"; done
+nopath=${PATH//$pproj_dir/$work/nopproj}
+PATH=$nopath status_is "no pproj: exit 2" 2 --projects
+check "no pproj: names the pin" "$(cat "$work/err")" "pproj not found"
+PATH=$nopath status_is "no pproj: --summary exit 0" 0 --summary -p alpha
+if [[ -s $work/out ]]; then fail "... and silent"; else ok "... and silent"; fi
+PATH=$nopath status_is "--registry works without pproj" 0 --projects --registry "$work/alt.yaml"
 
 if ((fails)); then echo "$fails failed"; exit 1; fi
 echo "all passed"
