@@ -113,6 +113,7 @@ packageTargets:
       - portaudio            # libportaudio for sounddevice (pywhisper-dictation); Debian/Ubuntu: libportaudio2
       - python3-pip
       - readline-devel
+      - { name: shellcheck, dnf: ShellCheck }  # tools/ lint; amontillado's `amo config check --shellcheck`
       - sqlite
       - sqlite-devel
       - xz-devel
