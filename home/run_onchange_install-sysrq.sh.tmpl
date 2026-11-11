@@ -2,16 +2,20 @@
 # run_onchange_install-sysrq.sh.tmpl — allow the SysRq keys needed for a clean
 # emergency reboot (MH, 2026-10-23; docs/runbooks/display-session-recovery.md).
 #
-#   kernel.sysrq = 244 = 4 (keyboard: R unraw, SAK) + 16 (S sync) + 32 (U remount
-#   read-only) + 64 (E/I/F signal processes) + 128 (B reboot, O power off)
+#   kernel.sysrq = 252 = 4 (keyboard: R unraw, SAK) + 8 (debug dumps: W blocked
+#   tasks, L backtraces of all CPUs, T tasks, M memory, P registers) + 16 (S sync) +
+#   32 (U remount read-only) + 64 (E/I/F signal processes) + 128 (B reboot, O power off)
 #
-# Left out: 2 (console log level), 8 (debugging dumps: registers, tasks, memory,
-# which leak information to whoever is at the keyboard), 256 (nicing real-time
-# tasks). Fedora's default is 16 (sync only). SysRq works below the compositor, so
-# REISUB (hold Alt+SysRq, press R E I S U B a second apart) reboots cleanly when
-# the display stack is wedged: on 2026-10-23 the kernel kept running after one,
-# and the power key only cuts power on zbook. The built-in keyboard's SysRq is
-# Fn+Home. Only physical keyboard access can use it; it unlocks nothing.
+# Left out: 2 (console log level), 256 (nicing real-time tasks). Fedora's default is
+# 16 (sync only). 8 was added 2026-11-10 (chz-42c, after a hard freeze): the dumps
+# go to the kernel log, which needs a login to read (journalctl -k), so they show
+# nothing to whoever is at the keyboard; pressed before S and B, they land in the
+# journal and explain the next freeze (runbook "Hard freeze triage"). SysRq works
+# below the compositor, so REISUB (hold Alt+SysRq, press R E I S U B a second apart)
+# reboots cleanly when the display stack is wedged: on 2026-10-23 the kernel kept
+# running after one, and the power key only cuts power on zbook. The built-in
+# keyboard's SysRq is Fn+Home. Only physical keyboard access can use it; it unlocks
+# nothing.
 #
 # /etc is outside chezmoi's scope. Same pattern as run_onchange_install-logind-power.sh:
 # staged under ~/.local/state/chezmoi-system/, installed with sudo (asks for the
@@ -37,11 +41,11 @@ fi
 mkdir -p "$STAGE_DIR"
 cat > "$STAGED" <<'CONF'
 # Installed by chezmoi (run_onchange_install-sysrq.sh.tmpl).
-# 4 keyboard + 16 sync + 32 remount ro + 64 signals + 128 reboot: REISUB, no dumps.
-kernel.sysrq = 244
+# 4 keyboard + 8 debug dumps + 16 sync + 32 remount ro + 64 signals + 128 reboot.
+kernel.sysrq = 252
 CONF
 
-if cmp -s "$STAGED" "$TARGET" && [ "$(cat /proc/sys/kernel/sysrq)" = 244 ]; then
+if cmp -s "$STAGED" "$TARGET" && [ "$(cat /proc/sys/kernel/sysrq)" = 252 ]; then
   echo "sysrq: $TARGET is up to date" >&2
   exit 0
 fi
