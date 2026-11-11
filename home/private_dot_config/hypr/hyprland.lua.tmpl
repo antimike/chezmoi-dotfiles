@@ -35,9 +35,15 @@ local function lid_closed()
     end
     return false -- no lid
 end
+-- A headless output (hyprctl output create headless: amontillado's screenshot tool,
+-- screen sharing) is not a screen: it has no EDID, so an empty description (and serial,
+-- make, model; checked 2026-11-10). Counting it left a closed-lid undocked panel off (chz-vac).
+local function real_monitor(m)
+    return m.description ~= "" and not m.name:match("^HEADLESS%-")
+end
 local function other_monitor()
     for _, m in ipairs(hl.get_monitors()) do
-        if m.name ~= "eDP-1" then return true end
+        if m.name ~= "eDP-1" and real_monitor(m) then return true end
     end
     return false
 end

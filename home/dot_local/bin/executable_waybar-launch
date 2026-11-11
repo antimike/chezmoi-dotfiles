@@ -12,7 +12,8 @@
 # closed) and the panel undocked, and any monitor works without naming it. The main
 # bar (~/.config/waybar/bars/main.jsonc: every module, the tray) goes there; every
 # other monitor gets bars/extra.jsonc. The generated config
-# is $XDG_RUNTIME_DIR/waybar/config.jsonc. Hyprland runs `reconcile` on monitor events
+# is $XDG_RUNTIME_DIR/waybar/config.jsonc. Headless outputs (empty description, or a
+# HEADLESS-n name) never count: one right of the externals made the Dell the middle (chz-vac). Hyprland runs `reconcile` on monitor events
 # (hyprland.lua); it restarts the service only when the main monitor changes.
 set -euo pipefail
 
@@ -23,7 +24,8 @@ out=$out_dir/config.jsonc
 
 main_monitor() {
   hyprctl monitors -j | jq -r '
-    [.[] | select(.disabled | not)] | sort_by(.x, .y) |
+    [.[] | select((.disabled | not) and .description != "" and (.name | test("^HEADLESS-") | not))] |
+    sort_by(.x, .y) |
     if length <= 2 then .[0] else .[(length - 1) / 2 | floor] end | .name // empty'
 }
 
