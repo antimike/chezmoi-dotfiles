@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# add-package-test — tests `add-package` (chz-02p) against a scratch copy of the source's
+# packages.yaml and mise config, with stubbed rpm, dnf, sudo, pipx, mise, gh, ticket and rofi.
+# Nothing is installed and the real source is never written.
+#
+#   tools/add-package-test/add-package-test
+#
+# Cases: dnf (entry at the end of the target, or --after, with --comment), already installed
+# (recorded, not installed), COPR (enabled first only when needed; unknown COPR refused), pipx
+# (true and a pip spec), mise (version from `mise latest`, exact pin, already pinned refused),
+# two targets (one install), a name already in the target (nothing done), --dry-run (nothing
+# written), the rofi picker without -t, a failing install (nothing written), --release (a ticket
+# with the probe's evidence, nothing installed or written). Needs mikefarah's yq.
+# Exit 1 if any case fails.
+# ok() always succeeds, so `check && ok || bad` is safe; stubs expand $* at their run time.
+# shellcheck disable=SC2015,SC2016
+set -euo pipefail
+
+root=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+script=$root/home/dot_local/bin/executable_add-package
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+export STATE=$work/state
+fails=0
+
+mkdir -p "$work/bin"
+stub() { printf '#!/usr/bin/env bash\necho "%s $*" >>"$STATE/calls"\n%s\n' "$1" "${2:-}" >"$work/bin/$1"; }
+stub sudo 'exec "$@"'
+stub rpm 'grep -qxF "$2" "$STATE/installed" 2>/dev/null'
+stub dnf 'case $1 in
+  repolist) echo "repo id  repo name"; cat "$STATE/repos" 2>/dev/null ;;
+  install) [[ -e $STATE/fail ]] && exit 1 ;;
+esac; exit 0'
+stub pipx '[[ $1 == list ]] && echo "{\"venvs\": {}}"; exit 0'
+stub mise 'case $1 in
+  latest) echo 9.9.9 ;;
+  where) exit 1 ;;
+  registry) echo "jd                aqua:josephburnett/jd go:github.com/josephburnett/jd" ;;
+  ls-remote) printf "1.0.0\n1.1.0\n" ;;
+esac; exit 0'
+stub gh 'echo "{\"tagName\": \"v1.1.0\", \"publishedAt\": \"2026-01-02T00:00:00Z\", \"assets\": [{\"name\": \"tool-linux-amd64.tar.gz\"}]}"'
+stub ticket 'echo /inbox/ticket.md'
+stub rofi 'printf "wayland\tWayland desktop\n"'
+chmod +x "$work/bin"/*
+
+fresh() {  # a fresh scratch source and state
+  rm -rf "$work/src" "$STATE"
+  mkdir -p "$work/src/.chezmoidata" "$work/src/private_dot_config/mise" "$STATE"
+  cp "$root/home/.chezmoidata/packages.yaml" "$work/src/.chezmoidata/"
+  cp "$root/home/private_dot_config/mise/config.toml" "$work/src/private_dot_config/mise/"
+  : >"$STATE/calls"
+}
+pkgs=$work/src/.chezmoidata/packages.yaml
+toml=$work/src/private_dot_config/mise/config.toml
+run() {  # args... -> rc, out, err
+  rc=0
+  PATH="$work/bin:$PATH" python3 "$script" --source "$work/src" "$@" >"$work/out" 2>"$work/err" </dev/null || rc=$?
+}
+ok() { echo "ok    $case_name"; }
+bad() { echo "FAIL  $case_name: $*"; sed 's/^/      /' "$work/err" "$STATE/calls"; fails=$((fails + 1)); }
+called() { grep -qxF -- "$1" "$STATE/calls"; }
+unchanged() { cmp -s "$pkgs" "$root/home/.chezmoidata/packages.yaml" && cmp -s "$toml" "$root/home/private_dot_config/mise/config.toml"; }
+last() { yq -o json -I0 ".packageTargets.$1.packages[-1]" "$pkgs"; }
+
+case_name="dnf: installed, entry last in the target, with a comment"
+fresh; run -t base --comment "a cow" cowsay
+[[ $rc == 0 && $(last base) == '"cowsay"' ]] && called "sudo dnf install -y cowsay" &&
+  grep -q '^      - cowsay  # a cow$' "$pkgs" && grep -q 'commit -m "chore(packages): add cowsay (base)"' "$work/out" &&
+  ok || bad "rc=$rc last=$(last base)"
+
+case_name="already installed: recorded, not installed"
+fresh; echo cowsay >"$STATE/installed"; run -t base cowsay
+[[ $rc == 0 && $(last base) == '"cowsay"' ]] && ! grep -q 'dnf install' "$STATE/calls" && ok || bad "rc=$rc"
+
+case_name="COPR not enabled: enabled, then installed; --after places the entry"
+fresh; run --copr hyprland -t wayland --after hyprlock hyprland-qtutils
+i=$(yq '.packageTargets.wayland.packages | to_entries | .[] | select(.value.name == "hyprlock") | .key' "$pkgs")
+[[ $rc == 0 && $(yq -o json -I0 ".packageTargets.wayland.packages[$((i + 1))]" "$pkgs") == '{"name":"hyprland-qtutils","copr":"hyprland"}' ]] &&
+  called "sudo dnf copr enable -y sdegler/hyprland" && called "sudo dnf install -y hyprland-qtutils" && ok || bad "rc=$rc"
+
+case_name="COPR enabled: not enabled again"
+fresh; echo "copr:copr.fedorainfracloud.org:sdegler:hyprland  Copr repo" >"$STATE/repos"; run --copr hyprland -t wayland hyprland-qtutils
+[[ $rc == 0 ]] && ! grep -q 'copr enable' "$STATE/calls" && ok || bad "rc=$rc"
+
+case_name="unknown COPR refused, nothing written"
+fresh; run --copr nope -t wayland x
+[[ $rc == 2 ]] && unchanged && grep -q "COPR 'nope' is not in the coprs block" "$work/err" && ok || bad "rc=$rc"
+
+case_name="pipx: true, default entry form"
+fresh; run --pipx -t python-tools httpie
+[[ $rc == 0 && $(last python-tools) == '{"name":"httpie","pipx":true}' ]] && called "pipx install httpie" && ok || bad "rc=$rc $(last python-tools)"
+
+case_name="pipx: a pip spec"
+fresh; run --pipx --pipx-spec 'httpie[socks]>=3' -t python-tools httpie
+[[ $rc == 0 && $(last python-tools) == '{"name":"httpie","pipx":"httpie[socks]>=3"}' ]] && called "pipx install httpie[socks]>=3" && ok || bad "rc=$rc $(last python-tools)"
+
+case_name="mise: exact pin from mise latest, installed"
+fresh; run --mise --comment "a tool" eza
+[[ $rc == 0 && $(python3 -c 'import sys, tomllib; print(tomllib.load(open(sys.argv[1], "rb"))["tools"]["eza"])' "$toml") == 9.9.9 ]] &&
+  grep -q '^# a tool$' "$toml" && called "mise install eza@9.9.9" && ok || bad "rc=$rc"
+
+case_name="mise: an already pinned tool is refused"
+fresh; run --mise stylua
+[[ $rc == 2 ]] && unchanged && grep -q 'already pinned' "$work/err" && ok || bad "rc=$rc"
+
+case_name="two targets: entry in both, one install"
+fresh; run -t base -t wayland cowsay
+[[ $rc == 0 && $(last base) == '"cowsay"' && $(last wayland) == '"cowsay"' && $(grep -c '^sudo dnf install' "$STATE/calls") == 1 ]] && ok || bad "rc=$rc"
+
+case_name="already in the target: nothing done"
+fresh; run -t base jq
+[[ $rc == 0 ]] && unchanged && ! grep -q install "$STATE/calls" && grep -q 'already in target base' "$work/err" && ok || bad "rc=$rc"
+
+case_name="--dry-run: diff printed, nothing installed or written"
+fresh; run --dry-run -t base cowsay
+[[ $rc == 0 ]] && unchanged && ! grep -q 'dnf install' "$STATE/calls" && grep -q '^+      - cowsay$' "$work/out" && ok || bad "rc=$rc"
+
+case_name="no -t: the rofi picker chooses (stdin not a terminal)"
+fresh; run cowsay
+[[ $rc == 0 && $(last wayland) == '"cowsay"' ]] && grep -q '^rofi -dmenu -multi-select' "$STATE/calls" && ok || bad "rc=$rc"
+
+case_name="failing install: exit 1, nothing written"
+fresh; touch "$STATE/fail"; run -t base cowsay
+[[ $rc == 1 ]] && unchanged && ok || bad "rc=$rc"
+
+case_name="--release: a ticket with the probe's evidence, nothing installed or written"
+fresh; run --release someone/tool
+[[ $rc == 0 ]] && unchanged && ! grep -qE '^(sudo|dnf|pipx install|mise install)' "$STATE/calls" &&
+  grep -q "^ticket -p chezmoi --type task --title Pinned release install for someone/tool" "$STATE/calls" &&
+  grep -q 'v1.1.0' "$STATE/calls" && grep -q 'tool-linux-amd64.tar.gz' "$STATE/calls" &&
+  grep -q 'lists 2 version(s) (latest 1.1.0)' "$STATE/calls" && grep -q 'Filed: /inbox/ticket.md' "$work/out" && ok || bad "rc=$rc"
+
+case_name="--release: a repo mise knows points at a mise pin"
+fresh; run --release josephburnett/jd
+[[ $rc == 0 ]] && grep -q 'add-package --mise jd' "$STATE/calls" && ok || bad "rc=$rc"
+
+if ((fails)); then echo "$fails failed"; exit 1; fi
+echo "all passed"

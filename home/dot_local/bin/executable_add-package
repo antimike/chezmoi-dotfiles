@@ -1,0 +1,495 @@
+#!/usr/bin/env python3
+"""Install a package and record it in the chezmoi source, so a fresh host gets it too (chz-02p).
+
+Methods (one per call; the default is dnf):
+  NAME                  dnf install NAME; entry `- NAME` in each target
+  --copr KEY NAME       the same from a COPR in packages.yaml's `coprs` block (enabled first
+                        if needed); entry `- name: NAME` + `copr: KEY`
+  --pipx NAME           pipx install NAME (or --pipx-spec); entry `{ name: NAME, pipx: true }`,
+                        default target python-tools
+  --mise TOOL           mise install TOOL@VERSION (--version, else `mise latest`); exact pin
+                        in private_dot_config/mise/config.toml, the one source for mise tools
+                        (no targets: mise tools follow the mise config, not the package map)
+  --release OWNER/REPO  installs nothing and writes nothing: probes the latest release (gh)
+                        and whether mise/aqua knows the repo, then files a ticket for the
+                        chezmoi project with that evidence. Release installers (asset
+                        patterns, checksums, signatures) are written by hand (D48).
+
+Targets: -t TARGET (repeatable) names packageTargets in packages.yaml. Without -t, a
+multi-select picker lists them with their descriptions (fzf in a terminal, rofi
+otherwise). A host installs the targets its package_targets key names, filtered by each
+target's `when`, so "several hosts" means several targets. A target already listing the
+name is skipped. The entry goes at the end of the target's list, or after --after NAME;
+--comment adds a trailing comment.
+
+Something already installed (rpm -q, pipx list, mise where) is not installed again, only
+recorded: the usual case for a package first installed by hand. The edit goes to the
+chezmoi source (`chezmoi source-path`, or --source), never to the target, and is checked
+by parsing the file again. Nothing is committed and chezmoi apply is not run: the diff
+and a suggested commit are printed. --dry-run prints the commands and the diff only.
+
+Exit status: 0 = done (or nothing to do), 1 = a command failed, 2 = usage error.
+"""
+
+from __future__ import annotations
+
+import argparse
+import difflib
+import json
+import logging
+import re
+import shutil
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+logger = logging.getLogger("add-package")
+
+PACKAGES = Path(".chezmoidata/packages.yaml")
+MISE = Path("private_dot_config/mise/config.toml")
+ENTRY_INDENT = " " * 6
+TICKET_PROJECT = "chezmoi"
+ASK_RELEASE = (
+    "Add a pinned install: a mise pin if mise/aqua knows it, else a packages.yaml `release` entry, "
+    "run_onchange_install-<id>.sh.tmpl and .chezmoidata/<tool>.yaml (checksums, signature check)."
+)
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+    """Preserve description whitespace and show defaults."""
+
+
+class Usage(Exception):
+    """A user error; the message says what to fix."""
+
+
+def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="add-package", description=__doc__, formatter_class=HelpFormatter)
+    parser.add_argument("name", metavar="NAME", help="package, tool or OWNER/REPO")
+    method = parser.add_mutually_exclusive_group()
+    method.add_argument("--copr", metavar="KEY", help="dnf from this COPR (a key of the coprs block)")
+    method.add_argument("--pipx", action="store_true", help="install with pipx")
+    method.add_argument("--mise", action="store_true", help="pin and install with mise")
+    method.add_argument("--release", action="store_true", help="probe a GitHub release and file a ticket")
+    parser.add_argument("-t", "--target", action="append", default=[], help="package-map target (repeatable)")
+    parser.add_argument("--after", metavar="ENTRY", help="insert after this entry instead of at the end")
+    parser.add_argument("--comment", help="trailing comment for the entry")
+    parser.add_argument("--version", help="mise: exact version (default: mise latest)")
+    parser.add_argument("--pipx-spec", metavar="SPEC", help="pipx: a pip spec when it is not NAME")
+    parser.add_argument("--source", type=Path, help="chezmoi source dir (default: chezmoi source-path)")
+    parser.add_argument("-n", "--dry-run", action="store_true", help="print commands and the diff only")
+    parser.add_argument(
+        "--loglevel",
+        "-l",
+        default="INFO",
+        type=lambda v: v.strip().upper(),
+        help="Logging verbosity (DEBUG, INFO, WARNING, ERROR).",
+    )
+    args = parser.parse_args(argv)
+    if args.version and not args.mise:
+        parser.error("--version only applies to --mise")
+    if args.pipx_spec and not args.pipx:
+        parser.error("--pipx-spec only applies to --pipx")
+    if (args.mise or args.release) and (args.target or args.after or (args.comment and args.release)):
+        parser.error("--mise and --release take no targets (--mise takes --comment)")
+    return args
+
+
+def setup_logger(args: argparse.Namespace) -> None:
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter("add-package: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(args.loglevel)
+
+
+def run(cmd: list[str], *, dry_run: bool = False, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a command that changes the system; under --dry-run only print it."""
+    if dry_run:
+        print("would run: " + " ".join(cmd))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+    logger.info("running: %s", " ".join(cmd))
+    return subprocess.run(cmd, text=True, check=check)
+
+
+def probe(cmd: list[str]) -> subprocess.CompletedProcess:
+    """Run a read-only query; never fails the program."""
+    try:
+        return subprocess.run(cmd, text=True, capture_output=True, check=False)
+    except FileNotFoundError:
+        return subprocess.CompletedProcess(cmd, 127, "", f"{cmd[0]}: not found")
+
+
+def need(*commands: str) -> None:
+    for command in commands:
+        if not shutil.which(command):
+            raise Usage(f"{command} not found")
+
+
+def source_dir(args: argparse.Namespace) -> Path:
+    if args.source:
+        return args.source
+    need("chezmoi")
+    return Path(probe(["chezmoi", "source-path"]).stdout.strip())
+
+
+def load_yaml(path: Path) -> dict:
+    """mikefarah's yq turns the YAML into JSON (stdlib only, as in `ticket`)."""
+    result = probe(["yq", "-o", "json", ".", str(path)])
+    if result.returncode != 0:
+        raise Usage(f"cannot parse {path}: {result.stderr.strip()}")
+    return json.loads(result.stdout) or {}
+
+
+def entry_name(entry: str | dict) -> str:
+    return entry if isinstance(entry, str) else str(entry.get("name", ""))
+
+
+# ---- targets -------------------------------------------------------------------------------
+
+
+def pick_targets(targets: dict[str, dict], default: list[str]) -> list[str]:
+    """Multi-select picker: fzf in a terminal, rofi otherwise."""
+    lines = [f"{name}\t{spec.get('description', '')}" for name, spec in targets.items()]
+    if sys.stdin.isatty() and shutil.which("fzf"):
+        cmd = [
+            "fzf",
+            "--multi",
+            "--delimiter=\t",
+            "--prompt=targets> ",
+            "--header=Tab selects, Enter confirms",
+        ]
+    elif shutil.which("rofi"):
+        cmd = ["rofi", "-dmenu", "-multi-select", "-i", "-p", "targets"]
+    else:
+        raise Usage("no -t given and neither fzf (in a terminal) nor rofi to pick targets")
+    if default:
+        logger.info("suggested: %s", ", ".join(default))
+    result = subprocess.run(
+        cmd, input="\n".join(lines) + "\n", text=True, stdout=subprocess.PIPE, check=False
+    )
+    picked = [line.split("\t", 1)[0] for line in result.stdout.splitlines() if line.strip()]
+    if not picked:
+        raise Usage("no target picked")
+    return picked
+
+
+# ---- packages.yaml edits -------------------------------------------------------------------
+
+
+def format_entry(args: argparse.Namespace) -> list[str]:
+    comment = f"  # {args.comment}" if args.comment else ""
+    if args.copr:
+        return [f"{ENTRY_INDENT}- name: {args.name}{comment}", f"{ENTRY_INDENT}  copr: {args.copr}"]
+    if args.pipx:
+        pipx = json.dumps(args.pipx_spec) if args.pipx_spec else "true"
+        return [f"{ENTRY_INDENT}- {{ name: {args.name}, pipx: {pipx} }}{comment}"]
+    return [f"{ENTRY_INDENT}- {args.name}{comment}"]
+
+
+def expected_entry(args: argparse.Namespace) -> str | dict:
+    if args.copr:
+        return {"name": args.name, "copr": args.copr}
+    if args.pipx:
+        return {"name": args.name, "pipx": args.pipx_spec or True}
+    return args.name
+
+
+def indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def insertion_index(lines: list[str], target: str, after: str | None) -> int:
+    """Line index to insert at: the end of TARGET's packages list, or after the entry AFTER."""
+    try:
+        start = lines.index(f"  {target}:")
+    except ValueError:
+        raise Usage(f"target {target!r} not found in {PACKAGES}") from None
+    i = start + 1
+    while i < len(lines) and not (lines[i].strip() and indent_of(lines[i]) <= 2):
+        if lines[i] == "    packages:":
+            break
+        i += 1
+    else:
+        raise Usage(f"target {target!r} has no packages: list")
+    end = last = i
+    entry_at = None
+    for j in range(i + 1, len(lines)):
+        line = lines[j]
+        if line.strip() and indent_of(line) < len(ENTRY_INDENT):
+            break
+        end = j
+        if line.strip() and not line.lstrip().startswith("#"):
+            last = j
+        if after and line.startswith(ENTRY_INDENT + "- ") and entry_matches(line, after):
+            entry_at = j
+    if after:
+        if entry_at is None:
+            raise Usage(f"no entry {after!r} in target {target!r}")
+        k = entry_at + 1
+        while k <= end and lines[k].strip() and indent_of(lines[k]) > len(ENTRY_INDENT):
+            k += 1
+        return k
+    return last + 1
+
+
+def entry_matches(line: str, name: str) -> bool:
+    body = line[len(ENTRY_INDENT) + 2 :]
+    pattern = rf"^(\{{\s*)?(name:\s*)?{re.escape(name)}(\s|,|\}}|$|#)"
+    return re.match(pattern, body) is not None
+
+
+def edit_packages(path: Path, targets: list[str], args: argparse.Namespace) -> tuple[str, str, list[str]]:
+    """Old text, new text and the targets written. Verified by parsing the result."""
+    old = path.read_text()
+    data = load_yaml(path)
+    all_targets = data.get("packageTargets", {})
+    if args.copr and args.copr not in data.get("coprs", {}):
+        raise Usage(f"COPR {args.copr!r} is not in the coprs block ({', '.join(data.get('coprs', {}))})")
+    lines = old.splitlines()
+    written = []
+    for target in targets:
+        if target not in all_targets:
+            raise Usage(f"no target {target!r} (known: {', '.join(all_targets)})")
+        names = [entry_name(e) for e in all_targets[target].get("packages") or []]
+        if args.name in names:
+            logger.warning("%s is already in target %s; skipped", args.name, target)
+            continue
+        elsewhere = [
+            t for t, spec in all_targets.items() if args.name in map(entry_name, spec.get("packages") or [])
+        ]
+        if elsewhere:
+            logger.info("%s is also in %s", args.name, ", ".join(elsewhere))
+        at = insertion_index(lines, target, args.after)
+        lines[at:at] = format_entry(args)
+        written.append(target)
+    new = "\n".join(lines) + "\n"
+    if written:
+        verify_packages(path, new, data, written, args)
+    return old, new, written
+
+
+def verify_packages(
+    path: Path, new: str, old_data: dict, written: list[str], args: argparse.Namespace
+) -> None:
+    scratch = path.with_name(f".{path.name}.add-package")
+    scratch.write_text(new)
+    try:
+        new_data = load_yaml(scratch)
+    finally:
+        scratch.unlink()
+    want = expected_entry(args)
+    for target, spec in old_data["packageTargets"].items():
+        before = spec.get("packages") or []
+        after = new_data["packageTargets"][target].get("packages") or []
+        if target in written:
+            rest = list(after)
+            if want not in rest:
+                raise Usage(f"internal: the {target} entry does not parse as {want!r}; nothing written")
+            rest.remove(want)
+            if rest != before:
+                raise Usage(f"internal: the edit changed other entries of {target}; nothing written")
+        elif after != before:
+            raise Usage(f"internal: the edit changed target {target}; nothing written")
+    if {k: v for k, v in new_data.items() if k != "packageTargets"} != {
+        k: v for k, v in old_data.items() if k != "packageTargets"
+    }:
+        raise Usage("internal: the edit changed more than packageTargets; nothing written")
+
+
+# ---- mise -------------------------------------------------------------------------------------
+
+
+def toml_key(tool: str) -> str:
+    return tool if re.fullmatch(r"[A-Za-z0-9_-]+", tool) else json.dumps(tool)
+
+
+def edit_mise(path: Path, tool: str, version: str, comment: str | None) -> tuple[str, str]:
+    old = path.read_text()
+    tools = tomllib.loads(old).get("tools", {})
+    if tool in tools:
+        raise Usage(f"{tool} is already pinned in {MISE} ({tools[tool]}); bump it there")
+    lines = old.splitlines()
+    try:
+        start = lines.index("[tools]")
+    except ValueError:
+        raise Usage(f"no [tools] table in {path}") from None
+    end = start
+    for j in range(start + 1, len(lines)):
+        if lines[j].startswith("["):
+            break
+        if lines[j].strip():
+            end = j
+    new_lines = ([f"# {comment}"] if comment else []) + [f'{toml_key(tool)} = "{version}"']
+    lines[end + 1 : end + 1] = new_lines
+    new = "\n".join(lines) + "\n"
+    parsed = tomllib.loads(new)
+    if (
+        parsed.get("tools", {}).get(tool) != version
+        or {k: v for k, v in parsed["tools"].items() if k != tool} != tools
+    ):
+        raise Usage("internal: the mise edit does not parse as intended; nothing written")
+    return old, new
+
+
+# ---- methods ----------------------------------------------------------------------------------
+
+
+def install_native(args: argparse.Namespace, data: dict) -> None:
+    if probe(["rpm", "-q", args.name]).returncode == 0:
+        logger.info("%s is already installed; recording it only", args.name)
+        return
+    need("dnf", "sudo")
+    if args.copr:
+        project = data["coprs"][args.copr]["project"]
+        # dnf5 names a COPR's repo copr:copr.fedorainfracloud.org:<owner>:<project> (as the installer).
+        repos = [
+            line.split()[0]
+            for line in probe(["dnf", "repolist", "--enabled"]).stdout.splitlines()[1:]
+            if line
+        ]
+        if "copr:copr.fedorainfracloud.org:" + project.replace("/", ":") not in repos:
+            run(["sudo", "dnf", "copr", "enable", "-y", project], dry_run=args.dry_run)
+    run(["sudo", "dnf", "install", "-y", args.name], dry_run=args.dry_run)
+
+
+def install_pipx(args: argparse.Namespace) -> None:
+    need("pipx")
+    venvs = json.loads(probe(["pipx", "list", "--json"]).stdout or "{}").get("venvs", {})
+    if args.name in venvs:
+        logger.info("%s is already installed with pipx; recording it only", args.name)
+        return
+    run(["pipx", "install", args.pipx_spec or args.name], dry_run=args.dry_run)
+
+
+def do_mise(args: argparse.Namespace, src: Path) -> int:
+    need("mise")
+    version = args.version
+    if not version:
+        result = probe(["mise", "latest", args.name])
+        version = result.stdout.strip()
+        if result.returncode != 0 or not version:
+            raise Usage(f"mise latest {args.name} failed: {result.stderr.strip()}")
+    old, new = edit_mise(src / MISE, args.name, version, args.comment)
+    if probe(["mise", "where", f"{args.name}@{version}"]).returncode == 0:
+        logger.info("%s@%s is already installed; recording it only", args.name, version)
+    else:
+        run(["mise", "install", f"{args.name}@{version}"], dry_run=args.dry_run)
+    write(src, MISE, old, new, args, f"chore(mise): pin {args.name} {version}")
+    if not args.dry_run:
+        print(f"Active after: chezmoi apply ~/.config/mise/config.toml (then `mise which {args.name}`)")
+    return 0
+
+
+def do_release(args: argparse.Namespace) -> int:
+    repo = args.name
+    if not re.fullmatch(r"[\w.-]+/[\w.-]+", repo):
+        raise Usage(f"--release takes OWNER/REPO, not {repo!r}")
+    need("gh", "ticket")
+    release = probe(["gh", "release", "view", "-R", repo, "--json", "tagName,publishedAt,assets"])
+    if release.returncode == 0:
+        info = json.loads(release.stdout)
+        assets = "\n".join(f"- {a['name']}" for a in info.get("assets", [])) or "- (none)"
+        gh_text = f"Latest release: {info.get('tagName')} ({info.get('publishedAt', '?')[:10]})\n\nAssets:\n{assets}"
+    else:
+        gh_text = f"gh release view failed: {release.stderr.strip()}"
+    registry = probe(["mise", "registry"])
+    known = [
+        line.split()[0]
+        for line in registry.stdout.splitlines()
+        if re.search(rf"\b(aqua|ubi|github):{re.escape(repo)}\b", line, re.IGNORECASE)
+    ]
+    if known:
+        mise_text = (
+            f"mise's registry knows it as `{known[0]}`: prefer a mise pin (add-package --mise {known[0]})."
+        )
+    else:
+        remote = probe(["mise", "ls-remote", f"aqua:{repo}"])
+        versions = remote.stdout.split()
+        mise_text = (
+            f"Not in mise's registry; `mise ls-remote aqua:{repo}` lists {len(versions)} version(s)"
+            + (f" (latest {versions[-1]}): an `aqua:{repo}` pin may do." if versions else ".")
+        )
+    body = (
+        f"add-package --release {repo} probed it (nothing installed, nothing written).\n\n"
+        f"{gh_text}\n\n{mise_text}"
+    )
+    cmd = [
+        "ticket",
+        "-p",
+        TICKET_PROJECT,
+        "--type",
+        "task",
+        "--title",
+        f"Pinned release install for {repo}",
+        "-s",
+        "Ask",
+        ASK_RELEASE,
+        "-s",
+        "Done when",
+        "A fresh chezmoi apply installs the pinned version; tools/package-map-test passes.",
+        body,
+    ]
+    if args.dry_run:
+        print(body)
+        print("would run: ticket -p " + TICKET_PROJECT + f" --title 'Pinned release install for {repo}' ...")
+        return 0
+    result = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        raise Usage(f"ticket failed: {result.stderr.strip()}")
+    print(f"Filed: {result.stdout.strip()}")
+    return 0
+
+
+def write(src: Path, rel: Path, old: str, new: str, args: argparse.Namespace, message: str) -> None:
+    """Print the diff; unless --dry-run, write the file and suggest the commit."""
+    sys.stdout.writelines(
+        difflib.unified_diff(old.splitlines(True), new.splitlines(True), f"a/{rel}", f"b/{rel}")
+    )
+    if args.dry_run:
+        return
+    (src / rel).write_text(new)
+    print(
+        f'\nWritten to the chezmoi source, not committed. Suggested:\n  git -C {src} commit -m "{message}" -- {rel}'
+    )
+
+
+def main_flow(args: argparse.Namespace) -> int:
+    if args.release:
+        return do_release(args)
+    src = source_dir(args)
+    if args.mise:
+        return do_mise(args, src)
+    need("yq")
+    path = src / PACKAGES
+    data = load_yaml(path)
+    targets = args.target or pick_targets(
+        data.get("packageTargets", {}), ["python-tools"] if args.pipx else []
+    )
+    old, new, written = edit_packages(path, targets, args)
+    if not written:
+        logger.info("nothing to record")
+        return 0
+    if args.pipx:
+        install_pipx(args)
+    else:
+        install_native(args, data)
+    write(src, PACKAGES, old, new, args, f"chore(packages): add {args.name} ({', '.join(written)})")
+    return 0
+
+
+def main() -> None:
+    args = get_cli_arguments()
+    setup_logger(args)
+    try:
+        sys.exit(main_flow(args))
+    except Usage as error:
+        logger.error("%s", error)
+        sys.exit(2)
+    except subprocess.CalledProcessError as error:
+        logger.error("%s failed (exit %d); nothing written", " ".join(error.cmd[:3]), error.returncode)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

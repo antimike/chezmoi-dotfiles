@@ -81,14 +81,14 @@
 {{-           if not (hasKey $coprs .copr) }}{{ fail (printf "packages.yaml: %s names copr %q, which is not in the coprs block" $name .copr) }}{{ end }}
 {{-           $copr = (index $coprs .copr).project }}
 {{-         end }}
-{{-         if hasKey . "verify" }}{{ $verify = append $verify (list $name .verify) }}{{ end }}
+{{-         if and (hasKey . "verify") (not (has (list $name .verify) $verify)) }}{{ $verify = append $verify (list $name .verify) }}{{ end }}
 {{-       end }}
 {{-       if eq (toString $pkg) "false" }}
-{{-         $skipped = append $skipped $name }}
+{{-         if not (has $name $skipped) }}{{ $skipped = append $skipped $name }}{{ end }}
 {{-       else if eq $method "pipx" }}
 {{-         if not (has $pkg $pipx) }}{{ $pipx = append $pipx $pkg }}{{ end }}
 {{-       else if eq $method "release" }}
-{{-         $releases = append $releases (list $name $pkg) }}
+{{-         if not (has (list $name $pkg) $releases) }}{{ $releases = append $releases (list $name $pkg) }}{{ end }}
 {{-       else if not (has $pkg $wanted) }}
 {{-         $wanted = append $wanted $pkg }}
 {{-         $_ := set $coprOf $pkg $copr }}
