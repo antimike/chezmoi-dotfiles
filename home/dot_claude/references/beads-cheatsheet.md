@@ -106,7 +106,13 @@ This is a standing instruction (also captured inline in `~/.claude/CLAUDE.md`), 
 
 `BEADS_DIR` exported from one project's `.envrc` leaks into shells that have cd'd through that direnv and silently overrides bd's cwd-based auto-discovery in other projects. Symptoms: bd commands from project B return project A's beads.
 
-Fix: do NOT export `BEADS_DIR` from any project's `.envrc`. bd's cwd-walking auto-discovery works correctly when the variable is unset. If contaminated: `unset BEADS_DIR BEADS_DOLT_PASSWORD`. Same issue affects `BEADS_DOLT_PASSWORD`.
+Rule (project-registry D22, interim until its credential and direnv plugins exist, D23-D26; `~/.local/src/project-registry/docs/decisions.md`):
+
+- `BEADS_DIR`: never exported from any `.envrc`. bd's cwd-walking auto-discovery works correctly when the variable is unset.
+- `BEADS_DOLT_PASSWORD`: exported only in **server-mode** projects, and only from a credential command (today `pass`, e.g. `export BEADS_DOLT_PASSWORD="$(pass show …)"`), never as a literal. **Embedded** projects omit it.
+- Target (D23-D26): no `.envrc` names a credential store; credential lines go through the direnv plugin's `use_credential`.
+
+If contaminated: `unset BEADS_DIR BEADS_DOLT_PASSWORD`.
 
 Memory: `beads-dir-envvar-contamination`.
 
