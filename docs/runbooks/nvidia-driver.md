@@ -7,7 +7,8 @@ updated: 2026-10-24
 # NVIDIA driver
 
 Read [display-session-recovery.md](display-session-recovery.md) first: its rollback card (console login, multi-user
-boot) is the way back if the graphical session does not start.
+boot) is the way back if the graphical session does not start. For a full freeze (no keys, no VT switch), follow its
+["Hard freeze triage"](display-session-recovery.md#hard-freeze-triage) before reaching for the power key.
 
 ## Current state (checked 2026-10-24)
 - **615.78.08 since 2026-10-24** (`dnf` transaction 29; kmod built by akmods, transaction 30); results in step 5
