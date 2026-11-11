@@ -9,7 +9,8 @@ mani = "0.32.1"
 ghq = "1.11.2"
 go = "1.21.7"
 "go:github.com/doronbehar/pistol/cmd/pistol" = "0.5.3"
-glow = "1.5.1"
+# Markdown renderer (pistol previews, glow.nvim). 1.5.1's install had no executable (chz-3qa).
+glow = "3.0.0"
 # Lua formatter for the shell (just lint-lua) and nvim alike; mason no longer installs it (chz-7ze).
 stylua = "2.6.0"
 # GitHub Actions workflow linter (bd-track's actionlint-system pre-commit hook; nvim-lint
