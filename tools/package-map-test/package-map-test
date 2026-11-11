@@ -72,6 +72,9 @@ resolve '{"package_targets":["t"],"packageTargets":{"t":{"packages":[{"name":"fz
 check "release: listed with its installer id, nothing installed" test "$(cat "$tmp/list")" = $'release\tfzf\tfzf'
 check "release: a missing installer fails the render" \
   bash -c "! chezmoi execute-template --override-data '{\"package_targets\":[\"t\"],\"packageTargets\":{\"t\":{\"packages\":[{\"name\":\"x\",\"release\":\"no-such\"}]}}}' <'$tmpl' >/dev/null 2>&1"
+resolve '{"package_targets":["t","u"],"packageTargets":{"t":{"packages":["pmt-n",{"name":"pmt-p","pipx":true},{"name":"fzf","release":"fzf"}]},"u":{"packages":["pmt-n",{"name":"pmt-p","pipx":true},{"name":"fzf","release":"fzf"}]}}}'
+check "one package in two targets: listed once each (native, pipx, release)" \
+  test "$(cat "$tmp/list")" = $'native\tpmt-n\t\npipx\tpmt-p\t\nrelease\tfzf\tfzf'
 resolve '{"work_tooling":false,"package_targets":["work"]}'
 check "work target: skipped without work_tooling" test "$(lines)" = 0
 resolve '{"work_tooling":true,"package_targets":["work"]}'
