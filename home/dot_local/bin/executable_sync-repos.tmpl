@@ -1,7 +1,8 @@
 {{ if lookPath "git" -}}
 #!/usr/bin/env bash
 # sync-repos: daily git auto-commit + push for every project in the registry
-# ~/.config/projects.yaml with `sync: {enabled: true}` (D75). Invoked by
+# (`pproj where registry`; $PPROJ_REGISTRY overrides it) with `sync: {enabled: true}`
+# (D75). Invoked by
 # sync-repos.service (systemd user unit), triggered by sync-repos.timer.
 #
 # A synced project needs a `path:` (D36: only data repos with a fixed, known
@@ -24,8 +25,7 @@
 
 set -euo pipefail
 
-# The SYNC_REPOS_* overrides exist for testing against scratch repos.
-REGISTRY="${SYNC_REPOS_REGISTRY:-${XDG_CONFIG_HOME:-$HOME/.config}/projects.yaml}"
+# SYNC_REPOS_NOTIFY exists for testing; the registry comes from pproj (PPROJ_REGISTRY).
 LOCK="${XDG_RUNTIME_DIR:-/tmp}/sync-repos.lock"
 NOTIFY="${SYNC_REPOS_NOTIFY:-${HOME}/.claude/scripts/notify}"
 
@@ -40,6 +40,16 @@ for cmd in flock logger yq; do
         exit 2
     }
 done
+
+# One resolver for the registry path (chz-37d); no fallback without pproj. Notify:
+# this runs from a timer, where stderr goes unread.
+if ! command -v pproj >/dev/null 2>&1; then
+    msg="pproj not found; it locates the project registry (chezmoi pin: .chezmoidata/project_registry.yaml)"
+    log "$msg"
+    [ -x "$NOTIFY" ] && { "$NOTIFY" --urgent "sync-repos failed" "$msg" || true; }
+    exit 1
+fi
+REGISTRY="$(pproj where registry)"
 
 [ -r "$REGISTRY" ] || { log "no registry at $REGISTRY; nothing to do"; exit 0; }
 

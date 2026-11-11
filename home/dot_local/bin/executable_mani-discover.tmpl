@@ -8,7 +8,8 @@
 # Finds every directory with a .git directory (not worktrees or submodules,
 # whose .git is a file) under the root folders below, plus the fixed paths.
 # Project names: a clone whose origin matches a `remote:` (a git URL or owner/repo) in the
-# project registry ~/.config/projects.yaml (D72) gets that name; every other
+# project registry (D72; its path from `pproj where registry`, so $PPROJ_REGISTRY
+# overrides it) gets that name; every other
 # clone is keyed by its path relative to $HOME, so two clones with the same
 # basename stay distinct. A second clone of a named remote keeps its path key.
 # A summary goes to stderr; --report also lists named projects with no clone
@@ -23,7 +24,12 @@ OUT="${HOME}/mani.yaml"
 read -r -a roots <<<"${MANI_DISCOVER_ROOTS:-{{ range $i, $r := .registry.scan_roots }}{{ if $i }} {{ end }}{{ $r | replace "~/" "$HOME/" }}{{ end }}}"
 fixed=("{{ .chezmoi.workingTree }}" "$HOME/.claude/projects")
 
-REGISTRY="${XDG_CONFIG_HOME:-$HOME/.config}/projects.yaml"
+# One resolver for the registry path (chz-37d); no fallback without pproj.
+command -v pproj >/dev/null 2>&1 || {
+    echo "mani-discover: pproj not found; it locates the project registry (chezmoi pin: .chezmoidata/project_registry.yaml)" >&2
+    exit 1
+}
+REGISTRY="$(pproj where registry)"
 dry_run=0
 report=0
 for arg in "$@"; do

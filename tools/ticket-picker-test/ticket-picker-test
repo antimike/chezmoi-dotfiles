@@ -13,7 +13,7 @@ src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 export HOME=$work/home XDG_CONFIG_HOME=$work/home/.config XDG_STATE_HOME=$work/home/.local/state
-unset VISUAL TICKET_FROM TICKET_REGISTRY TICKET_ROOT
+unset VISUAL TICKET_FROM PPROJ_REGISTRY TICKET_ROOT
 inbox=$XDG_STATE_HOME/triage
 mkdir -p "$XDG_CONFIG_HOME" "$work/bin"
 printf 'projects:\n  alpha: { remote: me/alpha }\n  beta: { remote: me/beta }\n  gamma: { remote: me/gamma }\n' \

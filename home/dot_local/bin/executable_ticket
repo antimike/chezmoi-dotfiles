@@ -6,7 +6,8 @@ frontmatter (from, date, type, urgency, status: open) and a body; the project
 handles its inbox later (/triage). --quick appends one paragraph to that inbox's
 triage/inbox.md instead, for notes too small for a file.
 
-Project names come from the registry ~/.config/projects.yaml. Without -p, the
+Project names come from the project registry, at the path `pproj where registry`
+prints ($PPROJ_REGISTRY, else ~/.config/projects.yaml). Without -p, the
 project is the one whose remote (or path) matches the current git repo; an unknown
 name is refused with the closest registry names.
 
@@ -67,10 +68,6 @@ class Usage(Exception):
     """A user error; the message says what to fix."""
 
 
-def config_home() -> Path:
-    return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-
-
 def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="ticket", description=__doc__, formatter_class=HelpFormatter)
     parser.add_argument("text", nargs="?", metavar="TEXT", help='ticket text; "-" reads stdin')
@@ -109,8 +106,7 @@ def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--registry",
         type=Path,
-        default=Path(os.environ.get("TICKET_REGISTRY") or config_home() / "projects.yaml"),
-        help="project registry ($TICKET_REGISTRY)",
+        help="project registry (default: `pproj where registry`, which honours $PPROJ_REGISTRY)",
     )
     parser.add_argument(
         "--root",
@@ -138,8 +134,21 @@ def setup_logger(args: argparse.Namespace) -> None:
     logger.setLevel(args.loglevel)
 
 
-def load_registry(path: Path) -> dict[str, dict]:
+def registry_path() -> Path:
+    """The registry pproj uses: one resolver for every client (chz-37d), no fallback."""
+    if not shutil.which("pproj"):
+        raise Usage(
+            "pproj not found; it locates the project registry (chezmoi pin: .chezmoidata/project_registry.yaml)"
+        )
+    result = subprocess.run(["pproj", "where", "registry"], text=True, capture_output=True, check=False)
+    if result.returncode != 0 or not result.stdout.strip():
+        raise Usage(f"pproj where registry failed: {result.stderr.strip()}")
+    return Path(result.stdout.strip())
+
+
+def load_registry(path: Path | None) -> dict[str, dict]:
     """The registry's projects as {name: entry}; yq turns the YAML into JSON (stdlib only)."""
+    path = path or registry_path()
     if not path.is_file():
         raise Usage(f"no project registry at {path}")
     if not shutil.which("yq"):

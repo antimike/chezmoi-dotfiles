@@ -19,6 +19,7 @@ trap 'rm -rf "$work"' EXIT
 # Render with the real HOME (chezmoi needs its own config), then switch to the fake one.
 chezmoi execute-template --source "$src" <"$src/dot_local/bin/executable_mani-discover.tmpl" >"$work/mani-discover"
 export HOME=$work/home XDG_CONFIG_HOME=$work/home/.config GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+unset PPROJ_REGISTRY
 mkdir -p "$HOME/.config" "$HOME/Source"
 fails=0
 
@@ -75,6 +76,18 @@ if (cd "$HOME" && mani list projects >/dev/null 2>&1); then echo "ok    mani par
 rm "$HOME/.config/projects.yaml"
 out=$(run --dry-run 2>"$work/err")
 check "no registry: every clone keyed by path" "$(key_for alpha)" '"Source/alpha":'
+
+# The registry path comes from `pproj where registry` (chz-37d).
+printf 'projects:\n  alt-alpha: { remote: me/alpha }\n' >"$work/alt.yaml"
+out=$(PPROJ_REGISTRY=$work/alt.yaml run --dry-run 2>"$work/err")
+check "PPROJ_REGISTRY picks the registry" "$(key_for alpha)" '"alt-alpha":'
+pproj_dir=$(dirname "$(command -v pproj)")
+mkdir -p "$work/nopproj"
+for f in "$pproj_dir"/*; do [[ ${f##*/} == pproj ]] || ln -s "$f" "$work/nopproj/"; done
+rc=0
+PATH=${PATH//$pproj_dir/$work/nopproj} run --dry-run >/dev/null 2>"$work/err" || rc=$?
+check "no pproj: exit 1" "$rc" "1"
+check "no pproj: names the pin" "$(cat "$work/err")" "pproj not found"
 
 if ((fails)); then echo "$fails failed"; exit 1; fi
 echo "all passed"

@@ -4,11 +4,13 @@
 #   tools/sync-repos-test/sync-repos-test
 #
 # Renders home/dot_local/bin/executable_sync-repos.tmpl with chezmoi and runs it against a
-# scratch registry (SYNC_REPOS_REGISTRY), scratch clones with local bare remotes, and a fake
+# scratch registry (PPROJ_REGISTRY, read through `pproj where registry`), scratch clones with local bare remotes, and a fake
 # notifier (SYNC_REPOS_NOTIFY). Checks: `sync: {enabled: true}` with a path is committed and
 # pushed; `false`, an absent key and an empty `sync: {}` are left alone; `yes` (a string in YAML
 # 1.2), `true` without a path, a scalar `sync: true` and the old key `sync_repo` are reported as
-# failures (exit 1, one notification); an empty or missing registry is a no-op (exit 0). Prints one line per case; exits 1 if any fails. Needs chezmoi, git, yq, gitleaks.
+# failures (exit 1, one notification); an empty or missing registry is a no-op (exit 0); without
+# pproj on PATH it fails (exit 1, one notification). Prints one line per case; exits 1 if any
+# fails. Needs chezmoi, git, yq, gitleaks, pproj.
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/../.." && pwd)
@@ -41,7 +43,7 @@ for n in on off str nopath absent scalar old emptymap; do mkclone "$n"; done
 run() { # REGISTRY -> exit code in $rc
   rm -f "$tmp/notified"
   rc=0
-  SYNC_REPOS_REGISTRY=$1 SYNC_REPOS_NOTIFY=$tmp/notify XDG_RUNTIME_DIR=$tmp \
+  PATH=${RUN_PATH:-$PATH} PPROJ_REGISTRY=$1 SYNC_REPOS_NOTIFY=$tmp/notify XDG_RUNTIME_DIR=$tmp \
     GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t \
     "$tmp/sync-repos" >"$tmp/out" 2>&1 || rc=$?
 }
@@ -85,5 +87,14 @@ check "empty registry: exit 0" "$rc" "0"
 run "$tmp/missing.yaml"
 check "missing registry: exit 0" "$rc" "0"
 check "missing registry: no notification" "$([ -e "$tmp/notified" ] && echo yes || echo no)" "no"
+
+# PATH without pproj: the directory holding it, minus pproj itself.
+pproj_dir=$(dirname "$(command -v pproj)")
+mkdir -p "$tmp/nopproj"
+for f in "$pproj_dir"/*; do [[ ${f##*/} == pproj ]] || ln -s "$f" "$tmp/nopproj/"; done
+RUN_PATH=${PATH//$pproj_dir/$tmp/nopproj} run "$tmp/reg.yaml"
+check "no pproj: exit 1" "$rc" "1"
+check "no pproj: names the pin" "$(grep -c 'pproj not found.*project_registry.yaml' "$tmp/out" || true)" "1"
+check "no pproj: one notification" "$(grep -c 'sync-repos failed' "$tmp/notified" || true)" "1"
 
 exit "$failed"
