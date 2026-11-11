@@ -1,0 +1,121 @@
+#!/bin/sh
+# run_onchange_install-freeze-diagnostics.sh.tmpl — leave evidence behind after a
+# hard freeze (MH, 2026-11-10; chz-42c; docs/runbooks/display-session-recovery.md,
+# "Hard freeze triage"). zbook froze twice (2026-11-05, 2026-11-10) with no trace:
+# the journal stopped mid-second and nothing explained the hang.
+#
+#   1. Lockup panics (/etc/sysctl.d/91-freeze-panic.conf): kernel.softlockup_panic=1,
+#      kernel.hardlockup_panic=1 (the NMI watchdog is on by default), kernel.panic=10.
+#      A detected lockup panics and reboots after 10 s instead of hanging forever.
+#      Trade-off (accepted): a stall the kernel might have recovered from becomes a
+#      reboot.
+#   2. pstore: the kernel argument efi_pstore.pstore_disable=0 (Fedora builds the EFI
+#      backend disabled, so without it pstore saves nothing) and systemd-pstore.service
+#      enabled. On a panic or oops the kernel writes the log tail (~10 KB) to EFI
+#      variables; at the next boot systemd-pstore moves it to /var/lib/systemd/pstore/
+#      and deletes it from NVRAM. Takes effect after a reboot. Watch item: HP firmware
+#      and EFI variable writes (only on a crash; the risk notes are in the runbook).
+#   3. journald syncs every 15 s instead of 5 min
+#      (/etc/systemd/journald.conf.d/50-chezmoi-sync.conf), so a freeze loses at most
+#      15 s of the journal.
+#
+# Declined for now: kdump (reserved RAM, LUKS + btrfs capture initramfs, debuginfo);
+# add it only if pstore captures are too thin. SysRq dump keys are
+# run_onchange_install-sysrq.sh.tmpl.
+#
+# /etc and the kernel command line are outside chezmoi's scope. Same pattern as
+# run_onchange_install-sysrq.sh: staged under ~/.local/state/chezmoi-system/,
+# installed with sudo (asks for the password in a terminal; otherwise prints the
+# commands and exits 1 so the next apply retries). grubby adds the kernel argument to
+# every installed kernel and to /etc/default/grub (new kernels). Undo: the runbook's
+# "System-level installs" table.
+#
+# Only runs on Linux, non-WSL hosts. The pstore part needs EFI firmware and grubby
+# (Fedora); without them it is skipped with a notice.
+{{- $run := and (eq .chezmoi.os "linux") (ne (includeTemplate "is-wsl" .) "true") }}
+set -eu
+
+ENABLED={{ if $run }}1{{ else }}0{{ end }}
+STAGE_DIR={{ joinPath .chezmoi.homeDir ".local" "state" "chezmoi-system" | quote }}
+SYSCTL_NAME=91-freeze-panic.conf
+SYSCTL_DIR=/etc/sysctl.d
+JOURNALD_NAME=50-chezmoi-sync.conf
+JOURNALD_DIR=/etc/systemd/journald.conf.d
+KARG=efi_pstore.pstore_disable=0
+
+if [ "$ENABLED" != 1 ]; then
+  echo "freeze-diagnostics: needs non-WSL Linux (this host: {{ .chezmoi.os }}); skipping" >&2
+  exit 0
+fi
+
+mkdir -p "$STAGE_DIR"
+cat > "$STAGE_DIR/$SYSCTL_NAME" <<'CONF'
+# Installed by chezmoi (run_onchange_install-freeze-diagnostics.sh.tmpl).
+# A detected soft or hard lockup panics; a panic reboots after 10 s (pstore keeps the log).
+kernel.softlockup_panic = 1
+kernel.hardlockup_panic = 1
+kernel.panic = 10
+CONF
+cat > "$STAGE_DIR/$JOURNALD_NAME" <<'CONF'
+# Installed by chezmoi (run_onchange_install-freeze-diagnostics.sh.tmpl).
+# Sync to disk every 15 s (default 5 min), so a hard freeze loses little of the journal.
+[Journal]
+SyncIntervalSec=15s
+CONF
+
+pstore_ok=1
+if [ ! -d /sys/firmware/efi ] || ! command -v grubby >/dev/null 2>&1; then
+  echo "freeze-diagnostics: no EFI firmware or no grubby; skipping the pstore kernel argument" >&2
+  pstore_ok=0
+fi
+
+# Up to date: both files installed, the sysctls live, pstore enabled and the
+# argument in /etc/default/grub (readable without root; grubby keeps it in sync).
+sysctl_live() {
+  [ "$(cat /proc/sys/kernel/softlockup_panic)" = 1 ] &&
+    [ "$(cat /proc/sys/kernel/hardlockup_panic)" = 1 ] &&
+    [ "$(cat /proc/sys/kernel/panic)" = 10 ]
+}
+karg_set() { grep -q "$KARG" /etc/default/grub 2>/dev/null; }
+if cmp -s "$STAGE_DIR/$SYSCTL_NAME" "$SYSCTL_DIR/$SYSCTL_NAME" &&
+  cmp -s "$STAGE_DIR/$JOURNALD_NAME" "$JOURNALD_DIR/$JOURNALD_NAME" &&
+  sysctl_live &&
+  { [ "$pstore_ok" = 0 ] || { [ "$(systemctl is-enabled systemd-pstore.service 2>/dev/null)" = enabled ] && karg_set; }; }; then
+  echo "freeze-diagnostics: up to date" >&2
+  exit 0
+fi
+
+install_all() {
+  "$@" install -d -m 0755 "$SYSCTL_DIR" "$JOURNALD_DIR"
+  "$@" install -m 0644 "$STAGE_DIR/$SYSCTL_NAME" "$SYSCTL_DIR/$SYSCTL_NAME"
+  "$@" sysctl -q -p "$SYSCTL_DIR/$SYSCTL_NAME"
+  "$@" install -m 0644 "$STAGE_DIR/$JOURNALD_NAME" "$JOURNALD_DIR/$JOURNALD_NAME"
+  "$@" systemctl reload systemd-journald.service
+  if [ "$pstore_ok" = 1 ]; then
+    "$@" systemctl enable systemd-pstore.service
+    "$@" grubby --update-kernel=ALL --args="$KARG"
+    karg_set || echo "freeze-diagnostics: $KARG is not in /etc/default/grub; new kernels may miss it (add it to GRUB_CMDLINE_LINUX)" >&2
+  fi
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  install_all
+elif sudo -n true 2>/dev/null; then
+  install_all sudo
+elif [ -t 0 ]; then
+  echo "freeze-diagnostics: installing with sudo" >&2
+  install_all sudo
+else
+  echo "freeze-diagnostics: need root. Run:" >&2
+  echo "  sudo install -d -m 0755 $SYSCTL_DIR $JOURNALD_DIR" >&2
+  echo "  sudo install -m 0644 '$STAGE_DIR/$SYSCTL_NAME' $SYSCTL_DIR/$SYSCTL_NAME" >&2
+  echo "  sudo sysctl -p $SYSCTL_DIR/$SYSCTL_NAME" >&2
+  echo "  sudo install -m 0644 '$STAGE_DIR/$JOURNALD_NAME' $JOURNALD_DIR/$JOURNALD_NAME" >&2
+  echo "  sudo systemctl reload systemd-journald.service" >&2
+  if [ "$pstore_ok" = 1 ]; then
+    echo "  sudo systemctl enable systemd-pstore.service" >&2
+    echo "  sudo grubby --update-kernel=ALL --args=$KARG" >&2
+  fi
+  exit 1
+fi
+echo "freeze-diagnostics: installed (sysctls live; journald reloaded; pstore and $KARG take effect at the next boot)" >&2
