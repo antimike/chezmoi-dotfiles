@@ -25,7 +25,7 @@ Do NOT use this skill to evaluate arbitrary project source files — its scope i
 ## Arguments
 
 - `--project` — audit project-local Claude files in the current working directory's project (`./CLAUDE.md`, `./.claude/**/*.md` if auto-injected, project-scoped `MEMORY.md` under `~/.claude/projects/<slug>/memory/`).
-- `--global` — audit global Claude files (`~/.claude/CLAUDE.md`, anything under `~/.claude/skills/`, `~/.claude/commands/`, `~/.claude/agents/` that is loaded into every session).
+- `--global` — audit global Claude files (`~/.claude/CLAUDE.md`, `~/.claude/rules/`, anything under `~/.claude/skills/`, `~/.claude/commands/`, `~/.claude/agents/` that is loaded into every session).
 - Flags are **additive**, not mutually exclusive. Both → audit both categories in one pass.
 - Neither flag → prompt the user: "Audit project, global, or both?"
 
@@ -34,6 +34,7 @@ Do NOT use this skill to evaluate arbitrary project source files — its scope i
 Audit these by default:
 
 - `~/.claude/CLAUDE.md` (global, always loaded)
+- `~/.claude/rules/*.md` and `<project>/.claude/rules/*.md` without `paths:` frontmatter (always loaded; path-scoped rules load only with matching files, so list them separately as on-demand)
 - `<project>/CLAUDE.md` (project, always loaded when CWD is the project root)
 - `~/.claude/projects/<project-slug>/memory/MEMORY.md` (auto-memory index, always loaded)
 - Any file the project's `CLAUDE.md` links from the loaded chain as "always-on" content
