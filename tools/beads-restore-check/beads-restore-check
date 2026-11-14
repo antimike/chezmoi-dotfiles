@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# beads-restore-check — prove that a project's `bd export` restores: export, import into a fresh
+# scratch bd, export again, and compare the two.
+#
+#   beads-restore-check [PROJECT_DIR]      default: the current directory (must hold .beads/)
+#   beads-restore-check --keep DIR         also keep the scratch dir (default: removed on exit)
+#
+# Why: beads' README calls .beads/issues.jsonl "an export ..., not the source of truth or a backup",
+# but our session-end backup relies on it (docs/plans/issue-tracker.md, chz-47g). Run after every bd
+# upgrade. Compares per issue: status, title, description, notes, labels, priority, type and every
+# dependency edge (type + target), plus memory count. Not covered: comments, Dolt history,
+# .beads/queue.yaml, bd-track event logs, config.yaml.
+# Read-only for the project: the import goes into a throwaway repo under $TMPDIR (bd init there also
+# writes agent files such as AGENTS.md; they go with the scratch dir).
+# Exit 0: identical; 1: differences (printed); 2: usage or setup error.
+set -euo pipefail
+
+usage() { echo "usage: beads-restore-check [--keep DIR] [PROJECT_DIR]" >&2; exit 2; }
+
+keep=""
+project="."
+while (($#)); do
+    case $1 in
+        --keep) [[ $# -ge 2 ]] || usage; keep=$2; shift 2 ;;
+        -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+        -*) usage ;;
+        *) project=$1; shift ;;
+    esac
+done
+
+command -v bd >/dev/null || { echo "beads-restore-check: bd not found" >&2; exit 2; }
+command -v jq >/dev/null || { echo "beads-restore-check: jq not found" >&2; exit 2; }
+project=$(cd "$project" && pwd)
+[[ -d $project/.beads ]] || { echo "beads-restore-check: no .beads/ in $project" >&2; exit 2; }
+
+if [[ -n $keep ]]; then
+    mkdir -p "$keep"; scratch=$(cd "$keep" && pwd)
+else
+    scratch=$(mktemp -d "${TMPDIR:-/tmp}/beads-restore-check.XXXXXX")
+    trap 'rm -rf "$scratch"' EXIT
+fi
+
+prefix=$(cd "$project" && bd config get issue_prefix 2>/dev/null | awk 'NF{print $NF; exit}')
+[[ -n $prefix ]] || prefix=restore
+
+(cd "$project" && bd export --include-memories --output "$scratch/before.jsonl" >/dev/null)
+
+mkdir -p "$scratch/db"
+(
+    cd "$scratch/db"
+    git init -q
+    # BEADS_DIR would point bd at the wrong store (rules/beads.md); make sure it is unset here.
+    unset BEADS_DIR
+    bd init --prefix "$prefix" >/dev/null 2>&1
+    bd config set no-git-ops true >/dev/null 2>&1 || true
+    bd import "$scratch/before.jsonl" >/dev/null
+    bd export --include-memories --output "$scratch/after.jsonl" >/dev/null
+)
+
+# Normalise: one line per issue with the fields that matter, edges sorted; memories counted.
+normalise() {
+    jq -cS 'select(._type == "issue")
+        | {id, status, title, description, notes, priority, issue_type,
+           labels: ((.labels // []) | sort),
+           deps: ((.dependencies // []) | map({type, to: .depends_on_id}) | sort_by(.type, .to))}' "$1" | sort
+    printf 'memories: %s\n' "$(jq -c 'select(._type == "memory")' "$1" | wc -l)"
+}
+normalise "$scratch/before.jsonl" >"$scratch/before.norm"
+normalise "$scratch/after.jsonl" >"$scratch/after.norm"
+
+issues=$(grep -c '^{' "$scratch/before.norm" || true)
+edges=$(jq -s 'map(.deps | length) | add // 0' <(grep '^{' "$scratch/before.norm"))
+if diff -u "$scratch/before.norm" "$scratch/after.norm" >"$scratch/diff"; then
+    echo "beads-restore-check: OK: $issues issues, $edges edges, $(tail -1 "$scratch/before.norm") restored identically ($project)"
+    exit 0
+fi
+echo "beads-restore-check: DIFFERENCES after restore ($project); per issue, the fields that differ:"
+# Pair each id's before/after line and name the differing keys; memory-count lines pass through.
+jq -rn --slurpfile b <(grep '^{' "$scratch/before.norm") --slurpfile a <(grep '^{' "$scratch/after.norm") '
+    ($b | map({(.id): .}) | add // {}) as $B | ($a | map({(.id): .}) | add // {}) as $A
+    | (($B | keys) + ($A | keys) | unique)[] as $id
+    | if $B[$id] == null then "  \($id): only after restore"
+      elif $A[$id] == null then "  \($id): lost in restore"
+      else ([$B[$id] | keys[] | select($B[$id][.] != $A[$id][.])] | select(length > 0)
+            | "  \($id): \(join(", "))") end'
+grep -h '^memories' "$scratch/before.norm" "$scratch/after.norm" | paste -sd' ' | awk '$2 != $4 {print "  memories before/after: " $2 " / " $4}'
+echo "  full diff: rerun with --keep DIR and read DIR/diff"
+exit 1
