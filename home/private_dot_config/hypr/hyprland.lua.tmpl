@@ -158,6 +158,14 @@ hl.config({
         force_default_wallpaper = 0,
         disable_hyprland_logo   = true,
     },
+    -- Persistent logs (chz-mfl): hyprland.log lives on tmpfs and is lost in a hard
+    -- reboot; stdout goes through uwsm to the user journal
+    -- (journalctl --user -b -1 -t uwsm_hyprland.desktop). Read at startup only.
+    debug = {
+        disable_logs        = false,
+        enable_stdout_logs  = true,
+        colored_stdout_logs = false,
+    },
     input = {
         kb_layout    = "us",
         -- Focus follows the mouse: on trial in Hyprland and SwayFX (MH, 2026-10-23; i3 stays off).
