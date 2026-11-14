@@ -7,7 +7,7 @@
 #                                                and in DIR/results.md, raw rows in DIR/results.tsv
 #   tracker-trial [--dir DIR] clean              stop leftover daemons and remove DIR
 #
-#   TOOLS: comma list of kata, ticks, beans (default: all).  TESTS: comma list of 1-8 (default: all).
+#   TOOLS: comma list of kata, ticks, beans (default: all).  TESTS: comma list of 1-9 (default: all).
 #   DIR:   default ${XDG_CACHE_HOME:-~/.cache}/tracker-trial (keeps the binaries between runs).
 #
 # Tests (docs/plans/issue-tracker.md, "Hands-on"):
@@ -20,6 +20,8 @@
 #   6 10 parallel claims on 5 items: claims that succeeded, refused, errors, distinct owners
 #   7 import a COPY of this repo's beads (bd export, read-only for the project): what survives
 #   8 dependency semantics: ready hides an item blocked by an open item, shows it after the close
+#   9 kata only: federation (hub daemon on loopback + two spoke daemons): concurrent and offline edits,
+#     plain claims and federation leases raced from both spokes
 #
 # Sandbox: every tool runs with HOME, XDG_* (XDG_RUNTIME_DIR: a short tt.* dir in the real one, for
 # kata's socket; removed on exit), GIT_CONFIG_GLOBAL, GNUPGHOME (throwaway ed25519/cv25519 key)
@@ -39,7 +41,7 @@ TICKS_VER=0.32.0
 TICKS_ASSET=tk_${TICKS_VER}_linux_amd64.tar.gz
 TICKS_SHA=cecbf832a7dd0ead68a176b327dad6dcad410ab8d711cea6ed198152538a46c5
 ALL_TOOLS=kata,ticks,beans
-ALL_TESTS=1,2,3,4,5,6,7,8
+ALL_TESTS=1,2,3,4,5,6,7,8,9
 
 usage() { sed -n '2,12p' "$0" >&2; exit 2; }
 die() { echo "tracker-trial: $*" >&2; exit 2; }
@@ -257,7 +259,7 @@ kata_label() { kata label add "$1" "$2" --agent >/dev/null; }
 kata_block() { kata edit "$2" --blocked-by "$1" --agent >/dev/null; }
 kata_ready() { kata ready --json | jq -r '.issues[]?.short_id'; }
 kata_close() { kata close "$1" --done -m "Closed by tracker-trial: the dependency test is done." --test true --agent >/dev/null; }
-kata_claim() { kata claim "$1" --as "$2" --if-unowned --agent >/dev/null 2>&1; }
+kata_claim() { kata claim "$1" --as "$2" --agent >/dev/null 2>&1; }
 kata_owner() { kata show "$1" --json | jq -r '.issue.owner // ""'; }
 kata_get() { kata show "$1" --json | jq -c '{title: .issue.title, labels: ([.issue.labels[]?] | sort), extra: .issue.priority}'; }
 # shellcheck disable=SC2034 # read through ${!edges_var} in test8_deps
@@ -523,6 +525,7 @@ test5_two_hosts() {
             BEANS_SYNC=append beans_two_hosts append
             return 0 ;;
     esac
+    [[ $TOOL == kata ]] && rec 5 "note" "kata.db in git is NOT kata's model (its multi-host is federation: test 9); kept as the 'no daemon on the second host' baseline"
     rec 5 "initial sync" "$s1"; rec 5 "h1 sync after edit" "$s2"; rec 5 "h2 sync after edit" "$s3"
 
     g1=$(state5 h1 "$r1" "$id") || g1=error
@@ -581,6 +584,72 @@ test6_claims() {
     rec 6 "claims succeeded / refused" "$ok / $refused"
     rec 6 "distinct owners on 5 items" "$owners"
     rec 6 "double claims" "$([[ $ok -gt 5 ]] && echo "YES: $((ok - 5)) claims reported success on an item someone else claimed" || echo none)"
+    # Hot item: 10 claimants on ONE item, released together (a barrier file), to give a
+    # read-then-write claim its best chance to race.
+    local hot; hot=$(in_repo h1 "$r" "${TOOL}_create" "hot claim target")
+    rm -f "$T"/scratch/claim.* "$T/scratch/go"
+    for i in $(seq 0 9); do
+        ( while [[ ! -e $T/scratch/go ]]; do sleep 0.01; done
+          if in_repo h1 "$r" "${TOOL}_claim" "$hot" "hot$i"; then echo ok; else echo refused; fi ) >"$T/scratch/claim.$i" &
+    done
+    sleep 0.5; touch "$T/scratch/go"; wait
+    ok=$(cat "$T"/scratch/claim.* | grep -c '^ok' || true)
+    rec 6 "one hot item, 10 simultaneous claimants: succeeded" "$ok (1 = exclusive); final owner $(in_repo h1 "$r" "${TOOL}_owner" "$hot")"
+    [[ $TOOL == ticks ]] && rec 6 "intended model" "a claim IS update --status in_progress and is never refused (tk JSON contract); exclusivity belongs to the orchestrator (ticfac: one reconciler per epic dispatches waves to worktrees)"
+    return 0
+}
+
+# kata only: its own multi-host model. A hub daemon on loopback TCP (with an [auth] token) and two
+# spoke daemons, each with its own database; direct enrollment; pull interval 1 s.
+test9_federation() {
+    [[ $TOOL == kata ]] || { rec 9 "federation" "n/a (git-based tool: see test 5)"; return 0; }
+    local port tok id n out h ok
+    port=$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+    tok=$(head -c 24 /dev/urandom | base64 | tr -d '/+=')
+    host hub; mkdir -p "$T/hosts/hub/kata" "$T/hosts/hub/ws"
+    printf '[auth]\ntoken = "%s"\n' "$tok" >"$T/hosts/hub/kata/config.toml"; chmod 600 "$T/hosts/hub/kata/config.toml"
+    on hub kata daemon start --listen "127.0.0.1:$port" >/dev/null 2>&1 || { rec 9 "hub" "daemon failed to start"; return 0; }
+    git -C "$T/hosts/hub/ws" init -q
+    (cd "$T/hosts/hub/ws" && on hub env KATA_SERVER="http://127.0.0.1:$port" KATA_AUTH_TOKEN="$tok" kata init --project alpha --agent >/dev/null)
+    id=$(cd "$T/hosts/hub/ws" && on hub env KATA_SERVER="http://127.0.0.1:$port" KATA_AUTH_TOKEN="$tok" kata create "seed issue" --body hub --json | jq -r .issue.short_id)
+    (cd "$T/hosts/hub/ws" && on hub env KATA_SERVER="http://127.0.0.1:$port" KATA_AUTH_TOKEN="$tok" kata federation enable alpha >/dev/null)
+    for h in h1 h2; do
+        mkdir -p "$T/hosts/$h/ws"; git -C "$T/hosts/$h/ws" init -q
+        on "$h" env KATA_FEDERATION_PULL_INTERVAL_MS=1000 kata daemon start >/dev/null 2>&1
+        out=$(cd "$T/hosts/hub/ws" && on hub env HUB_ADMIN_TOKEN="$tok" kata federation enroll --project alpha \
+            --spoke-instance "$(on "$h" kata federation identity --json | jq -r .instance_uid)" \
+            --hub-url "http://127.0.0.1:$port" --hub-token-env HUB_ADMIN_TOKEN --actor "$h" --spoke-name "$h" 2>&1)
+        # The printed join command carries the enrollment token: run it, never record it.
+        (cd "$T/hosts/$h/ws" && on "$h" bash -c "$(grep -o 'kata federation join .*' <<<"$out")" >/dev/null 2>&1 \
+            && on "$h" kata init --project alpha --agent >/dev/null) || { rec 9 "join $h" "failed: $(head -c 120 <<<"$out")"; return 0; }
+    done
+    fed() { local h=$1; shift; (cd "$T/hosts/$h/ws" && on "$h" "$@"); }
+    fstate() { fed "$1" kata show "$2" --json | jq -c '{title: .issue.title, labels: ([.issue.labels[]?] | sort)}'; }
+    sleep 4
+    rec 9 "spokes replicate the hub's issue" "h1 $(fed h1 kata list --json | jq '.issues | length'), h2 $(fed h2 kata list --json | jq '.issues | length')"
+    fed h1 kata edit "$id" --title "title from h1" --agent >/dev/null; fed h1 kata label add "$id" from-h1 --agent >/dev/null
+    fed h2 kata edit "$id" --title "title from h2" --agent >/dev/null; fed h2 kata label add "$id" from-h2 --agent >/dev/null
+    sleep 6
+    rec 9 "online concurrent edits: h1 / h2 see" "$(fstate h1 "$id") / $(fstate h2 "$id")"
+    on hub kata daemon stop >/dev/null 2>&1
+    fed h2 kata edit "$id" --title "offline from h2" --agent >/dev/null; fed h2 kata label add "$id" off-h2 --agent >/dev/null
+    sleep 1
+    fed h1 kata edit "$id" --title "offline from h1" --agent >/dev/null; fed h1 kata label add "$id" off-h1 --agent >/dev/null
+    fed h1 kata create "made offline on h1" --body x --agent >/dev/null
+    rec 9 "hub down: local writes keep working" "h1 $(fstate h1 "$id"), h2 $(fstate h2 "$id")"
+    on hub kata daemon start --listen "127.0.0.1:$port" >/dev/null 2>&1; sleep 8
+    rec 9 "hub back: h1 / h2 see" "$(fstate h1 "$id") / $(fstate h2 "$id"); issues h1 $(fed h1 kata list --json | jq '.issues | length'), h2 $(fed h2 kata list --json | jq '.issues | length')"
+    rec 9 "converged" "$([[ $(fstate h1 "$id") == "$(fstate h2 "$id")" ]] && echo "yes (later edit wins per field, labels unioned)" || echo NO)"
+    n=$(fed h1 kata create "claim race" --body x --json | jq -r .issue.short_id); sleep 4
+    ( fed h1 kata claim "$n" --agent >"$T/scratch/fc1" 2>&1 ) & ( fed h2 kata claim "$n" --agent >"$T/scratch/fc2" 2>&1 ) & wait
+    ok=$(cat "$T/scratch/fc1" "$T/scratch/fc2" | grep -c '^OK' || true); sleep 6
+    rec 9 "plain claim, both spokes at once: succeeded" "$ok of 2 (claims are local-first; final owner h1 $(fed h1 kata show "$n" --json | jq -r .issue.owner), h2 $(fed h2 kata show "$n" --json | jq -r .issue.owner))"
+    n=$(fed h1 kata create "lease race" --body x --json | jq -r .issue.short_id); sleep 4
+    ( fed h1 kata federation lease acquire "$n" >"$T/scratch/fl1" 2>&1 ) & ( fed h2 kata federation lease acquire "$n" >"$T/scratch/fl2" 2>&1 ) & wait
+    ok=$(cat "$T/scratch/fl1" "$T/scratch/fl2" | grep -c '^acquired' || true); sleep 3
+    out=""; for h in h1 h2; do fed "$h" kata edit "$n" --title "edit by $h" --agent >/dev/null 2>&1 && out+="$h edits ok; " || out+="$h edit refused; "; done
+    rec 9 "federation lease, both spokes at once: acquired" "$ok of 2 (hub-granted); write gate: $out"
+    return 0
 }
 
 # Counts on the original export, for comparison.
@@ -705,7 +774,7 @@ run_tool() {
         host h1; host h2; fixtures
         case $n in
             1) test1_footprint ;; 2) test2_speed ;; 3) test3_private_store ;; 4) test4_gcrypt ;;
-            5) test5_two_hosts ;; 6) test6_claims ;; 7) test7_import ;; 8) test8_deps ;;
+            5) test5_two_hosts ;; 6) test6_claims ;; 7) test7_import ;; 8) test8_deps ;; 9) test9_federation ;;
             *) die "unknown test $n" ;;
         esac || rec "$n" "harness error" "test exited $?"
     done
