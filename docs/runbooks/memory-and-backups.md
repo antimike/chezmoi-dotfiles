@@ -18,6 +18,8 @@ Two independent mechanisms protect `~/.claude/projects` (one folder per project 
 
 Units live in `private_dot_config/private_systemd/private_user/`. `cleanupPeriodDays` is 36500 so Claude never sweeps old transcripts.
 
+The PortableSSD also holds the encrypted images of amontillado's NSFW library (a git-annex special remote, not restic): [amontillado-library.md](amontillado-library.md).
+
 ## Passwords and keys
 
 - restic password: `pass show backup/restic-zbook` (the scripts use `RESTIC_PASSWORD_COMMAND`). A hard copy exists off this machine. Losing it loses the backups.
