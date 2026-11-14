@@ -437,20 +437,28 @@ store, which removes one tool. git-issue's real advantage is GitHub sync, the sa
 1. **Keep beads for now.** The data-loss risk is covered: the export restores (above), and bd-track
    0.10.1+ commits before compacting. Dolt's cost is real but already paid. Moving off it pays only if
    it deletes the ~810 Dolt lines in bd-track and the server/`.envrc` setup.
-2. **One-week tk trial**, follow-up bead, MH. Pass/fail against R1-R6:
-   - Run `tk migrate-beads` and check the edge types survive.
+2. **Live-test the finalists first: chz-vkf.** That means kata, ticks and henriquebastos/beans, with
+   Knots already tested. It builds `tools/tracker-trial`.
+3. **Then a one-week trial (chz-8fp, MH) of the winner.** Pass/fail against R1-R6:
+   - Check that the beads import keeps the edge types.
    - Check custom/`deferred` statuses (R3).
    - Decide where memories live (R5).
-   - Note what `/work-queue` and bd-track would need (a `tk` backend behind `bd show`/`list`/`update`).
-   - Log every place tk was slower or clumsier than bd.
-3. **Ticket inboxes stay files (D72); git-bug is not adopted.** It replaces only the inbox, which works.
+   - Note what `/work-queue` and bd-track would need (a backend behind `show`/`list`/`update`).
+   - Log every place the tool was slower or clumsier than bd.
+4. **Ticket inboxes stay files (D72); git-bug is not adopted.** It replaces only the inbox, which works.
    It would also put tickets inside target repos and need private remotes for public projects. Revisit
    if tickets should mirror GitHub Issues (git-bug's bridges are its real advantage).
-4. **bd-track's event log in git refs** is a candidate transport for D71, filed as a design note there
+5. **bd-track's event log in git refs** is a candidate transport for D71, filed as a design note there
    and not built now.
-5. **beads_rust excluded** (licence rider); **Knots** read but not adopted (17 stars, fixed workflow).
+6. **Out:** beads_rust (licence rider), grite (second clone sees no issues, 0.5.3), epiq, TrackDown.
+   tk stays a fallback, no longer the default trial. Backlog.md is a separate question (chz-1rs).
 
 ### Trial project
+
+The section below was written for a tk trial (first pass). It still applies to whichever tool wins
+chz-vkf if that tool keeps its data in the repo. For a tool with a central private store (kata,
+henriquebastos/beans, Knots with a private remote), the "private, so the data can be committed" point
+no longer matters, and any active private or personal project will do.
 
 **Recommended: `antimike/transition-2026`** (private; not cloned on zbook). Reasons:
 
