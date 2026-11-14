@@ -1,0 +1,727 @@
+#!/usr/bin/env bash
+# tracker-trial — live-test issue trackers against beads' requirements, in a sandbox (chz-vkf, D80 draft).
+#
+#   tracker-trial [--dir DIR] fetch              download the pinned kata and ticks releases (sha256-checked)
+#   tracker-trial [--dir DIR] run [-t TOOLS] [-n TESTS] [-v]
+#                                                fetch if needed, then run the tests; results table on stdout
+#                                                and in DIR/results.md, raw rows in DIR/results.tsv
+#   tracker-trial [--dir DIR] clean              stop leftover daemons and remove DIR
+#
+#   TOOLS: comma list of kata, ticks, beans (default: all).  TESTS: comma list of 1-8 (default: all).
+#   DIR:   default ${XDG_CACHE_HOME:-~/.cache}/tracker-trial (keeps the binaries between runs).
+#
+# Tests (docs/plans/issue-tracker.md, "Hands-on"):
+#   1 footprint: files, hooks, .gitignore and git config changed in a code repo, files under HOME,
+#     background processes left running, outbound connections (a logging HTTPS_PROXY; loopback exempt)
+#   2 speed: median of 3 runs of create, list, show, sync
+#   3 one private store for two projects, outside the worktrees; does code reach the private remote
+#   4 the same store through a gcrypt:: remote; grep the remote for plaintext titles and code
+#   5 two hosts edit one issue at once (title on both, a label or other field on each), sync, compare
+#   6 10 parallel claims on 5 items: claims that succeeded, refused, errors, distinct owners
+#   7 import a COPY of this repo's beads (bd export, read-only for the project): what survives
+#   8 dependency semantics: ready hides an item blocked by an open item, shows it after the close
+#
+# Sandbox: every tool runs with HOME, XDG_* (XDG_RUNTIME_DIR: a short tt.* dir in the real one, for
+# kata's socket; removed on exit), GIT_CONFIG_GLOBAL, GNUPGHOME (throwaway ed25519/cv25519 key)
+# and KATA_HOME under DIR/run/<tool>/, and PATH=DIR/bin:/usr/bin:/bin (never ~/.cargo/bin: chz-if3).
+# Nothing outside DIR is written, except that `bd export` reads this repo's .beads (test 7).
+# beans (magic-beans) is not downloaded: it comes from $BEANS_BIN or `beans` on PATH (pipx, 0.7.0).
+# gpg runs with disable-scdaemon (a sandbox scdaemon would grab the YubiKey); agents are killed at the end.
+# Needs: git, git-remote-gcrypt, gpg, jq, sqlite3, python3, curl, sha256sum, bd (test 7).
+# Exit 0: all tests ran (the results say how each tool did); 2: usage or setup error.
+set -euo pipefail
+shopt -s nullglob
+
+KATA_VER=0.23.0
+KATA_ASSET=kata_${KATA_VER}_linux_amd64.tar.gz
+KATA_SHA=6f869e780e1a2be1bde4c4c98ac520b810beb04498b095674780ffa2aec4669e
+TICKS_VER=0.32.0
+TICKS_ASSET=tk_${TICKS_VER}_linux_amd64.tar.gz
+TICKS_SHA=cecbf832a7dd0ead68a176b327dad6dcad410ab8d711cea6ed198152538a46c5
+ALL_TOOLS=kata,ticks,beans
+ALL_TESTS=1,2,3,4,5,6,7,8
+
+usage() { sed -n '2,12p' "$0" >&2; exit 2; }
+die() { echo "tracker-trial: $*" >&2; exit 2; }
+log() { ((VERBOSE)) && echo "  · $*" >&2 || true; }
+
+DIR=${XDG_CACHE_HOME:-$HOME/.cache}/tracker-trial
+VERBOSE=0 TOOLS=$ALL_TOOLS TESTS=$ALL_TESTS CMD=""
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
+REAL_BEANS=${BEANS_BIN:-$(command -v beans || true)}
+REAL_BD=$(command -v bd || true)
+while (($#)); do
+    case $1 in
+        --dir) [[ $# -ge 2 ]] || usage; DIR=$2; shift 2 ;;
+        -t) [[ $# -ge 2 ]] || usage; TOOLS=$2; shift 2 ;;
+        -n) [[ $# -ge 2 ]] || usage; TESTS=$2; shift 2 ;;
+        -v) VERBOSE=1; shift ;;
+        -h|--help) usage ;;
+        fetch|run|clean) CMD=$1; shift ;;
+        *) usage ;;
+    esac
+done
+[[ -n $CMD ]] || usage
+mkdir -p "$DIR"; DIR=$(cd "$DIR" && pwd)
+BIN=$DIR/bin
+
+# ---------------------------------------------------------------- fetch / clean
+
+fetch_one() { # fetch_one REPO VER ASSET SHA BINARY
+    local repo=$1 ver=$2 asset=$3 sha=$4 binary=$5 dl=$DIR/dl/$5
+    [[ -x $BIN/$binary ]] && return 0
+    mkdir -p "$dl" "$BIN"
+    curl -fsSL -o "$dl/$asset" "https://github.com/$repo/releases/download/v$ver/$asset"
+    echo "$sha  $dl/$asset" | sha256sum -c --quiet - || die "$asset: sha256 mismatch"
+    mkdir -p "$dl/x" && tar -xzf "$dl/$asset" -C "$dl/x"
+    install -m 755 "$dl/x/$binary" "$BIN/$binary"
+    echo "tracker-trial: fetched $binary $ver (sha256 ok)" >&2
+}
+
+do_fetch() {
+    fetch_one kenn-io/kata "$KATA_VER" "$KATA_ASSET" "$KATA_SHA" kata
+    fetch_one pengelbrecht/ticks "$TICKS_VER" "$TICKS_ASSET" "$TICKS_SHA" tk
+    [[ -n $REAL_BEANS ]] || die "beans not found (pipx install magic-beans==0.7.0, or set BEANS_BIN)"
+    ln -sfn "$REAL_BEANS" "$BIN/beans"
+    [[ -n $REAL_BD ]] && ln -sfn "$REAL_BD" "$BIN/bd"
+    return 0
+}
+
+stop_daemons() { # kata's local daemon, one per KATA_HOME; each sandbox's gpg-agent
+    local h
+    for h in "$DIR"/run/*/gnupg; do GNUPGHOME=$h gpgconf --kill all >/dev/null 2>&1 || true; done
+    for h in "$DIR"/run/*/hosts/*/kata "$DIR"/run/*/scratch/*/kata; do
+        [[ -d $h ]] && KATA_HOME=$h HOME=$(dirname "$h") XDG_RUNTIME_DIR=${RUNTIME:-/nonexistent}/$(basename "$(dirname "$(dirname "$(dirname "$h")")")")-$(basename "$(dirname "$h")") \
+            "$BIN/kata" daemon stop >/dev/null 2>&1 || true
+    done
+    pkill -f -- "^$BIN/kata" 2>/dev/null || true
+}
+
+do_clean() { stop_daemons; rm -rf "$DIR"; echo "tracker-trial: removed $DIR" >&2; }
+
+case $CMD in
+    fetch) do_fetch; exit 0 ;;
+    clean) do_clean; exit 0 ;;
+esac
+
+# ---------------------------------------------------------------- sandbox
+
+for c in git gpg jq sqlite3 python3 curl sha256sum git-remote-gcrypt; do
+    command -v "$c" >/dev/null || die "$c not found"
+done
+do_fetch
+
+# The only thing outside DIR: per-host runtime dirs (kata's daemon socket), removed on exit.
+RUNTIME=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/tt.XXXXXX")
+RESULTS=$DIR/results.tsv
+: >"$RESULTS"
+rec() { printf '%s\t%s\t%s\t%s\n' "$TOOL" "$1" "$2" "$3" >>"$RESULTS"; log "$TOOL [$1] $2: $3"; }
+
+# Per-tool sandbox: shared git config and GPG key; one HOME per host under $T/hosts/<host>.
+enter_sandbox() { # enter_sandbox TOOL
+    TOOL=$1 T=$DIR/run/$1
+    rm -rf "$T"; mkdir -p "$T"/{hosts,remotes,scratch}
+    unset BEADS_DIR KATA_SERVER KATA_AUTH_TOKEN MAGIC_BEANS_DIR TICK_OWNER TK_ACTOR NO_PROXY no_proxy
+    export PATH=$BIN:/usr/bin:/bin GIT_CONFIG_GLOBAL=$T/gitconfig GNUPGHOME=$T/gnupg
+    export GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0 LC_ALL=C.UTF-8 TZ=UTC
+    git config --global user.name "Trial User"
+    git config --global user.email trial@example.invalid
+    git config --global init.defaultBranch main
+    git config --global commit.gpgsign false
+    git config --global advice.detachedHead false
+    git config --global pull.rebase false
+    mkdir -p "$GNUPGHOME" && chmod 700 "$GNUPGHOME"
+    # Never let a sandbox scdaemon open the card reader (it would hold the YubiKey without pcsc-shared).
+    echo disable-scdaemon >"$GNUPGHOME/gpg-agent.conf"
+    gpg -q --batch --passphrase '' --quick-gen-key "trial <trial@example.invalid>" ed25519 sign never 2>/dev/null
+    KEY=$(gpg --batch --list-keys --with-colons 2>/dev/null | awk -F: '/^fpr/ {print $10; exit}')
+    gpg -q --batch --passphrase '' --quick-add-key "$KEY" cv25519 encr never 2>/dev/null
+    git config --global user.signingkey "$KEY"
+    git config --global gcrypt.participants "$KEY"
+    git config --global gcrypt.publish-participants true
+    host h1; host h2
+    fixtures
+}
+
+host() { # host NAME: a fresh HOME with XDG dirs; a short runtime dir (unix socket paths max ~108 bytes)
+    local h=$T/hosts/$1
+    mkdir -p "$h"/{.config,.local/share,.local/state,.cache,src}
+    rm -rf "${RUNTIME:?}/$TOOL-$1"; mkdir -p "$RUNTIME/$TOOL-$1"; chmod 700 "$RUNTIME/$TOOL-$1"
+}
+
+# on HOST CMD...: run CMD as that host (its HOME, XDG dirs and KATA_HOME)
+on() {
+    local h=$T/hosts/$1; shift
+    HOME=$h XDG_CONFIG_HOME=$h/.config XDG_DATA_HOME=$h/.local/share XDG_STATE_HOME=$h/.local/state \
+        XDG_CACHE_HOME=$h/.cache XDG_RUNTIME_DIR=$RUNTIME/$TOOL-$(basename "$h") KATA_HOME=$h/kata KATA_AUTHOR=${KATA_AUTHOR:-$(basename "$h")} "$@"
+}
+
+# Code repos with real history and a marker string, to catch tools that copy code into the store.
+fixtures() {
+    MARKER="code-marker-$RANDOM$RANDOM"
+    local w=$T/scratch/seed p
+    for p in alpha beta; do
+        git init -q --bare "$T/remotes/$p.git"
+        rm -rf "$w"; git init -q "$w"
+        printf 'print("%s %s")\n' "$MARKER" "$p" >"$w/main.py"
+        git -C "$w" add -A && git -C "$w" commit -qm "initial $p"
+        echo "# $p" >"$w/README.md"
+        git -C "$w" add -A && git -C "$w" commit -qm "readme"
+        git -C "$w" push -q "file://$T/remotes/$p.git" main
+        # The origin is a fake hosted URL: kata and tk derive the project from it and reject file://.
+        local hh
+        for hh in h1 h2; do
+            on $hh git clone -q "file://$T/remotes/$p.git" "$T/hosts/$hh/src/$p"
+            git -C "$T/hosts/$hh/src/$p" remote set-url origin "https://example.invalid/trial/$p.git"
+        done
+    done
+    git init -q --bare "$T/remotes/private.git"
+    git init -q --bare "$T/remotes/private-gc.git"
+    rm -rf "$w"
+}
+
+ms_now() { local t=${EPOCHREALTIME/./}; echo $((t / 1000)); }
+median3() { printf '%s\n' "$@" | sort -n | sed -n 2p; }
+
+# A logging proxy: every CONNECT/GET line a client sends lands in $T/proxy.log.
+start_proxy() {
+    : >"$T/proxy.log"
+    python3 -I - "$T/proxy.log" "$T/proxy.port" <<'PY' &
+import socket, sys
+log, portfile = sys.argv[1], sys.argv[2]
+s = socket.socket(); s.bind(("127.0.0.1", 0)); s.listen(16)
+open(portfile, "w").write(str(s.getsockname()[1]))
+while True:
+    c, _ = s.accept()
+    c.settimeout(2)
+    try:
+        line = c.recv(4096).split(b"\r\n", 1)[0].decode(errors="replace")
+        open(log, "a").write(line + "\n")
+    except OSError:
+        pass
+    c.close()
+PY
+    PROXY_PID=$!
+    local i
+    for i in {1..50}; do [[ -s $T/proxy.port ]] && break; sleep 0.1; done
+    HTTPS_PROXY=http://127.0.0.1:$(<"$T/proxy.port")
+    export HTTPS_PROXY HTTP_PROXY=$HTTPS_PROXY
+}
+stop_proxy() { kill "$PROXY_PID" 2>/dev/null || true; wait "$PROXY_PID" 2>/dev/null || true; unset HTTPS_PROXY HTTP_PROXY; }
+
+# Snapshot of what a tool can change in a repo and a HOME.
+snapshot() { # snapshot REPO HOME OUT: one "section: line" per fact, so a diff keeps the section
+    {
+        git -C "$1" status --porcelain --ignored --untracked-files=all | sed 's/^/status: /'
+        find "$1/.git/hooks" -type f ! -name '*.sample' -printf 'hook: %P\n'
+        git -C "$1" config --local --list | sed 's/^/git config: /'
+        sed 's/^/info\/attributes: /' "$1/.git/info/attributes" 2>/dev/null || true
+        find "$2" -path "$2/src" -prune -o -type f -printf 'home: %P\n'
+    } | sort >"$3"
+}
+
+# git_sync HOST DIR: commit everything, merge the remote's main if it exists, push. 1 = conflict/failure
+# (the merge is aborted; stderr kept in scratch/pull.err).
+git_sync() {
+    local d=$2
+    git -C "$d" add -A && { git -C "$d" commit -qm "sync $1" >/dev/null || true; }
+    if on "$1" git -C "$d" ls-remote --exit-code origin main >/dev/null 2>&1; then
+        if ! on "$1" git -C "$d" pull --no-edit origin main >"$T/scratch/pull.err" 2>&1; then
+            git -C "$d" merge --abort 2>/dev/null || true
+            return 1
+        fi
+    fi
+    on "$1" git -C "$d" push -q origin HEAD:main 2>>"$T/scratch/pull.err" || return 1
+}
+
+# clone_or_init HOST URL DIR: clone main, or start an empty repo with that origin.
+clone_or_init() {
+    rm -rf "$3"
+    on "$1" git clone -q -b main "$2" "$3" >/dev/null 2>&1 && return 0
+    rm -rf "$3"; mkdir -p "$3"; git -C "$3" init -q; git -C "$3" remote add origin "$2"
+}
+
+# ================================================================ adapters
+# Each tool implements: <tool>_init_repo HOST REPO (in-repo/default setup), <tool>_create TITLE -> id,
+# _list, _show ID, _title ID TITLE, _label ID LABEL (exit 3 = unsupported), _block BLOCKER ID,
+# _ready -> ids, _close ID, _claim ID ACTOR, _get ID -> {title, labels, extra}, plus the store tests.
+# All run inside the cwd of the project they act on, as a host (via `on`).
+
+# ---------------------------------------------------------------- kata
+kata_init_repo() { (cd "$2" && on "$1" kata init --project "$(basename "$2")" --agent >/dev/null); }
+kata_create() { kata create "$1" --body "trial" --force-new --json | jq -r '.issue.short_id'; }
+kata_list() { kata list --status all --limit 0 --json >/dev/null; }
+kata_show() { kata show "$1" --json >/dev/null; }
+kata_title() { kata edit "$1" --title "$2" --agent >/dev/null; }
+kata_label() { kata label add "$1" "$2" --agent >/dev/null; }
+kata_block() { kata edit "$2" --blocked-by "$1" --agent >/dev/null; }
+kata_ready() { kata ready --json | jq -r '.issues[]?.short_id'; }
+kata_close() { kata close "$1" --done -m "Closed by tracker-trial: the dependency test is done." --test true --agent >/dev/null; }
+kata_claim() { kata claim "$1" --as "$2" --if-unowned --agent >/dev/null 2>&1; }
+kata_owner() { kata show "$1" --json | jq -r '.issue.owner // ""'; }
+kata_get() { kata show "$1" --json | jq -c '{title: .issue.title, labels: ([.issue.labels[]?] | sort), extra: .issue.priority}'; }
+# shellcheck disable=SC2034 # read through ${!edges_var} in test8_deps
+KATA_EDGES="blocks, blocked-by, parent (no gating), related; plus duplicate-of"
+
+# kata's store is the daemon's SQLite under KATA_HOME. Its own multi-host story is a shared daemon or
+# federation, not git; the git option tested here: stop the daemon, snapshot kata.db into the private
+# repo, merge, copy back.
+kata_sync() { # kata_sync HOST
+    local h=$T/hosts/$1 priv=$T/hosts/$1/private
+    on "$1" kata daemon stop >/dev/null 2>&1 || true
+    # .backup, not cp: right after `daemon stop` the WAL is not always checkpointed yet, and a plain
+    # copy of kata.db then misses the latest writes (seen in this harness).
+    [[ -f $h/kata/kata.db ]] && sqlite3 "$h/kata/kata.db" ".backup '$priv/kata.db'"
+    git_sync "$1" "$priv" || return 1
+    mkdir -p "$h/kata"; cp "$priv/kata.db" "$h/kata/kata.db"
+    rm -f "$h/kata/kata.db-wal" "$h/kata/kata.db-shm"
+}
+
+# ---------------------------------------------------------------- ticks
+tk_init_here() { tk init >/dev/null 2>&1; }
+ticks_init_repo() { (cd "$2" && on "$1" tk init >/dev/null 2>&1); }
+ticks_create() { tk create "$1" -d trial --json | jq -r '.id'; }
+ticks_list() { tk list --all --status all --json >/dev/null; }
+ticks_show() { tk show "$1" --json >/dev/null; }
+ticks_title() { tk update "$1" --title "$2" >/dev/null; }
+ticks_label() { tk label add "$1" "$2" >/dev/null; }
+ticks_block() { tk block "$2" "$1" >/dev/null; }
+ticks_ready() { tk ready --all --limit 100 --json | jq -r '.ticks[]?.id'; }
+ticks_close() { tk close "$1" >/dev/null 2>&1 || tk update "$1" --status closed >/dev/null; }
+ticks_claim() { tk update "$1" --status in_progress --owner "$2" >/dev/null 2>&1; }
+ticks_owner() { tk show "$1" --json | jq -r '.owner // ""'; }
+ticks_get() { tk show "$1" --json | jq -c '{title, labels: ((.labels // []) | sort), extra: .priority}'; }
+# shellcheck disable=SC2034
+TICKS_EDGES="blocked_by, parent, discovered_from, after (soft order); no related"
+
+# ticks' store is .tick/ at the git root: one store = one git repo. Sync = commit + pull (merge
+# driver) + push.
+ticks_sync() { git_sync "$1" "$2"; } # ticks_sync HOST REPO
+
+# ---------------------------------------------------------------- beans
+beans_init_repo() { (cd "$2" && on "$1" beans init --name "$(basename "$2")" >/dev/null); }
+beans_create() { beans --json create "$1" --body trial | jq -r '.id'; }
+beans_list() { beans --json list >/dev/null; }
+beans_show() { beans --json show "$1" >/dev/null; }
+beans_title() { beans update "$1" --title "$2" >/dev/null; }
+beans_label() { return 3; } # no labels in schema v2
+beans_block() { beans dep add "$1" "$2" >/dev/null; } # FROM blocks TO
+beans_ready() { beans --json ready | jq -r '.[]?.id'; }
+beans_close() { beans close "$1" >/dev/null; }
+beans_claim() { beans claim "$1" --actor "$2" >/dev/null 2>&1; }
+beans_owner() { beans --json show "$1" | jq -r '.assignee // ""'; }
+beans_get() { beans --json show "$1" | jq -c '{title, labels: [], extra: .priority}'; }
+# shellcheck disable=SC2034
+BEANS_EDGES="blocks (dep_type column, one edge per pair), parent_id"
+
+# beans' store: the registry maps a project to a directory; the private repo is checked out at
+# $XDG_DATA_HOME/beans, its .gitignore keeps only journal.jsonl. Sync = export-journal, commit,
+# pull, push, rebuild the db from the merged journal.
+# BEANS_SYNC=overwrite: the documented flow (export-journal > journal.jsonl). BEANS_SYNC=append: the
+# workaround: rebuild empties the journal table, so each export holds only the entries since the last
+# rebuild; append them, union-merge the file in git (.gitattributes), replay it.
+beans_sync() { # beans_sync HOST PROJECT...
+    local h=$1 store=$T/hosts/$1/.local/share/beans p; shift
+    for p in "$@"; do
+        if [[ ${BEANS_SYNC:-overwrite} == append ]]; then
+            printf 'journal.jsonl merge=union\n' >"$store/$p/.gitattributes"
+            (cd "$T/hosts/$h/src/$p" && on "$h" beans export-journal >>"$store/$p/journal.jsonl")
+        else
+            (cd "$T/hosts/$h/src/$p" && on "$h" beans export-journal >"$store/$p/journal.jsonl")
+        fi
+    done
+    git_sync "$h" "$store" || return 1
+    for p in "$@"; do beans_rebuild "$h" "$p" || return 1; done
+}
+beans_rebuild() { # beans_rebuild HOST PROJECT: replace the db with a replay of journal.jsonl
+    local db=$T/hosts/$1/.local/share/beans/$2/beans.db
+    [[ -s ${db%/*}/journal.jsonl ]] || return 0
+    rm -f "$db" "$db-wal" "$db-shm"
+    (cd "$T/hosts/$1/src/$2" && on "$1" beans rebuild "${db%/*}/journal.jsonl" >/dev/null 2>"$T/scratch/rebuild.err")
+}
+
+# ================================================================ tests
+
+adapter() { local op=$1; shift; "${TOOL}_$op" "$@"; }
+in_repo() { local h=$1 r=$2; shift 2; (cd "$r" && on "$h" "$@"); }
+
+test1_footprint() {
+    local r=$T/hosts/h1/src/alpha before=$T/scratch/fp.before after=$T/scratch/fp.after id procs net
+    snapshot "$r" "$T/hosts/h1" "$before"
+    start_proxy
+    adapter init_repo h1 "$r"
+    id=$(in_repo h1 "$r" adapter_create "footprint one")
+    in_repo h1 "$r" adapter_create "footprint two" >/dev/null
+    in_repo h1 "$r" adapter_list
+    in_repo h1 "$r" adapter_show "$id"
+    sleep 1
+    stop_proxy
+    net=$(sort -u "$T/proxy.log" | paste -sd';')
+    rec 1 "outbound connections (init, create, list, show)" "${net:-none}"
+    if [[ $TOOL == ticks ]]; then # tk's periodic check is cached in ~/.config/tk; `tk version` always checks
+        start_proxy; in_repo h1 "$r" tk list --all >/dev/null 2>&1 || true; sleep 1; stop_proxy
+        net=$(sort -u "$T/proxy.log" | paste -sd';')
+        rec 1 "outbound connections (a second command, cache fresh)" "${net:-none}"
+    fi
+    snapshot "$r" "$T/hosts/h1" "$after"
+    rec 1 "repo changes" "$(comm -13 "$before" "$after" | grep -v '^home: ' | paste -sd';' | head -c 600)"
+    rec 1 "files under HOME" "$(comm -13 "$before" "$after" | sed -n 's/^home: //p' | awk -F/ '{print (NF > 3 ? $1 "/" $2 "/" $3 "/" : $0)}' | sort | uniq -c | awk '{printf "%s%s (%d)", sep, $2, $1; sep=", "}')"
+    procs=$(pgrep -af -- "^$BIN/" | cut -d' ' -f2- | sed "s|^$BIN/||" | sort -u | paste -sd';' || true)
+    rec 1 "processes left running" "${procs:-none}"
+}
+
+adapter_create() { "${TOOL}_create" "$@"; }
+adapter_list() { "${TOOL}_list" "$@"; }
+adapter_show() { "${TOOL}_show" "$@"; }
+
+time3() { # time3 LABEL CMD...: median of three runs, in ms
+    local a b c t0 label=$1; shift
+    t0=$(ms_now); "$@" >/dev/null; a=$(($(ms_now) - t0))
+    t0=$(ms_now); "$@" >/dev/null; b=$(($(ms_now) - t0))
+    t0=$(ms_now); "$@" >/dev/null; c=$(($(ms_now) - t0))
+    rec 2 "$label" "$(median3 $a $b $c) ms (runs $a/$b/$c)"
+}
+
+test2_speed() {
+    local r=$T/hosts/h1/src/beta id
+    adapter init_repo h1 "$r"
+    id=$(in_repo h1 "$r" "${TOOL}_create" "warm-up")
+    [[ $TOOL == kata ]] && rec 2 "note" "daemon already running (auto-started by the warm-up)"
+    for i in 1 2 3 4 5; do in_repo h1 "$r" "${TOOL}_create" "filler $i" >/dev/null; done
+    time3 create in_repo h1 "$r" "${TOOL}_create" "timed"
+    time3 "list (all)" in_repo h1 "$r" "${TOOL}_list"
+    time3 show in_repo h1 "$r" "${TOOL}_show" "$id"
+    case $TOOL in
+        kata) setup_private_plain h1; time3 "sync (stop daemon, commit db, pull, push)" kata_sync h1 ;;
+        ticks) setup_ticks_private h1 private.git; time3 "sync (commit, pull, push)" ticks_sync h1 "$T/hosts/h1/private" ;;
+        beans) setup_beans_private h1 private.git; beans_init_repo h1 "$r" 2>/dev/null || true
+               time3 "sync (export-journal, commit, pull, push, rebuild)" beans_sync h1 beta ;;
+    esac
+}
+
+setup_private_plain() { # clone private.git as HOST/private
+    [[ -d $T/hosts/$1/private/.git ]] || clone_or_init "$1" "file://$T/remotes/private.git" "$T/hosts/$1/private"
+}
+
+# ticks: one private repo holds the .tick store (projects separated by label).
+setup_ticks_private() { # HOST REMOTE [gcrypt]
+    local p=$T/hosts/$1/private url="file://$T/remotes/$2"
+    [[ ${3:-} == gcrypt ]] && url="gcrypt::$url"
+    clone_or_init "$1" "$url" "$p"
+    if [[ ! -d $p/.tick ]]; then
+        (cd "$p" && on "$1" tk init >/dev/null 2>&1)
+        git_sync "$1" "$p"
+    fi
+}
+
+# beans: the private repo checked out at XDG_DATA_HOME/beans.
+setup_beans_private() { # HOST REMOTE [gcrypt]
+    local url="file://$T/remotes/$2"
+    [[ ${3:-} == gcrypt ]] && url="gcrypt::$url"
+    [[ -d $T/hosts/$1/.local/share/beans/.git ]] || clone_or_init "$1" "$url" "$T/hosts/$1/.local/share/beans"
+}
+
+test3_private_store() {
+    local p ids=() code_hits n
+    case $TOOL in
+        kata)
+            for p in alpha beta; do kata_init_repo h1 "$T/hosts/h1/src/$p"; ids+=("$(in_repo h1 "$T/hosts/h1/src/$p" kata_create "issue in $p")"); done
+            n=$(in_repo h1 "$T/hosts/h1/src/alpha" kata list --all --status all --limit 0 --json | jq '[.issues[] | select(.title | startswith("issue in"))] | length')
+            rec 3 "one store, two projects" "yes: KATA_HOME holds every project (all-project list sees $n of 2); repo keeps only .kata.toml"
+            setup_private_plain h1
+            if kata_sync h1; then rec 3 "store in a private git repo" "kata.db committed (binary SQLite; daemon stopped, then sqlite3 .backup)"; else rec 3 "store in a private git repo" "sync failed"; fi
+            ;;
+        ticks)
+            setup_ticks_private h1 private.git
+            for p in alpha beta; do ids+=("$(in_repo h1 "$T/hosts/h1/private" ticks_create "issue in $p")"); in_repo h1 "$T/hosts/h1/private" ticks_label "${ids[-1]}" "project:$p"; done
+            ticks_sync h1 "$T/hosts/h1/private" || true
+            n=$(in_repo h1 "$T/hosts/h1/private" tk list --all --status all --json | jq '[.ticks[] | select(.title | startswith("issue in"))] | length')
+            rec 3 "one store, two projects" "only as one .tick store in a separate private repo, projects as labels ($n of 2; no TICK_DIR in 0.32.0: the store is <git root>/.tick, so tk runs from that checkout, not the project)"
+            ;;
+        beans)
+            setup_beans_private h1 private.git
+            for p in alpha beta; do beans_init_repo h1 "$T/hosts/h1/src/$p"; ids+=("$(in_repo h1 "$T/hosts/h1/src/$p" beans_create "issue in $p")"); done
+            beans_sync h1 alpha beta || true
+            n=$(jq '.projects | length' "$T/hosts/h1/.config/beans/config.json")
+            rec 3 "one store, two projects" "yes: registry maps $n projects (by git remote) to dirs in the private checkout; projects stay clean; registry itself not in the repo"
+            ;;
+    esac
+    local revs
+    mapfile -t revs < <(git -C "$T/remotes/private.git" rev-list --all 2>/dev/null)
+    code_hits=0
+    ((${#revs[@]})) && code_hits=$(git -C "$T/remotes/private.git" grep -l "$MARKER" "${revs[@]}" 2>/dev/null | wc -l)
+    rec 3 "code in the private remote" "$([[ ${code_hits:-0} -gt 0 ]] && echo "YES ($code_hits blobs with the code marker)" || echo no)"
+    rec 3 "private remote objects" "$(git -C "$T/remotes/private.git" count-objects -v | awk '/^(count|in-pack)/{s+=$2} END{print s+0}') objects"
+}
+
+test4_gcrypt() {
+    local p ok=no title="secret-title-$RANDOM" seen plain
+    case $TOOL in
+        kata)
+            kata_init_repo h1 "$T/hosts/h1/src/alpha"
+            in_repo h1 "$T/hosts/h1/src/alpha" kata_create "$title" >/dev/null
+            clone_or_init h1 "gcrypt::file://$T/remotes/private-gc.git" "$T/hosts/h1/private"
+            kata_sync h1 && ok=yes
+            clone_or_init h2 "gcrypt::file://$T/remotes/private-gc.git" "$T/hosts/h2/private"
+            if [[ -f $T/hosts/h2/private/kata.db ]]; then
+                seen=$(sqlite3 "$T/hosts/h2/private/kata.db" "select count(*) from issues where title='$title'" 2>/dev/null || echo 0)
+            fi
+            ;;
+        ticks)
+            setup_ticks_private h1 private-gc.git gcrypt
+            in_repo h1 "$T/hosts/h1/private" ticks_create "$title" >/dev/null
+            ticks_sync h1 "$T/hosts/h1/private" && ok=yes
+            setup_ticks_private h2 private-gc.git gcrypt
+            seen=$(in_repo h2 "$T/hosts/h2/private" tk list --all --status all --json 2>/dev/null | jq --arg t "$title" '[.ticks[]? | select(.title == $t)] | length')
+            ;;
+        beans)
+            setup_beans_private h1 private-gc.git gcrypt
+            beans_init_repo h1 "$T/hosts/h1/src/alpha"
+            in_repo h1 "$T/hosts/h1/src/alpha" beans_create "$title" >/dev/null
+            beans_sync h1 alpha && ok=yes
+            setup_beans_private h2 private-gc.git gcrypt
+            beans_init_repo h2 "$T/hosts/h2/src/alpha" 2>/dev/null || true
+            beans_rebuild h2 alpha || true
+            seen=$(in_repo h2 "$T/hosts/h2/src/alpha" beans --json list 2>/dev/null | jq --arg t "$title" '[.[] | select(.title == $t)] | length')
+            ;;
+    esac
+    plain=$(grep -rlF -e "$title" -e "$MARKER" "$T/remotes/private-gc.git" 2>/dev/null | wc -l)
+    rec 4 "push through gcrypt::" "$ok"
+    rec 4 "second host reads it back" "$([[ ${seen:-0} -ge 1 ]] && echo yes || echo "no (${seen:-0})")"
+    rec 4 "plaintext on the remote" "$([[ $plain -eq 0 ]] && echo none || echo "YES ($plain files)")"
+}
+
+test5_two_hosts() {
+    local id r1 r2 g1 g2 s1=ok s2=ok s3=ok
+    case $TOOL in
+        kata)
+            kata_init_repo h1 "$T/hosts/h1/src/alpha"; r1=$T/hosts/h1/src/alpha
+            id=$(in_repo h1 "$r1" kata_create "shared issue")
+            setup_private_plain h1; kata_sync h1 || s1=fail
+            setup_private_plain h2; mkdir -p "$T/hosts/h2/kata"; cp "$T/hosts/h2/private/kata.db" "$T/hosts/h2/kata/"
+            r2=$T/hosts/h2/src/alpha; kata_init_repo h2 "$r2" 2>/dev/null || true
+            in_repo h1 "$r1" kata_title "$id" "title from h1"; in_repo h1 "$r1" kata_label "$id" from-h1
+            in_repo h2 "$r2" kata_title "$id" "title from h2"; in_repo h2 "$r2" kata_label "$id" from-h2
+            kata_sync h1 || s2=fail; kata_sync h2 || s3="fail: $(pull_msg)"; kata_sync h1 || true
+            ;;
+        ticks)
+            setup_ticks_private h1 private.git; r1=$T/hosts/h1/private
+            id=$(in_repo h1 "$r1" ticks_create "shared issue"); ticks_sync h1 "$r1" || s1=fail
+            setup_ticks_private h2 private.git; r2=$T/hosts/h2/private
+            local before after
+            before=$(git -C "$r2" config --get merge.tick.driver >/dev/null && echo yes || echo no)
+            in_repo h2 "$r2" ticks_list
+            after=$(git -C "$r2" config --get merge.tick.driver >/dev/null && echo yes || echo no)
+            rec 5 "merge driver on a fresh clone" "registered after clone: $before; after the first tk command: $after (.gitattributes is committed, the driver lives in .git/config)"
+            in_repo h1 "$r1" ticks_title "$id" "title from h1"; in_repo h1 "$r1" ticks_label "$id" from-h1
+            in_repo h2 "$r2" ticks_title "$id" "title from h2"; in_repo h2 "$r2" ticks_label "$id" from-h2
+            ticks_sync h1 "$r1" || s2=fail; ticks_sync h2 "$r2" || s3="fail: $(pull_msg)"; ticks_sync h1 "$r1" || true
+            ;;
+        beans)
+            rec 5 "fields compared" "title on both; priority (h1) and type (h2) stand in for labels (beans has none)"
+            beans_two_hosts overwrite
+            BEANS_SYNC=append beans_two_hosts append
+            return 0 ;;
+    esac
+    rec 5 "initial sync" "$s1"; rec 5 "h1 sync after edit" "$s2"; rec 5 "h2 sync after edit" "$s3"
+
+    g1=$(state5 h1 "$r1" "$id") || g1=error
+    g2=$(state5 h2 "$r2" "$id") || g2=error
+    rec 5 "h1 sees" "$g1"; rec 5 "h2 sees" "$g2"
+    rec 5 "converged" "$([[ $g1 == "$g2" && $g1 != error ]] && echo yes || echo NO)"
+    [[ $g1 == error && $g2 == error ]] && rec 5 "issue after sync" "GONE on both hosts"
+    return 0
+}
+
+beans_two_hosts() { # beans_two_hosts MODE: test 5 with one journal sync mode (fresh stores each time)
+    local mode=$1 id r1=$T/hosts/h1/src/alpha r2=$T/hosts/h2/src/alpha s1=ok s2=ok s3=ok g1 g2 j1 j2
+    rm -rf "$T/hosts/h1/.local/share/beans" "$T/hosts/h2/.local/share/beans" "$T/hosts/h1/.config/beans" "$T/hosts/h2/.config/beans"
+    rm -rf "$T/remotes/private.git"; git init -q --bare "$T/remotes/private.git"
+    setup_beans_private h1 private.git; beans_init_repo h1 "$r1"
+    id=$(in_repo h1 "$r1" beans_create "shared issue")
+    beans_sync h1 alpha || s1=fail
+    setup_beans_private h2 private.git; beans_init_repo h2 "$r2" 2>/dev/null || true; beans_rebuild h2 alpha || s1=fail
+    j1=$(wc -l <"$T/hosts/h1/.local/share/beans/alpha/journal.jsonl"); j2=$(in_repo h2 "$r2" beans export-journal | wc -l)
+    rec 5 "[$mode] journal: file after h1 sync / h2 export after its rebuild" "$j1 / $j2"
+    in_repo h1 "$r1" beans_title "$id" "title from h1"; in_repo h1 "$r1" beans update "$id" --priority 0 >/dev/null
+    in_repo h2 "$r2" beans_title "$id" "title from h2"; in_repo h2 "$r2" beans update "$id" --type bug >/dev/null
+    beans_sync h1 alpha || s2=fail
+    beans_sync h2 alpha || s3="fail: $(pull_msg)"
+    beans_sync h1 alpha || true
+    g1=$(state5 h1 "$r1" "$id") || g1=error
+    g2=$(state5 h2 "$r2" "$id") || g2=error
+    rec 5 "[$mode] syncs: initial / h1 / h2" "$s1 / $s2 / $s3"
+    rec 5 "[$mode] h1 sees" "$g1"; rec 5 "[$mode] h2 sees" "$g2"
+    rec 5 "[$mode] converged" "$([[ $g1 == "$g2" && $g1 != error ]] && echo yes || echo NO)"
+    [[ $g1 == error && $g2 == error ]] && rec 5 "[$mode] issue after sync" "GONE on both hosts"
+    return 0
+}
+
+pull_msg() { grep -m1 -iE 'conflict|error|fatal' "$T/scratch/pull.err" | head -c 140; }
+
+state5() { # state5 HOST REPO ID: the compared fields as JSON; fails if the issue cannot be read
+    case $TOOL in
+        beans) in_repo "$1" "$2" beans --json show "$3" 2>/dev/null | jq -ec 'select(.title != null) | {title, priority, type}' ;;
+        kata) [[ $1 == h1 && -f $T/hosts/h1/private/kata.db ]] && { on h1 kata daemon stop >/dev/null 2>&1; cp "$T/hosts/h1/private/kata.db" "$T/hosts/h1/kata/"; rm -f "$T/hosts/h1/kata/kata.db-wal" "$T/hosts/h1/kata/kata.db-shm"; }
+              in_repo "$1" "$2" kata_get "$3" 2>/dev/null ;;
+        *) in_repo "$1" "$2" "${TOOL}_get" "$3" 2>/dev/null ;;
+    esac
+}
+
+test6_claims() {
+    local r=$T/hosts/h1/src/beta ids=() i ok=0 refused=0 owners
+    adapter init_repo h1 "$r"
+    for i in 1 2 3 4 5; do ids+=("$(in_repo h1 "$r" "${TOOL}_create" "claim target $i")"); done
+    for i in $(seq 0 9); do
+        ( if in_repo h1 "$r" "${TOOL}_claim" "${ids[i % 5]}" "agent$i"; then echo ok; else echo refused; fi ) >"$T/scratch/claim.$i" &
+    done
+    wait
+    ok=$(cat "$T"/scratch/claim.* | grep -c '^ok' || true); refused=$((10 - ok))
+    owners=$(for i in "${ids[@]}"; do in_repo h1 "$r" "${TOOL}_owner" "$i"; done | sort -u | grep -c . || true)
+    rec 6 "claims succeeded / refused" "$ok / $refused"
+    rec 6 "distinct owners on 5 items" "$owners"
+    rec 6 "double claims" "$([[ $ok -gt 5 ]] && echo "YES: $((ok - 5)) claims reported success on an item someone else claimed" || echo none)"
+}
+
+# Counts on the original export, for comparison.
+beads_counts() {
+    jq -s '[.[] | select(._type == "issue")] as $i | {
+        issues: ($i | length),
+        status: ($i | map(.status) | group_by(.) | map({(.[0]): length}) | add),
+        labels: ($i | map(.labels // [] | length) | add),
+        notes: ($i | map(select((.notes // "") != "")) | length),
+        edges: ($i | map(.dependencies // [] | .[].type) | group_by(.) | map({(.[0]): length}) | add)}' "$DIR/chz.jsonl"
+}
+
+test7_import() {
+    local w=$T/scratch/import out note_probe
+    [[ -n $REAL_BD ]] || { rec 7 "import" "skipped: bd not found"; return; }
+    if [[ ! -s $DIR/chz.jsonl ]]; then # read-only for the project: export and ready
+        (cd "$REPO" && env PATH="$PATH" bd export --include-memories --output "$DIR/chz.jsonl" >/dev/null)
+        (cd "$REPO" && env PATH="$PATH" bd ready --json -n 0 2>/dev/null | jq length >"$DIR/bd-ready.count")
+    fi
+    rec 7 "beads export (source)" "$(beads_counts | jq -c ". + {ready: $(<"$DIR/bd-ready.count")}")"
+    mkdir -p "$w"
+    case $TOOL in
+        kata)
+            # kata imports from a live bd store in the cwd: restore the export into a scratch bd first.
+            (cd "$w" && git init -q && on h1 bd init --prefix chz >/dev/null 2>&1 && on h1 bd config set no-git-ops true >/dev/null 2>&1 \
+                && on h1 bd import "$DIR/chz.jsonl" >/dev/null 2>&1)
+            (cd "$w" && on h1 kata init --project chz --agent >/dev/null && on h1 kata import --source-format beads >"$T/scratch/import.out" 2>&1) || true
+            rec 7 "importer says" "$(tr '\n' ' ' <"$T/scratch/import.out" | head -c 200)"
+            (cd "$w" && on h1 kata export --allow-running-daemon --output "$T/scratch/kata.jsonl" >/dev/null 2>&1)
+            out=$(jq -s '{
+                issues: [.[] | select(.kind == "issue")] | length,
+                status: ([.[] | select(.kind == "issue") | .data.status] | group_by(.) | map({(.[0]): length}) | add),
+                status_labels: ([.[] | select(.kind == "issue_label") | .data.label | select(startswith("beads-status:"))] | group_by(.) | map({(.[0]): length}) | add),
+                labels: [.[] | select(.kind == "issue_label") | .data.label | select(test("^(beads-|source:)") | not)] | length,
+                edges: ([.[] | select(.kind == "link") | .data.type] | group_by(.) | map({(.[0]): length}) | add)}' "$T/scratch/kata.jsonl")
+            out=$(jq --argjson r "$(cd "$w" && on h1 kata ready --limit 0 --json | jq '.issues | length')" '. + {ready: $r}' <<<"$out")
+            note_probe=$(jq -r 'select(._type == "issue" and (.notes // "") != "") | .notes[0:40]' "$DIR/chz.jsonl" | head -1)
+            out=$(jq --arg n "$(jq -s --arg p "$note_probe" '[.[] | select(.kind == "issue") | .data.body // "" | select(contains($p))] | length' "$T/scratch/kata.jsonl")" '. + {notes_probe_found: ($n | tonumber)}' <<<"$out")
+            ;;
+        ticks)
+            (cd "$w" && git init -q && git remote add origin "file://$T/remotes/import.git" && on h1 tk init >/dev/null 2>&1 \
+                && on h1 tk import "$DIR/chz.jsonl" >"$T/scratch/import.out" 2>&1) || true
+            rec 7 "importer says (export with memories)" "$(head -1 "$T/scratch/import.out" | head -c 200)"
+            # Again from the issues only: the memory record is what it chokes on.
+            rm -rf "$w"; mkdir -p "$w"; jq -c 'select(._type == "issue")' "$DIR/chz.jsonl" >"$T/scratch/issues-only.jsonl"
+            (cd "$w" && git init -q && git remote add origin "file://$T/remotes/import.git" && on h1 tk init >/dev/null 2>&1 \
+                && on h1 tk import "$T/scratch/issues-only.jsonl" >"$T/scratch/import.out" 2>&1) || true
+            rec 7 "importer says (issues only)" "$(tr '\n' ' ' <"$T/scratch/import.out" | head -c 200)"
+            out=$(cat "$w"/.tick/issues/*.json 2>/dev/null | jq -s '{
+                issues: length,
+                status: (map(.status) | group_by(.) | map({(.[0]): length}) | add),
+                labels: (map(.labels // [] | length) | add),
+                notes: (map(select((.notes // "") != "")) | length),
+                edges: {blocked_by: (map(.blocked_by // [] | length) | add), parent: (map(select((.parent // "") != "")) | length),
+                        discovered_from: (map(select((.discovered_from // "") != "")) | length)},
+                deferred_until: (map(select(.defer_until != null)) | length)}')
+            out=$(jq --argjson r "$(cd "$w" && on h1 tk ready --all --limit 1000 --json | jq '.ticks | length')" '. + {ready: $r}' <<<"$out")
+            ;;
+        beans)
+            # No importer: convert the export to a beans journal (new hex ids, old id in ref_id,
+            # notes appended to the body; labels and other edge types have nowhere to go).
+            beads_to_journal "$DIR/chz.jsonl" >"$w/journal.jsonl"
+            mkdir -p "$w/repo" && git -C "$w/repo" init -q
+            (cd "$w/repo" && on h1 beans init --name chzimport >/dev/null && \
+                rm -f "$T/hosts/h1/.local/share/beans/chzimport/beans.db" && \
+                on h1 beans rebuild "$w/journal.jsonl" >"$T/scratch/import.out" 2>&1) || true
+            rec 7 "importer says" "none upstream; jq converter: $(tr '\n' ' ' <"$T/scratch/import.out" | head -c 160)"
+            local db=$T/hosts/h1/.local/share/beans/chzimport/beans.db
+            out=$(jq -n --argjson n "$(sqlite3 "$db" 'select count(*) from beans' 2>/dev/null || echo 0)" \
+                --argjson st "$(sqlite3 -json "$db" 'select status, count(*) n from beans group by status' 2>/dev/null || echo '[]')" \
+                --argjson dp "$(sqlite3 -json "$db" 'select dep_type, count(*) n from deps group by dep_type' 2>/dev/null || echo '[]')" \
+                --argjson pa "$(sqlite3 "$db" 'select count(*) from beans where parent_id is not null' 2>/dev/null || echo 0)" \
+                '{issues: $n, status: ($st | map({(.status): .n}) | add), labels: 0, notes: "appended to body by the converter",
+                  edges: (($dp | map({(.dep_type): .n}) | add // {}) + {parent_id: $pa})}')
+            out=$(jq --argjson r "$(cd "$w/repo" && on h1 beans --json ready | jq length)" '. + {ready: $r}' <<<"$out")
+            ;;
+    esac
+    rec 7 "after import" "$(jq -c . <<<"$out")"
+}
+
+# bd export JSONL -> beans journal. Statuses outside open/in_progress/closed become open.
+beads_to_journal() {
+    jq -cs '
+      [.[] | select(._type == "issue")] as $i
+      | ($i | to_entries | map({key: .value.id, value: ("task-" + ("00000000" + (.key + 1 | tostring))[-8:])}) | from_entries) as $id
+      | ($i | map(select(.dependencies // [] | any(.type == "parent-child"))) | map({key: .id, value: $id[(.dependencies[] | select(.type == "parent-child") | .depends_on_id)]}) | from_entries) as $parent
+      | ($i[] | {action: "create", bean_id: $id[.id], created_at: .created_at, snapshot: {
+            id: $id[.id], title, type: (if .issue_type == "epic" or .issue_type == "bug" then .issue_type else "task" end),
+            status: (if .status == "in_progress" or .status == "closed" then .status else "open" end),
+            priority: (.priority // 2), body: ((.description // "") + (if (.notes // "") != "" then "\n\nNOTES\n" + .notes else "" end)),
+            parent_id: $parent[.id], assignee: null, created_by: null, ref_id: .id, created_at: .created_at,
+            closed_at: .closed_at, close_reason: .close_reason}}),
+        ($i[] | . as $x | .dependencies // [] | .[] | select(.type == "blocks") | select($id[.depends_on_id] != null)
+            | {action: "dep_add", bean_id: $id[$x.id], created_at: $x.created_at,
+               snapshot: {from_id: $id[.depends_on_id], to_id: $id[$x.id], dep_type: "blocks"}})' "$1"
+}
+
+test8_deps() {
+    local r=$T/hosts/h1/src/alpha a b ready1 ready2
+    adapter init_repo h1 "$r"
+    a=$(in_repo h1 "$r" "${TOOL}_create" "blocker")
+    b=$(in_repo h1 "$r" "${TOOL}_create" "blocked")
+    in_repo h1 "$r" "${TOOL}_block" "$a" "$b"
+    ready1=$(in_repo h1 "$r" "${TOOL}_ready" | grep -cx -- "$b" || true)
+    in_repo h1 "$r" "${TOOL}_close" "$a"
+    ready2=$(in_repo h1 "$r" "${TOOL}_ready" | grep -cx -- "$b" || true)
+    rec 8 "ready hides a blocked item" "$([[ $ready1 -eq 0 ]] && echo yes || echo NO)"
+    rec 8 "ready shows it after the blocker closes" "$([[ $ready2 -ge 1 ]] && echo yes || echo NO)"
+    local edges_var
+    edges_var="$(tr '[:lower:]' '[:upper:]' <<<"$TOOL")_EDGES"
+    rec 8 "edge types" "${!edges_var}"
+}
+
+run_tool() {
+    enter_sandbox "$1"
+    local n
+    for n in ${TESTS//,/ }; do
+        echo "tracker-trial: $TOOL test $n" >&2
+        # Each test gets fresh host stores; the fixtures (remotes, clones) are rebuilt too.
+        stop_daemons
+        rm -rf "$T/hosts" "$T/remotes" "$T/scratch"; mkdir -p "$T/hosts" "$T/remotes" "$T/scratch"
+        host h1; host h2; fixtures
+        case $n in
+            1) test1_footprint ;; 2) test2_speed ;; 3) test3_private_store ;; 4) test4_gcrypt ;;
+            5) test5_two_hosts ;; 6) test6_claims ;; 7) test7_import ;; 8) test8_deps ;;
+            *) die "unknown test $n" ;;
+        esac || rec "$n" "harness error" "test exited $?"
+    done
+    stop_daemons
+}
+
+trap 'stop_daemons; [[ -n ${PROXY_PID:-} ]] && kill "$PROXY_PID" 2>/dev/null; rm -rf "$RUNTIME"; true' EXIT
+for t in ${TOOLS//,/ }; do
+    case $t in kata|ticks|beans) ( run_tool "$t" ) || echo "tracker-trial: $t: harness failed" >&2 ;; *) die "unknown tool $t" ;; esac
+done
+
+{
+    echo "# tracker-trial results ($(date -u +%Y-%m-%dT%H:%MZ); kata $KATA_VER, ticks $TICKS_VER, beans $("$BIN/beans" --help >/dev/null 2>&1 && pipx list --short 2>/dev/null | awk '/magic-beans/{print $2}'))"
+    echo
+    echo "| Tool | Test | Check | Result |"
+    echo "|---|---|---|---|"
+    awk -F'\t' '{gsub(/\|/, "\\|", $4); printf "| %s | %s | %s | %s |\n", $1, $2, $3, $4}' "$RESULTS"
+} | tee "$DIR/results.md"
+echo "tracker-trial: results in $DIR/results.md and $RESULTS" >&2
