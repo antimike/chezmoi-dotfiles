@@ -39,7 +39,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [no-home-paths/](no-home-paths/) | Pre-commit hook (`no-home-paths`): rejects staged files with `/home/$USER/`, `/run/media/$USER/` or `-home-$USER-` (username read at run time); `docs/log/` exempt: `tools/no-home-paths/no-home-paths FILE...` |
 | [ticket-picker-test/](ticket-picker-test/) | `ticket-picker` (Super+T) with a scripted fake rofi and notify-send: Enter = quick note, Alt+Enter / empty Enter = editor with the line as title, cancels and an empty editor file nothing, recent projects first: `tools/ticket-picker-test/ticket-picker-test` |
 | [beads-restore-check/](beads-restore-check/) | Proves a project's `bd export --include-memories` restores: imports it into a throwaway bd, exports again, compares status, text, labels, priority, typed edges and memory count; names the issues and fields that differ (chz-47g, D80 draft). Run after a bd upgrade: `tools/beads-restore-check/beads-restore-check [PROJECT_DIR]` |
-| [tracker-trial/](tracker-trial/) | Live-tests issue trackers against beads' requirements in a sandbox (chz-vkf, D80 draft): kata, ticks and henriquebastos/beans through eight tests (footprint, speed, one private store, gcrypt remote, two-host edits, parallel claims, import of this repo's beads, `ready` semantics); results table in `~/.cache/tracker-trial/results.md`: `tools/tracker-trial/tracker-trial run` |
+| [tracker-trial/](tracker-trial/) | Live-tests issue trackers against beads' requirements in a sandbox (chz-vkf, D80 draft): kata, ticks and henriquebastos/beans through nine tests (footprint, speed, one private store, gcrypt remote, two-host edits, parallel and hot-item claims, import of this repo's beads, `ready` semantics, kata federation with a hub and two spokes); results table in `~/.cache/tracker-trial/results.md`: `tools/tracker-trial/tracker-trial run` |
 
 ## zsh-probe
 
@@ -164,7 +164,7 @@ killed with it on exit or Ctrl-C (checked 2026-10-25). Moves a few hundred MB a 
 ## tracker-trial
 
 ```sh
-tools/tracker-trial/tracker-trial run                  # all tools, all tests (~1.5 min)
+tools/tracker-trial/tracker-trial run                  # all tools, all tests (~2 min)
 tools/tracker-trial/tracker-trial run -t ticks -n 5,6  # one tool, some tests; -v logs each result
 tools/tracker-trial/tracker-trial clean                # stop leftover daemons, remove the trial dir
 ```
@@ -177,5 +177,8 @@ remotes, and `PATH=<bin>:/usr/bin:/bin` (not `~/.cargo/bin`, chz-if3). The one t
 `$XDG_RUNTIME_DIR/tt.*` (kata's unix socket path must stay under ~108 bytes), removed on exit with the daemons and gpg
 agents. Test 7 runs `bd export` and `bd ready` in this repo (read-only) and imports a copy. Outbound connections are
 caught by a logging `HTTPS_PROXY` (loopback exempt), so a client that ignores proxy variables would go unseen.
+Test 9 (kata only) starts a hub daemon on a free loopback port with a generated `[auth]` token and enrolls two spoke
+daemons; the enrollment token printed by `enroll` is run, never recorded. Before adding a tracker, read its own agent
+instructions (skills, `AGENTS.md`, contract) and test the workflow it documents, not one inferred from `--help` (chz-9sj).
 Each tool is driven through adapter functions (`<tool>_create`, `_title`, `_label`, `_block`, `_ready`, `_claim`, `_sync`,
 ...), so adding a tracker means one adapter block and its store setup in tests 3-5. Results: [../docs/plans/issue-tracker.md](../docs/plans/issue-tracker.md), "Hands-on: kata, ticks, beans".
