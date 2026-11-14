@@ -97,17 +97,67 @@ the risk is easy to avoid: excluded.
 tk has no locking. That's acceptable for one operator plus a single-writer `/work-queue`, but not for
 `auto-session` swarms.
 
-### Wider search (MH asked for a double check)
+### Wider search (MH asked for a double check; second pass from the source)
 
-The reviewer's shortlist holds up. Nothing else found beats tk on simplicity or beads on features.
+The first pass judged these from READMEs and one blog post. The second pass (2026-11-13, MH's
+questions) read each repo's source, shallow-cloned, and replaces it.
 
-| Tool | Notes | Verdict |
-|---|---|---|
-| **beans** (`hmans/beans`) | Apache-2.0, Go, Markdown in `.beans/` + `.beans.yml`, CLI/TUI/GraphQL, `beans prime` hooks for Claude Code. Confirmed: "still under heavy development", not accepting contributions. Dependencies not documented. | Closest rival to tk, but heavier and less stable. |
-| **git-issue** (`dspinellis/git-issue`) | GPL-3.0, shell, `.issues/` as its own git repo, with weights, estimates, **time spent**, milestones and two-way GitHub/GitLab sync. Confirmed: no dependencies. | No dependencies, so out. MH already has a fork in `~/Source/antimike/git-issue`. |
-| **grite** (`neul-labs/grite`) | Reported (author's post): CBOR events in `refs/grite/wal`, last-write-wins plus set CRDT, a sled cache, TTL locks, `link ... blocks`. | Too new to adopt; relevant to the architecture question (below). |
-| **git-bug-agent** (`selesy/git-bug-ax`, `gba`) | Confirmed: adds status, priority, `blocks`, `parent` and claims to git-bug as prefixed fields. 0 stars, no licence. | Shows how much has to be built on top of git-bug to get beads. |
-| kata, epiq, thicket, ticks, bodega, kticket, Backlog.md | Seen in search results only; not read. | Unverified. |
+There are **two different tools called "beans"**:
+
+- **`hmans/beans`**: Go, Markdown files.
+- **`henriquebastos/beans`**: Python, SQLite plus a JSONL journal. PyPI `magic-beans`, CLI `beans`.
+
+MH's description ("SQLite instead of Dolt") fits the second.
+
+| | hmans/beans | henriquebastos/beans | grite | Knots | beads (now) |
+|---|---|---|---|---|---|
+| Storage | one Markdown file per bean; no database | SQLite (WAL mode) + journal table, exported as JSONL | CBOR events in `refs/grite/wal` + a sled cache per actor | JSON event files on a `knots` branch (worktree) + SQLite cache | Dolt |
+| Kept outside the worktree? | yes: `BEANS_PATH` / `--beans-path`, or an absolute `beans.path` | **yes by default**: `~/.local/share/beans/<project>`, registry `~/.config/beans/config.json` keyed by git remote; `MAGIC_BEANS_DIR` | no flag: it discovers the git repo from cwd (libgit2 `discover`) and uses the fixed ref `refs/grite/wal`. A central repo works through a wrapper (`cd`), with every project in one WAL (separated by labels) | `-C`/`KNOTS_REPO_ROOT`, `--db`; git config `knots.remote` + `knots.remoteRef`, so per-project refs in one shared private repo look possible (**untested**); named projects are local-only (no git) | `.beans/` per repo |
+| Edges | `parent`, `blocking`/`blocked_by` | `blocks` + `parent_id` | `blocks`, `depends_on`, `related_to` (no parent-child) | `blocked_by`/`blocks`, `parent_of` | blocks, parent-child, related, discovered-from, more |
+| `ready` | `beans list --ready` (also excludes implicitly blocked children) | `beans ready` | `grite dep topo` (topological order, not a ready list) | `kno ready`, `kno poll --claim` | `bd ready` |
+| Statuses | fixed five: todo, in-progress, draft, completed, scrapped | fixed three: open, in_progress, closed | open, closed | workflow states from loom bundles (planning, implementation and shipment, each with a review step; blocked, deferred) | built-in + custom |
+| Labels / notes | tags / body only | **neither** (labels table dropped in schema v2) / body only | labels, comments | tags, notes, handoff capsules | both |
+| Memories | archive of completed beans | no | `ProjectContextUpdated` key-value | no | `bd remember` |
+| Claims | none (ETag optimistic writes) | `claim`/`release` (assignee + in_progress) | lease locks as refs (`refs/grite/locks/*`, TTL; policy off/warn/require) | atomic `poll --claim`, leases (10 min, refreshed by writes, **this machine only**) | `--claim` |
+| Multi-host merge | none: git text merges, one file per bean | none: `export-journal` / `rebuild`; journal rows are whole-bean snapshots | CRDT: last-write-wins by timestamp for scalar fields, add/remove sets; a rejected push re-appends on the fetched head | union of immutable event files; refuses differing bytes; rebase-and-retry push | Dolt merge |
+| Signing | no | no | optional Ed25519 per event; keys plain in `.git/grite/actors/<id>/keys/`, public keys only in the local actor config; `grite db verify` | no | no |
+| Invasiveness | `beans prime` hooks, agent runner, web UI | none; prints a skill on request | writes `AGENTS.md` | **installs a `post-merge` hook**, `.claude/skills` | git hooks, agent files, Dolt remote |
+| Size (GitHub language bytes) | Go 1.0 MiB + TS | Python 158 KiB (1.7k lines) | Rust 0.7 MiB | Rust 3.1 MiB (~70k non-test lines) | Go 47 MiB |
+| Adoption, activity | 965★, last push 2026-04-06 | 66★, last push 2026-09-02 | 24★, created 2026-01, last push 2026-07-02 | 17★, last push 2026-08-28 | 28.7k★, daily |
+
+**Encryption of just the issue ref (tested, grite's question c).**
+
+- **gcrypt works.** A throwaway-key test pushed only `refs/grite/*` to a `gcrypt::` remote. The code
+  branch stayed out, a plaintext grep of the remote found nothing, and a fetch decrypted the WAL.
+- **But `grite sync` can't drive it.** grite syncs through libgit2, and libgit2 can't run `gcrypt::`
+  remote helpers. So the transport is plain `git push`/`fetch` of `refs/grite/*`. That loses grite's
+  re-append-on-rejected-push step, which needs a wrapper and a two-host divergence test.
+- **git-crypt can't help.** It encrypts working-tree files through gitattributes filters, and grite
+  writes git objects directly.
+- **Knots should work with gcrypt (untested).** It calls the git binary and reads `knots.remote`.
+
+**Performance (measured).** `bd show` costs 0.31 s per call, mostly opening embedded Dolt. `bd list
+--json` returns all 81 issues in 0.34 s. `bd-track queue list -t` is slow because it calls `bd show`
+once per line (`queue.py` `_fetch_title`). One `bd list --json` would make it constant time. That's a
+bd-track fix, not a reason to change trackers.
+
+A Python CLI also pays its imports on every call. henriquebastos/beans (typer + pydantic) is
+unmeasured: installing it from PyPI was blocked by this session's permission check.
+
+**Other names seen, not read:** wesm/kata (SQLite), epiq (events on a git branch), abarth/thicket,
+pengelbrecht/ticks, bjia56/bodega, kostyay/kticket, Backlog.md, TrackDown, signalnine/bd (a
+stripped-down beads fork, still on Dolt).
+
+**git-bug-agent** is `https://github.com/selesy/git-bug-ax`. "git-bug-agent" is the README's name and
+`gba` the binary. Confirmed: it adds status, priority, `blocks`, `parent` and claims to git-bug as
+prefixed fields; 0 stars, no licence.
+
+**git-issue** (`dspinellis/git-issue`, 2016, GPL-3.0, shell, 886★) has no dependencies, so it can't
+replace beads. Its `.issues/` is its own git repo (one commit per change) and is found by walking up
+from cwd. Each issue is a directory of small files: description, tags, comments, plus fields for
+weight, milestone, due date, time estimate and time spent. It has two-way GitHub/GitLab sync. MH has a
+fork in `~/Source/antimike/git-issue`. Compared with `ticket` and `tk` as a ticket store: see "Tickets"
+below.
 
 ## git-bug (MH's questions)
 
@@ -168,6 +218,46 @@ Two things to avoid:
 
 Build this only under the rule in the ticket: it must delete more code than it adds, and only after tk
 fails a named requirement.
+
+## Fit with MH's goals (second pass)
+
+MH's goals, stated 2026-11-13:
+
+1. Escape Dolt's slowness and fragility.
+2. Less config.
+3. All projects' issues in one private repo, outside the worktrees.
+4. Conflict-free merges across hosts.
+5. Exclusive claims for agent swarms.
+6. Signed audit trails.
+
+| Tool | 1-2 | 3 | 4 | 5 | 6 | Gaps against R1-R5 |
+|---|---|---|---|---|---|---|
+| tk | yes | `TICKETS_DIR` | git text merges (one file per ticket) | no | no | statuses, memories |
+| hmans/beans | yes | `BEANS_PATH` | git text merges | no | no | statuses fixed, no notes or related edges; quiet since April |
+| henriquebastos/beans | yes | **built in** (XDG data dir + registry) | **no** (snapshot journal, no merge) | claim, no lease | no | no labels, no notes, 3 statuses; it's a small Python codebase, so a fork could fill the gaps |
+| grite | yes (daemon optional) | wrapper only, one WAL per repo | **yes** (CRDT; timestamp ties, so clock skew decides) | TTL lease locks | optional Ed25519, keys outside GPG/YubiKey, not distributed | no parent-child, no `in_progress`, no priority; 24★, quiet since July |
+| Knots | yes (SQLite cache) | likely (`knots.remote`/`remoteRef`; untested) | **yes** (immutable event files) | **atomic claim + lease** (this machine only) | no | no `related`/`discovered-from`; fixed workflow (custom states need the loom DSL); git hook; 17★, one maintainer |
+
+Time tracking is the same question for every candidate. bd-track needs `show`/`list`/`update`/claim
+and a stable id string. Any of them fits behind an adapter; the work is making bd-track's calls go
+through one backend layer instead of `bd`.
+
+## Tickets: `ticket` vs git-issue vs tk (MH's question)
+
+- **Ours.** `ticket` (458 lines of Python) plus `ticket-picker` (80). Per-project inboxes live outside
+  the repos. Frontmatter: `from`, `date`, `type`, `urgency`, `status`, `resolved`, `outcome`. There's a
+  `triage/` and `done/` split, quick notes in `inbox.md`, and integrations with `/triage`, Super+T, the
+  SessionStart hook and zsh completion.
+- **git-issue.** Gains: git history of every change, comments, attachments, time estimate and time
+  spent, and GitHub/GitLab sync. Losses: the one-file-per-ticket Markdown format (each issue is a
+  directory of small files), the provenance and resolution fields (they'd become tags), and every
+  integration. It also has no env var to relocate the store; you `cd` above `.issues/`.
+- **tk.** It's the closest format (Markdown + YAML) and has `TICKETS_DIR`, plus links that suit
+  "duplicate of". Its statuses don't cover accepted, rejected and duplicate. It's also the same tool as
+  the tracker trial.
+
+Neither is a drop-in. Keep `ticket`. If the tk trial passes, tickets could become tk tickets in the same
+store, which removes one tool. git-issue's real advantage is GitHub sync, the same as git-bug's.
 
 ## Proposal (draft D80)
 
