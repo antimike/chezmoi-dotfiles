@@ -1,0 +1,305 @@
+#!/usr/bin/env bash
+# annex-gcrypt — set up and sync a git-annex repository with an encrypted git remote
+# (git-remote-gcrypt) and an encrypted directory special remote (encryption=hybrid).
+# Written for amontillado's NSFW library (runbook: docs/runbooks/amontillado-library.md
+# in the chezmoi source repo), but nothing in it is amontillado-specific except the
+# optional amo-info merge driver.
+#
+#   annex-gcrypt init --url gcrypt::URL --directory DIR [--remote NAME] [--special NAME] FPR...
+#                                   create both remotes for the repository in the current
+#                                   directory, encrypted to every FPR (machine keys + backup)
+#   annex-gcrypt clone gcrypt::URL DIR [--key FPR] [--directory DIR]
+#                                   clone on a new machine, then `setup` in the clone
+#   annex-gcrypt setup [--key FPR] [--directory DIR]
+#                                   configure this clone (idempotent; run again any time)
+#   annex-gcrypt check              report configuration problems (exit 1 if any)
+#   annex-gcrypt sync               git annex pull, re-apply the participants, copy content
+#                                   to the special remote, push --force to the gcrypt remote
+#   annex-gcrypt add-key FPR        let FPR read the remotes (from a machine that can)
+#   annex-gcrypt remove-key FPR     stop FPR reading what comes later (not a revocation)
+#
+# The committed file .annex-gcrypt (git config format) holds what every clone shares:
+#
+#   [annex-gcrypt]
+#       remote = github             # the gcrypt:: git remote's name
+#       special = ssd               # the encrypted special remote's name
+#       participants = FPR FPR ...  # every key that may read both remotes
+#
+# Why each clone needs configuring (all found rehearsing the setup, 2026-11-13; detail in
+# the runbook): gcrypt never takes the recipients from the (untrusted) remote, so a clone
+# without gcrypt-participants pushes encrypted to its own key only; with hidden recipients
+# (gcrypt's default) and Curve25519 keys, gpg exits 2 for all but one participant, so
+# participants are published; only manifests signed by a participant are accepted, so a
+# global user.signingkey outside the list (a YubiKey key) must be overridden per remote;
+# every gcrypt push is a force push, so pushes must be explicit (`sync` pulls first).
+set -euo pipefail
+
+prog=annex-gcrypt
+CONF=.annex-gcrypt
+
+die() { echo "$prog: $*" >&2; exit 1; }
+say() { echo "$prog: $*" >&2; }
+usage() { sed -n '2,/^set -euo/{/^set -euo/d;s/^# \{0,1\}//;p}' "$0"; }
+
+conf() { git config -f "$CONF" --get "annex-gcrypt.$1" 2>/dev/null || true; }
+
+toplevel() {
+  local top
+  top=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a git repository"
+  cd "$top"
+}
+
+# Primary-key fingerprints of the secret keys in this keyring.
+secret_fprs() {
+  gpg --batch --list-secret-keys --with-colons 2>/dev/null |
+    awk -F: '/^sec/ {p = 1; next} /^fpr/ && p {print $10; p = 0}'
+}
+
+has_pubkey() { gpg --batch --list-keys --with-colons "$1" >/dev/null 2>&1; }
+
+norm_fpr() { # uppercase, no spaces; a full 40-hex fingerprint
+  local f=${1//[[:space:]]/}
+  f=${f^^}
+  [[ $f =~ ^[0-9A-F]{40}$ ]] || die "not a full key fingerprint: $1"
+  echo "$f"
+}
+
+read_conf() {
+  [[ -f $CONF ]] || die "no $CONF in $(pwd): run '$prog init' first (or this is not such a repository)"
+  REMOTE=$(conf remote)
+  SPECIAL=$(conf special)
+  PARTICIPANTS=$(conf participants)
+  [[ -n $REMOTE && -n $SPECIAL && -n $PARTICIPANTS ]] ||
+    die "$CONF needs annex-gcrypt.remote, .special and .participants"
+}
+
+# This machine's key: --key, or the one participant whose secret key is here.
+pick_key() {
+  local want=${1:-} f mine=()
+  if [[ -n $want ]]; then
+    want=$(norm_fpr "$want")
+    [[ " $PARTICIPANTS " == *" $want "* ]] || die "--key $want is not in $CONF's participants"
+    echo "$want"
+    return
+  fi
+  while read -r f; do
+    [[ " $PARTICIPANTS " == *" $f "* ]] && mine+=("$f")
+  done < <(secret_fprs)
+  case ${#mine[@]} in
+    1) echo "${mine[0]}" ;;
+    0) die "no secret key here is a participant: create this machine's key and have a machine with access run '$prog add-key FPR' (runbook, 'Adding a machine')" ;;
+    *) die "several participant keys are here (${mine[*]}): pick one with --key" ;;
+  esac
+}
+
+missing_pubkeys() {
+  local f
+  for f in $PARTICIPANTS; do has_pubkey "$f" || echo "$f"; done
+}
+
+# Write the per-clone git config from .annex-gcrypt.
+apply_config() {
+  local key=$1
+  git config "remote.$REMOTE.gcrypt-participants" "$PARTICIPANTS"
+  git config "remote.$REMOTE.gcrypt-publish-participants" true
+  git config "remote.$REMOTE.gcrypt-require-explicit-force-push" true
+  git config "remote.$REMOTE.gcrypt-signingkey" "$key"
+  if grep -qs 'merge=amo-info' .gitattributes; then
+    git config merge.amo-info.name "amontillado info files"
+    git config merge.amo-info.driver 'amo info merge %O %A %B --name %P'
+  fi
+}
+
+special_keyids() { # long key ids the special remote's cipher is encrypted to
+  git annex info "$SPECIAL" 2>/dev/null |
+    sed -n 's/.*to gpg keys: \([0-9A-F ]*\)).*/\1/p'
+}
+
+cmd_setup() {
+  local key="" dir=""
+  while (($#)); do
+    case $1 in
+      --key) key=${2:?}; shift 2 ;;
+      --directory) dir=${2:?}; shift 2 ;;
+      *) die "setup: unknown argument $1" ;;
+    esac
+  done
+  toplevel
+  read_conf
+  local missing
+  missing=$(missing_pubkeys)
+  [[ -z $missing ]] || die "public keys missing from this keyring: ${missing//$'\n'/ }: import them first (runbook, 'Public keys')"
+  git remote get-url "$REMOTE" >/dev/null 2>&1 || die "no git remote '$REMOTE'"
+  key=$(pick_key "$key")
+  apply_config "$key"
+  say "remote $REMOTE: participants from $CONF, published, explicit force, signing key $key"
+  if [[ -z $(git config annex.uuid || true) ]]; then
+    git annex init "$(hostname -s)"
+  fi
+  if [[ -z $(git config "remote.$SPECIAL.annex-uuid" || true) ]]; then
+    [[ -n $dir ]] || die "special remote '$SPECIAL' is not enabled here: pass --directory (where its drive is mounted on this machine)"
+    git annex enableremote "$SPECIAL" "directory=$dir"
+  elif [[ -n $dir ]]; then
+    git config "remote.$SPECIAL.annex-directory" "$dir"
+  fi
+  cmd_check
+}
+
+cmd_check() {
+  toplevel
+  read_conf
+  local bad=0 f key ids
+  for f in $(missing_pubkeys); do say "missing public key: $f"; bad=1; done
+  [[ $(git config "remote.$REMOTE.gcrypt-participants" || true) == "$PARTICIPANTS" ]] ||
+    { say "remote.$REMOTE.gcrypt-participants differs from $CONF: run '$prog setup'"; bad=1; }
+  [[ $(git config --bool "remote.$REMOTE.gcrypt-publish-participants" || true) == true ]] ||
+    { say "remote.$REMOTE.gcrypt-publish-participants is not true: run '$prog setup'"; bad=1; }
+  [[ $(git config --bool "remote.$REMOTE.gcrypt-require-explicit-force-push" || true) == true ]] ||
+    { say "remote.$REMOTE.gcrypt-require-explicit-force-push is not true: run '$prog setup'"; bad=1; }
+  key=$(git config "remote.$REMOTE.gcrypt-signingkey" || true)
+  if [[ -z $key || " $PARTICIPANTS " != *" $key "* ]]; then
+    say "remote.$REMOTE.gcrypt-signingkey is not a participant: run '$prog setup'"
+    bad=1
+  fi
+  if [[ $SPECIAL != "$REMOTE" ]] && git config "remote.$SPECIAL.annex-uuid" >/dev/null; then
+    ids=$(special_keyids)
+    for f in $PARTICIPANTS; do
+      [[ " $ids " == *" ${f: -16} "* ]] ||
+        { say "special remote $SPECIAL is not encrypted to $f: run '$prog add-key $f'"; bad=1; }
+    done
+  fi
+  ((bad == 0)) && say "ok"
+  return "$bad"
+}
+
+special_available() {
+  local dir
+  dir=$(git config "remote.$SPECIAL.annex-directory" || true)
+  [[ -n $dir && -d $dir ]]
+}
+
+push_remote() {
+  git push --force "$REMOTE" "$(git symbolic-ref --short HEAD)" git-annex
+}
+
+cmd_sync() {
+  toplevel
+  read_conf
+  git annex pull "$REMOTE"
+  # The pull may have brought a changed participants list (another machine's add-key).
+  read_conf
+  local key
+  key=$(git config "remote.$REMOTE.gcrypt-signingkey" || true)
+  [[ -n $key ]] || die "this clone is not set up: run '$prog setup'"
+  local missing
+  missing=$(missing_pubkeys)
+  [[ -z $missing ]] || die "public keys missing: ${missing//$'\n'/ }: import them, then sync again"
+  apply_config "$key"
+  if special_available; then
+    git annex push "$SPECIAL"
+  else
+    say "special remote $SPECIAL is not mounted: content not copied (sync again with the drive in)"
+  fi
+  cmd_check >/dev/null 2>&1 || { cmd_check || true; die "not pushing: fix the problems above"; }
+  push_remote
+}
+
+# keyid+= / keyid-= on the special remote, then commit the new participants and push.
+change_key() {
+  local op=$1 fpr
+  fpr=$(norm_fpr "${2:?FPR}")
+  toplevel
+  read_conf
+  local new=
+  if [[ $op == + ]]; then
+    [[ " $PARTICIPANTS " != *" $fpr "* ]] || die "$fpr is already a participant"
+    has_pubkey "$fpr" || die "import $fpr's public key first"
+    new="$PARTICIPANTS $fpr"
+  else
+    [[ " $PARTICIPANTS " == *" $fpr "* ]] || die "$fpr is not a participant"
+    local f
+    for f in $PARTICIPANTS; do [[ $f == "$fpr" ]] || new+="${new:+ }$f"; done
+    [[ -n $new ]] || die "refusing to remove the last participant"
+  fi
+  git annex pull "$REMOTE"
+  local args=("$SPECIAL" "keyid$op=$fpr")
+  special_available && args+=("directory=$(git config "remote.$SPECIAL.annex-directory")")
+  git annex enableremote "${args[@]}"
+  git config -f "$CONF" annex-gcrypt.participants "$new"
+  git add "$CONF"
+  git commit -m "annex-gcrypt: participants $op ${fpr: -16}" -- "$CONF"
+  read_conf
+  local key
+  key=$(git config "remote.$REMOTE.gcrypt-signingkey") || die "this clone is not set up: run '$prog setup'"
+  apply_config "$key"
+  push_remote
+  if [[ $op == - ]]; then
+    say "$fpr no longer receives new data, but keeps what it already fetched and the special remote's cipher: real revocation is a new remote and a new upload (runbook)"
+  else
+    say "$fpr added: on that machine, import every participant's public key, then '$prog clone'"
+  fi
+}
+
+cmd_init() {
+  local url="" dir="" remote=github special=ssd keys=() f
+  while (($#)); do
+    case $1 in
+      --url) url=${2:?}; shift 2 ;;
+      --directory) dir=${2:?}; shift 2 ;;
+      --remote) remote=${2:?}; shift 2 ;;
+      --special) special=${2:?}; shift 2 ;;
+      -*) die "init: unknown option $1" ;;
+      *) f=$(norm_fpr "$1"); keys+=("$f"); shift ;;
+    esac
+  done
+  [[ $url == gcrypt::* ]] || die "init: --url gcrypt::URL is required"
+  [[ -n $dir ]] || die "init: --directory DIR (the special remote's directory) is required"
+  ((${#keys[@]} >= 1)) || die "init: list every participant's fingerprint (machine keys and the backup key)"
+  [[ $remote != "$special" ]] || die "init: the git remote and the special remote need different names"
+  toplevel
+  [[ ! -f $CONF ]] || die "$CONF exists already: use '$prog setup'"
+  for f in "${keys[@]}"; do has_pubkey "$f" || die "import $f's public key first"; done
+  mkdir -p "$dir"
+  if [[ -z $(git config annex.uuid || true) ]]; then
+    git annex init "$(hostname -s)"
+  fi
+  git config -f "$CONF" annex-gcrypt.remote "$remote"
+  git config -f "$CONF" annex-gcrypt.special "$special"
+  git config -f "$CONF" annex-gcrypt.participants "${keys[*]}"
+  git add "$CONF"
+  git commit -m "annex-gcrypt: remotes $remote and $special" -- "$CONF"
+  read_conf
+  local key
+  key=$(pick_key)
+  git remote get-url "$remote" >/dev/null 2>&1 || git remote add "$remote" "$url"
+  apply_config "$key"
+  # initremote takes one keyid (a keyid+= there is ignored); the rest go in with enableremote.
+  git annex initremote "$special" type=directory "directory=$dir" encryption=hybrid "keyid=${keys[0]}"
+  for f in "${keys[@]:1}"; do
+    git annex enableremote "$special" "directory=$dir" "keyid+=$f"
+  done
+  git annex push "$special"
+  push_remote
+  cmd_check
+}
+
+cmd_clone() {
+  local url=${1:?gcrypt::URL} dest=${2:?DIR}
+  shift 2
+  [[ $url == gcrypt::* ]] || die "clone: the URL must start with gcrypt::"
+  git clone "$url" "$dest" ||
+    die "clone failed: 'No public key' means this keyring lacks the last pusher's public key (import every participant's); 'Failed to decrypt' means this machine's key is not a participant yet"
+  cd "$dest"
+  read_conf
+  [[ $SPECIAL != origin ]] || die "the special remote is named origin: rename the git remote and retry"
+  [[ $REMOTE == origin ]] || git remote rename origin "$REMOTE"
+  cmd_setup "$@"
+}
+
+case ${1:-} in
+  init | clone | setup | check | sync) c=$1; shift; "cmd_$c" "$@" ;;
+  add-key) shift; change_key + "$@" ;;
+  remove-key) shift; change_key - "$@" ;;
+  -h | --help | help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac
