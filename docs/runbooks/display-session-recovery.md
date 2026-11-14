@@ -86,7 +86,8 @@ For a freeze where nothing on screen responds: no key binds, no `Ctrl+Alt+F3`, m
      after a freeze that never panicked).
    - `journalctl -b -1 -n 50 -o short-precise`: the last lines before the freeze (journald syncs every 15 s now).
    - `~/.cache/hyprland/` (crash reports), `coredumpctl list`.
-   - Hyprland's own log in the journal: chz-mfl. mongod's AVC flood used to bury everything: chz-8jq.
+   - Hyprland's own log (since chz-mfl, 2026-11-13; it was on tmpfs before): `journalctl --user -b -1 -t uwsm_hyprland.desktop -n 200 -o short-precise`.
+   - mongod's AVC flood used to bury everything: chz-8jq.
 4. Record the findings on chz-42c's follow-up (or a new bead): time, docked or not, which step answered.
 
 **pstore risk notes** (MH, 2026-11-10): the kernel writes the EFI variables only at a panic or oops (~10 KB each);
