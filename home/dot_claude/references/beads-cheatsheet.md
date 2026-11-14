@@ -1,6 +1,6 @@
 # Beads (bd) Cheat Sheet -- long-form reference
 
-Comprehensive command reference. The short "Beads (bd) Gotchas" section in `~/.claude/CLAUDE.md` is the always-on summary; this file is the on-demand expansion. Long-form details and rationale for individual gotchas live in `bd memories <keyword>` entries (search by keyword) -- this file lists which memories are worth pulling when.
+Comprehensive command reference. The "Gotchas" section of `~/.claude/rules/beads.md` is the always-on summary; this file is the on-demand expansion. Long-form details and rationale for individual gotchas live in `bd memories <keyword>` entries (search by keyword) -- this file lists which memories are worth pulling when.
 
 ## Common commands
 
@@ -150,7 +150,7 @@ Seen with bd 1.3 (2026-10-27, embedded mode, `--skip-hooks --skip-agents --sandb
 
 This reference is intended to evolve. When non-obvious bd functionality requires research or experimentation to verify (e.g., I had to test that `related` edges are directed; the user had to point out that `bd link` accepts non-blocks types), capture the finding in two places:
 
-1. **Add a one-line gotcha** to the "Beads (bd) Gotchas" section in `~/.claude/CLAUDE.md` if the finding is something a future session would benefit from seeing always-on.
+1. **Add a one-line gotcha** to the "Gotchas" section of `~/.claude/rules/beads.md` if the finding is something a future session would benefit from seeing always-on.
 2. **Expand the relevant section here** with the long-form rationale, examples, and edge cases.
 3. **`bd remember`** the underlying technical fact, with a slug that this reference can point at (`Memory: <slug>` line under the gotcha entry).
 
