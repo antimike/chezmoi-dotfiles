@@ -18,6 +18,10 @@ require("lazy").setup({
   spec = {
     -- add LazyVim and import its plugins
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+    -- LazyVim extras, managed here rather than with :LazyExtras (lazyvim.json is
+    -- not chezmoi-managed). mini.surround maps under gs (gsa add, gsd delete,
+    -- gsr replace, gsf/gsF find, gsh highlight, gsn n_lines), clear of flash's s.
+    { import = "lazyvim.plugins.extras.coding.mini-surround" },
     -- import/override with your plugins
     { import = "plugins" },
   },
