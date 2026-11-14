@@ -115,3 +115,8 @@ private repository for all private project data and metadata**.
 5. Should `bd memories` be exported too (overlap with Claude auto-memory)?
 6. Registry: the projects.yaml schema that bd-track can share (bd-track ticket above).
 7. Repo name and history: rename `claude-state` (keeps its history) or start a new repo?
+8. bd-track event logs (from chz-47g, draft D80): rather than JSONL files copied into this repo,
+   commit each host's per-session event files under its own ref (`refs/bd-track/<host>`) and push
+   those refs only to the private remote. One writer per ref means no merge logic; readers fold the
+   union by event id. Bears on question 3 too: `tools/beads-restore-check` shows the JSONL export
+   restores for our feature set (not Dolt history or comments). Detail: [issue-tracker.md](issue-tracker.md), git-bug (d).
