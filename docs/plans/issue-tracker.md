@@ -242,6 +242,179 @@ Time tracking is the same question for every candidate. bd-track needs `show`/`l
 and a stable id string. Any of them fits behind an adapter; the work is making bd-track's calls go
 through one backend layer instead of `bd`.
 
+## Hands-on: Knots and grite (2026-11-13, MH asked)
+
+**Setup.** Throwaway HOME and git config, bare repos standing in for GitHub and a private repo, and a
+throwaway GPG key for gcrypt.
+
+- Knots v0.18.2 was built from source with Fedora's Rust 1.98.
+- grite is the v0.5.3 release binary, its sha256 matching GitHub's digest. Building grite needs
+  `openssl-devel`, which isn't installed. Its source HEAD is 0.5.3 plus docs and one display fix.
+
+The probe scripts were one-offs in the session scratchpad.
+
+**Side effect on zbook.** The first build attempt ran `/usr/bin/cargo` with `~/.cargo/bin` first on
+`PATH`. Its rustup `rustc` proxy honoured Knots' `rust-toolchain.toml` and **installed toolchain 1.93.1
+into `~/.rustup` (1.3 GB)**. Remove it with `rustup toolchain uninstall 1.93.1` (or fold it into
+chz-if3). The retry used `PATH=/usr/bin:/bin RUSTC=/usr/bin/rustc`.
+
+### Knots
+
+| Test | Result |
+|---|---|
+| Speed | `new`, `ls`, `show` ~0.01 s; `sync` 0.07 s plain, 0.48 s over gcrypt |
+| One private repo for several projects | **works with flat ref names**: `knots.remote=private`, `init --remote-ref refs/heads/knots-<project>`; two projects and a second host synced from one bare repo. A namespaced ref (`knots/proj-a`) **breaks sync**: its fetch maps to `refs/remotes/private/knots`, which collides with `.../knots/proj-a` |
+| Code leaking into the issue ref | **yes by default**: `init` branches from code HEAD, so the private repo got the whole code history and the code files. **Workaround tested:** create an empty orphan `knots-<project>` ref in the private repo first; `init` adopts it and nothing from the code repo is pushed |
+| Encrypted remote | **works**: `private = gcrypt::...`; push, no plaintext on the remote, a second host read it back |
+| Concurrent edits, two hosts | converge after sync; the later title wins, the tag from the other host survives (last-writer-wins per field) |
+| Atomic claims | 10 parallel `poll --claim` on 5 knots: 5 distinct claims, 5 refused, no doubles |
+| Edges | any kind is accepted (`related` worked), so the vocabulary is free-form. **`blocked_by` does not filter `ready`/`poll`**: the dependent must be put in the `blocked` state, and Knots resumes it when the blocker finishes |
+| Footprint | `.gitignore` edited (`/.knots/`), a `post-merge` hook, a local `knots` branch, `.knots/` (256 KiB). A daily GitHub release check (2 s timeout; `KNOTS_SKIP_DOCTOR_UPGRADE` disables it) |
+
+### grite
+
+| Test | Result |
+|---|---|
+| Speed | `create`, `list` ~0.01 s; `sync` 0.01 s |
+| Footprint | writes `AGENTS.md` unless `--no-agents-md`; **auto-starts a background daemon** (`--no-daemon` per command; `daemon stop`) |
+| Dependencies | `depends_on` cycle refused; `related_to` accepted; `dep topo` shows creation dates as "Dec 31, 69" (fixed after 0.5.3) |
+| **Second host** | **failed.** A second clone gets `refs/grite/wal`, through `grite sync` or by fetching it before `init`, but materialises **0 issues**: `rebuild` reports 0 events and `show <id>` is `not_found`. Repeated on three fresh clones. Each WAL commit's tree holds only that commit's chunk. Maybe a usage error, but it follows the documented flow (`init`, `sync`) |
+| Rebuild on the first host | counted 6 events, then `issue list` returned **0** while `show <id>` still worked (the list index is lost) |
+| Cross-host locks | **work**: a lock acquired on host 1 and pushed blocks host 2 (`conflict: held by <actor> (expires in 595s)`) |
+| Signing | `actor init --generate-key` creates a **new actor** (key: a 64-byte file, mode 600, in `.git/grite/actors/<id>/`); after `actor use`, new events are signed and `db verify` passes them. Earlier events stay unsigned and count as errors |
+
+**Verdict.** Knots holds up in practice. It meets the goals (one private encrypted repo, merges,
+atomic claims) once two things are configured: flat ref names and pre-created orphan refs. Its
+`ready` doesn't use the dependency graph, though. grite fails its central promise in our test (a
+second host sees nothing), so it's out until that's fixed upstream. Its locks and signing work, and
+the design remains a good reference.
+
+## henriquebastos/beans in practice (third pass, MH leans towards it for personal projects)
+
+Everything below is read from the source (v0.7.0).
+
+**Where the data lives.** `MAGIC_BEANS_DIR` selects **one** store, so it overrides a single project.
+The consolidation mechanism is the **registry**:
+
+- `~/.config/beans/config.json` maps a project's normalised git remote (or its path) to a store
+  directory.
+- `beans init` puts the store in `$XDG_DATA_HOME/beans/<project>`.
+- One private repo for everything means each project's `store` points at `~/<issues-repo>/<project>`,
+  or the repo is checked out at `~/.local/share/beans`.
+
+What gets committed and what doesn't:
+
+- The store's `.gitignore` keeps only `journal.jsonl`; the SQLite file stays out of git.
+- **Nothing writes `journal.jsonl` automatically.** It's `beans export-journal > journal.jsonl` by
+  hand, so a commit wrapper or timer has to do it.
+
+**Migration from beads.** Possible, but not a one-command job:
+
+- **Ids.** `ID_PATTERN` is `^[a-z]+-[0-9a-f]+$`, and beads ids are base36 (`chz-47g` contains a `g`).
+  So **existing ids are rejected**: migrated beans need new ids, with the old one kept in `ref_id`.
+- **References.** Every reference to a bead id has to be rewritten: in other beans, in bd-track
+  events, in ticket `outcome:` lines, and in docs and commit messages. Without that, history loses
+  its links.
+- **Converter.** A converter is about 100 lines: read `bd export` JSONL, write journal `create` and
+  `dep_add` entries, then `beans rebuild`.
+- **What's lost.** Labels, notes, statuses other than open/in_progress/closed, and every edge type
+  except `blocks` and `parent`.
+
+**Merging two hosts.** `rebuild` replays a journal with plain INSERTs. Concatenating two hosts'
+journals fails on the second `create` of a bean (primary key), and the journal rows are whole-bean
+snapshots. There's no merge; one host at a time, or a fork adds a merge rule.
+
+**Time tracking without labels.** bd-track uses labels only to resolve the billing tuple
+(`.beads/bd-track.yaml`: a `case:` label, then label patterns, then the project default).
+
+- For personal projects the tuple is empty, so labels don't matter there.
+- **Per-project default.** The sidecar `default:` block (already exists) covers a project billed as
+  one unit.
+- **Type.** Custom bean types (`beans types add`), with pattern rules matched on `type:` instead of
+  labels.
+- **Parent.** The tuple is inherited from the epic (`parent_id`): one tuple per epic.
+- **Tags on the interval.** bd-track's events already carry their own `tags`. Tags given at `start`
+  live in bd-track, not the tracker.
+
+**Forking to add labels and edge types.**
+
+- **Labels.** Upstream added labels in 0.6.0 and **dropped them** in schema v2 ("defer to phase 8";
+  phase 8.5 of its build plan lists labels again). So ask upstream first; a fork that re-adds them
+  diverges on purpose. The work: a `labels` JSON column (or table), journal snapshots carrying it,
+  `label add/remove`, and `--label` filters on `list` and `ready`. Small, maybe half a day with tests.
+- **Edge types.** The `dep_type` column already exists and `dep add --type` is already accepted.
+  But the primary key is `(from_id, to_id)`, so a pair can carry only one edge, and `ready` filters
+  on `blocks`. The work: the key becomes `(from_id, to_id, dep_type)`, plus removal and display by
+  type.
+- **Also needed for us.** Relax `ID_PATTERN` (migration), add statuses (`deferred`, `blocked`), and
+  notes. All small.
+- **Total.** Roughly one to two days, in MH's language, for a 1.7k-line codebase. The lasting cost is
+  tracking upstream.
+
+## Five more tools (MH's list, screened from the source)
+
+| | kata (`kenn-io/kata`) | epiq (`ljtn/epiq`) | ticks (`pengelbrecht/ticks`) | Backlog.md (`MrLesk/Backlog.md`) | TrackDown (`mgoellnitz/trackdown`) |
+|---|---|---|---|---|---|
+| Model | issue ledger: claim, close with evidence, threaded comments with confirm/refute/supersede verdicts | **kanban board** (boards, lanes, tickets), event-sourced; replay | beads-like issues + epics + gates | Markdown tasks + kanban, milestones, **docs and decisions** | all issues in **one Markdown file** + a roadmap file |
+| Storage | **one SQLite under `KATA_HOME` (`~/.kata`) for every project**; the repo holds only `.kata.toml` | per-user JSONL logs on a state branch, checked out at `~/.epiq-global/worktrees/<id>`; `.epiq/project.json` in the repo | one JSON file per issue in `.tick/issues/`; `TICK_DIR` relocates it | Markdown in a **project-relative** folder (`backlog/`); `--no-git` for a standalone folder | that file on a `trackdown` branch, commit hook |
+| Edges / ready | parent, related, blocks/blocked-by, duplicate-of; `ready`, `next`, `inbox` | parent node, links; **no blocking deps, no ready** | `blocked_by`, `parent`, `discovered_from`, `after`; `ready`, `next` | dependencies, milestones | none |
+| Statuses, labels | open/closed + claim ownership; labels | lanes; tags, assignees | open/in_progress/closed + `defer_until`; labels, notes, `external_ref`, acceptance criteria | configurable list; labels | free text |
+| Multi-host | **not via git**: an opt-in remote daemon or federation (Postgres optional) | **git**: one log file per user, deterministic replay (ULID + parent "edge" event), later event wins | **git**: different issues are different files; a **field-by-field three-way merge driver** for the same issue | git (Markdown files in the repo) | git; one shared file, so concurrent edits conflict |
+| Background process | local daemon, auto-started, idle timeout | GUI server on demand | none | web UI on demand | commit hook |
+| Agent extras | MCP, `KATA_TEAMMATE` identities, `init --with-agents` opt-in, cron and workflows | MCP with per-agent identity, skill | owner scoping (`tk ready` shows yours), skill, **beads importer** | MCP, `AGENTS.md` | none |
+| Beads import | **`kata import --source-format beads`** | no | **yes** (`internal/beads`) | no | no |
+| Size, adoption | Go 25 MiB, 520★, created 2026-04, pushed daily | TypeScript 4.3 MiB, 584★, pushed daily | Go 1.7 MiB, **10★**, last push 2026-10-07; binary **named `tk`** (clashes with wedow's tk) | TypeScript 5.6 MiB, **7.4k★**, active | shell, 1.6k lines, 38★, since 2015 |
+| Licence | MIT | MIT | MIT (ticfac: none, 0★) | MIT | GPL-3.0 |
+
+Quick verdicts (screening, not tested):
+
+- **kata.** Closest to MH's goals for one person and many agents. It keeps all projects' issues
+  outside the repos, has rich relations and an evidence model, and imports from beads. The costs: a
+  25 MiB Go service with a daemon, and multi-host sync that means running a daemon, not git. That's
+  the opposite bet from git-based tools.
+- **ticks.** The best **data-model fit** for what we use today: labels, notes, deferral,
+  `discovered_from`, `external_ref`. It has a beads importer and a real three-way merge driver.
+  Tiny adoption.
+- **epiq.** A board, not a dependency tracker; it can't replace beads. Its sync design is the
+  interesting part (below).
+- **Backlog.md.** The most adopted by far. It is a project's in-repo planning record (tasks, docs,
+  decisions, milestones), reviewable in PRs, which suits public repos where the plans *should* be
+  public. It isn't for private notes.
+- **TrackDown.** One file for all issues: worse than `ticket` for an inbox.
+
+### epiq's architecture compared
+
+- **Where the state lives.** epiq keeps it on a **dedicated branch of the project's own repo**,
+  checked out as a **worktree outside the project** (`~/.epiq-global/worktrees/<id>`). The code
+  checkout never sees issue files, and its branch switches never touch them. That's the same idea as
+  Knots (a `knots` branch in a worktree) and close to grite and git-bug (a ref with no checkout). beads,
+  ticks, tk and Backlog.md keep files in the worktree; kata and henriquebastos/beans keep them outside
+  git.
+- **What it makes easier.**
+  - Sandboxes: an agent's sandbox can mount the code checkout read-write and the state worktree
+    separately, or not at all.
+  - Code branches and PRs stay clean.
+  - Git worktrees for parallel agents all share one state worktree, so there's no per-worktree
+    copy to reconcile. That's the problem ticks solves with a merge driver.
+- **What it complicates.**
+  - The state branch is pushed to **`origin`, hard-coded** (`git-constants.ts`). In a public repo,
+    every ticket is published. That rules it out for private notes unless that constant changes.
+  - Global state in `~/.epiq-global` is one more directory to back up and to keep out of sandboxes.
+  - A per-project worktree has to be repaired when a repo moves.
+- **"Local-first with eventual consistency" in the code.**
+  - Every edit is applied locally and appended to the editing user's own JSONL file.
+  - Sync is `pull --rebase` then `push` of the state branch. Users write different files, so git
+    never sees a conflict.
+  - State is rebuilt by replaying the union of all files in a deterministic order: ULIDs plus a
+    reference to the last event the writer had seen.
+  - **Conflicting concurrent edits: the later event wins, and the earlier one stays visible only
+    in the log.** Once every host has synced, all replicas replay the same events in the same order
+    and converge.
+  - It's the same rule as bd-track's event log (one writer per file, union fold) and grite's CRDT,
+    and weaker than ticks' field-level merge for two edits to the same field.
+  - The same user on two machines writes the same file. A pending-log mechanism handles that (read,
+    not tested).
+
 ## Tickets: `ticket` vs git-issue vs tk (MH's question)
 
 - **Ours.** `ticket` (458 lines of Python) plus `ticket-picker` (80). Per-project inboxes live outside
