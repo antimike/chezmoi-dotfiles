@@ -34,7 +34,8 @@ return {
       })
     end)
   end,
-  opts = function()
+  -- prev: options other specs set before this one (e.g. plugins/docformatter.lua); kept on top.
+  opts = function(_, prev)
     local plugin = require("lazy.core.config").plugins["conform.nvim"]
     ---@class ConformOpts
     local opts = {
@@ -72,6 +73,6 @@ return {
         -- },
       },
     }
-    return opts
+    return vim.tbl_deep_extend("force", opts, prev or {})
   end,
 }
