@@ -236,8 +236,8 @@ MH's goals, stated 2026-11-13:
 | tk | yes | `TICKETS_DIR` | git text merges (one file per ticket) | no | no | statuses, memories |
 | hmans/beans | yes | `BEANS_PATH` | git text merges | no | no | statuses fixed, no notes or related edges; quiet since April |
 | henriquebastos/beans (tested, chz-vkf) | yes, but ~180 ms per call | **built in** (XDG data dir + registry) | **no**: the documented export/rebuild flow lost an issue; the append + union workaround converges but drops one host's field edits | claim refuses a second actor (5/5 in the test), no lease | no | no labels, no notes, 3 statuses, no importer; a fork now also needs a journal fix |
-| kata (tested, chz-vkf) | yes, but a daemon + socket | **built in** (`KATA_HOME`, every project) | **not via git** (binary SQLite conflict); a shared remote daemon instead (untested) | **atomic claim**, `--ttl` lease, no doubles | `verification` field and daemon tokens (untested) | no memories; importer collapses every edge to `blocks` and drops notes |
-| ticks (tested, chz-vkf) | yes; daily GitHub check | **no**: store fixed at `<git root>/.tick`; one shared store with project labels only | **yes**: field-level merge driver (converged; later title wins, labels unioned) | **no**: 10 of 10 parallel claims "succeed" | no | no `related`, no memories; importer skips closed issues |
+| kata (tested, chz-vkf/chz-9sj) | yes, but a daemon + socket | **built in** (`KATA_HOME`, every project) | **yes, via federation** (not git): offline spokes, per-field LWW, labels unioned (test 9) | **exclusive** on one daemon; across machines through hub-granted federation leases (plain claims race there) | root-signed receipts in federation (from the docs; not verified) | no memories; importer collapses every edge to `blocks` and drops notes |
+| ticks (tested, chz-vkf/chz-9sj) | yes; daily GitHub check | **no**: store fixed at `<git root>/.tick`; one shared store with project labels only | **yes**: field-level merge driver (converged; later title wins, labels unioned) | **by design through ticfac** (one orchestrator dispatches waves); claims are never refused, and ticfac has no licence | no | no `related`, no memories; importer skips closed issues |
 | grite | yes (daemon optional) | wrapper only, one WAL per repo | **yes** (CRDT; timestamp ties, so clock skew decides) | TTL lease locks | optional Ed25519, keys outside GPG/YubiKey, not distributed | no parent-child, no `in_progress`, no priority; 24★, quiet since July |
 | Knots | yes (SQLite cache) | likely (`knots.remote`/`remoteRef`; untested) | **yes** (immutable event files) | **atomic claim + lease** (this machine only) | no | no `related`/`discovered-from`; fixed workflow (custom states need the loom DSL); git hook; 17★, one maintainer |
 
@@ -418,7 +418,7 @@ Quick verdicts (screening, not tested):
   - The same user on two machines writes the same file. A pending-log mechanism handles that (read,
     not tested).
 
-## Hands-on: kata, ticks, beans (chz-vkf, 2026-11-13)
+## Hands-on: kata, ticks, beans (chz-vkf, rechecked in chz-9sj, 2026-11-13)
 
 **Setup.** `tools/tracker-trial run` (one command, ~1.5 min; [../../tools/README.md](../../tools/README.md)). Each
 tool runs in its own sandbox: two "hosts" with their own `HOME`/XDG dirs, bare repos for code and a private remote
@@ -433,9 +433,9 @@ Knots was not rerun in the harness; its numbers are from the earlier hands-on ab
 
 How each tool's store was set up for tests 3-5:
 
-- **kata.** The daemon's SQLite under `KATA_HOME`, which holds all projects. The git variant tested: stop the daemon,
-  snapshot `kata.db` into the private repo, merge, copy back. kata's own multi-host answer is a shared remote daemon
-  (`KATA_SERVER`) or federation, which was not tested.
+- **kata.** The daemon's SQLite under `KATA_HOME`, which holds all projects. Test 5 commits a `kata.db` snapshot to the
+  private repo, which is **not kata's model**; it is kept only as the "no daemon on the second machine" baseline.
+  kata's own multi-host model is **federation**, tested in test 9.
 - **ticks.** The store is always `<git root>/.tick`, so one private repo holds a single `.tick` store and projects
   become labels. Sync is commit, pull (merge driver), push.
 - **beans.** The private repo is checked out at `$XDG_DATA_HOME/beans`, and the registry maps each project there. Sync
@@ -451,28 +451,75 @@ How each tool's store was set up for tests 3-5:
 | 3 Code in the private remote | no | no | no |
 | 4 gcrypt remote: push, second host reads, plaintext | yes / yes / none | yes / yes / none | yes / yes / none |
 | 5 Two hosts edit one issue | **binary conflict in `kata.db`**, no merge | **merged per field**: later title wins, both labels kept, converged | documented flow: **issue lost** (below); append workaround: converged, but **h2's field edit lost** (whole-bean snapshots) |
-| 6 10 parallel claims on 5 items | 5 ok / 5 refused, no doubles | **10 / 0: all 10 "succeed"** (claim = `update --status in_progress --owner`, no check) | 5 ok / 5 refused, no doubles |
+| 6 10 parallel claims on 5 items | 5 ok / 5 refused, no doubles | 10 / 0: all 10 "succeed" (by design, below) | 5 ok / 5 refused, no doubles |
+| 6 One item, 10 claimants released together | 1 succeeds | 10 succeed | 1 succeeds (5 runs out of 5; but no transaction around check-and-write in the code) |
 | 7 Import of this repo's beads (84 issues; `bd ready` = 11) | 84 issues; **all 98 edges become `blocks`** (related, parent-child, discovered-from); deferred/in_progress become labels; **notes lost**; labels kept; `ready` = 9 | **closed issues skipped** (26 of 84); `related` and edges to closed issues dropped; deferred → open (date lost); notes and labels kept; **fails on the memory record** (needs an issues-only file); `ready` = 22 | no importer; jq converter (in the harness): 84 issues, `blocks` + parent kept; **labels have nowhere to go**; deferred → open; notes appended to the body; `ready` = 20 |
 | 8 `ready` hides a blocked item, shows it after the close | yes, yes | yes, yes | yes, yes |
+| 9 Native multi-host (kata federation: hub daemon on loopback TCP with a token, two spoke daemons with their own databases) | **converged**: concurrent edits resolve per field (the later title wins, labels unioned); **offline writes work** with the hub down and merge when it returns; plain claims on two spokes at once **both succeed**, but a **federation lease** is granted to one spoke only, and the other's edits are then refused | n/a (git: test 5) | n/a (git: test 5) |
 | Edge types | blocks, parent (no gating), related, duplicate-of | blocked_by, parent, discovered_from, after (soft); no related | blocks, parent_id (one edge per pair) |
 
-**Findings that change the screening.**
+**Did the tests use each tool as intended? (chz-9sj)** chz-vkf worked from `--help` and the source. These are the
+agent instructions each tool ships, and what reading them changed:
+
+- **kata: `kata quickstart --format contract` and `kata quickstart`, plus the federation docs.**
+  - The workflow: search, create with `--idempotency-key`, `kata claim <ref>` (which "fails if already assigned to
+    another actor"), and close with `--done` plus evidence.
+  - Parking uses `kata schedule` or `someday` metadata. Identity comes from `KATA_AUTHOR`; sub-agents use
+    `KATA_TEAMMATE`.
+  - Multi-host means a remote daemon (`KATA_SERVER`) or **federation**. In federation each machine keeps its own
+    daemon and database, "ordinary issue edits are local-first and converge by LWW", and federation *leases* are the
+    cross-host reservation, with root-signed receipts.
+  - What changed: test 6 now uses the documented `kata claim` (it had used the stricter `--if-unowned`), and the db
+    copy in test 5 is labelled as not kata's model. **Test 9 adds federation; it was the real gap.**
+- **ticks: `tk skills get --full ticks`, the `tk --json` contract that ticfac vendors, and ticfac's README and source.**
+  - Ticks is the tracker; **ticfac runs epics**. One reconciler per epic dispatches each wave's ticks, the ones with
+    no blocking edge between them, to workers in separate git worktrees. Then it merges, gates and closes out.
+  - The contract says: "There is no separate `tk claim` verb — a claim IS update --status in_progress, and tk never
+    refuses one".
+  - **So "claims aren't exclusive" is by design, not a defect.** Exclusivity comes from the single orchestrator, and
+    parallel safety from planning waves around shared files. Working by hand without ticfac is supported
+    (`tk next <epic>`, then `tk close --reason`).
+  - It is a mismatch with *pull*-style agents racing on `ready`, which is our `auto-session` pattern. `/work-queue`
+    is a single writer, so it's unaffected.
+  - The skill also says `.tick/` is meant to be committed and to "sync across machines and team members via normal
+    git workflows", which matches test 5.
+  - **ticfac** (0.x, "Phase 1 in progress", 0★) has **no licence file**. Without a licence the default is all
+    rights reserved, so adopting ticks' intended agent workflow isn't possible as published.
+- **beans: `beans skill`, its `AGENTS.md` template and the README.**
+  - The workflow: `ready`, `show`, `claim --actor` before starting, `close`, and `dep add` for discovered work.
+    Test 6 matches it.
+  - The README advertises "Journal-based sync … an append-only JSONL journal that can be committed to git", and
+    documents exactly `beans export-journal > journal.jsonl` and `beans rebuild journal.jsonl`, the flow test 5
+    runs. That finding stands as a documented-flow failure.
+  - The README also states its values: no hooks, no daemons, no network, no agent-file injection. Test 1 confirms
+    all four.
+
+**Findings.**
 
 - **beans' journal loses data in its own documented flow.** `rebuild` replays into the tables but not into the
-  journal table: after a rebuild, `export-journal` holds 0 rows (confirmed by hand, 2 beans). The next host that
-  exports and commits therefore overwrites `journal.jsonl` without the `create` entries. In test 5 the bean vanished
-  on h1, and h2 hit a journal conflict.
-  - The workaround the harness tests: append each export, `merge=union` on the journal, replay. It converges, but every
-    journal row is a whole-bean snapshot, so the host that syncs last overwrites the other host's field edit.
-- **ticks' claims are not exclusive.** There's no claim command. `update --status in_progress` is idempotent and
-  ignores the current owner (`cmd/tk/cmd/update.go`). That's fine for `/work-queue` (a single writer), and wrong for
-  swarms (goal 5).
+  journal table: after a rebuild, `export-journal` holds 0 rows (confirmed by hand, 2 beans). The next export
+  therefore overwrites `journal.jsonl` without the `create` entries. In test 5 the bean vanished on h1, and h2 hit a
+  journal conflict.
+  - The workaround the harness tests: append each export, `merge=union` on the journal, replay. It converges, but
+    every journal row is a whole-bean snapshot, so the host that syncs last overwrites the other host's field edit.
+  - **This matters on one machine too.** If the journal is the backup, the first export after a restore (a rebuild)
+    truncates it. Back up `beans.db` instead (`sqlite3 .backup`), or append exports as in the workaround.
+- **ticks' claims are never refused**, by design (above). Without ticfac, parallel agents need an external
+  dispatcher or lock.
 - **ticks' merge driver** lives in `.git/config`. A fresh clone lacks it until the first `tk` command, which
   re-registers it (`CheckAndInstallMergeDrivers` runs on every command). A `git pull` before any `tk` command would
   text-merge the JSON.
-- **kata's SQLite in git is not a sync method.** Two hosts give a binary conflict. A plain `cp` right after
-  `kata daemon stop` sometimes missed the last writes, which were still in the WAL; the harness uses `sqlite3 .backup`.
-  Multi-host kata means one daemon that both machines talk to.
+- **kata federation works, with costs.**
+  - What you have to set up:
+    - a hub daemon reachable over HTTP(S), with a token;
+    - per machine, an enrollment token from the hub, then a `join`;
+    - `KATA_SERVER` must not be set when enrolling (it pointed the command at the wrong daemon; found by hand);
+    - signing keys held by the root hub.
+  - Plain claims are local-first, so two spokes can both claim one issue. Swarms across machines need `kata
+    federation lease acquire`, which the hub grants to one spoke, and that lease then gates the other's writes.
+  - For a single machine none of this is needed: the local daemon alone gave exclusive claims.
+- **kata.db in git is not a sync method** (binary conflict). A plain `cp` right after `kata daemon stop` sometimes
+  missed writes still in the WAL; the harness uses `sqlite3 .backup`.
 - **kata's beads importer drives a live `bd`** (not the JSONL): it needs the export restored into a scratch bd first.
   It maps every dependency to `blocks`, so `related` (37 here) starts gating `ready`.
 
@@ -484,17 +531,14 @@ How each tool's store was set up for tests 3-5:
 - **beans.** All labels and every edge type except `blocks` and parent. Notes go into the body, and all ids change
   (base36 ids fail `ID_PATTERN`).
 
-**Verdicts.**
+**Verdicts, judged separately for MH's personal stack and for a team (MH, 2026-11-13: multi-host is a team
+requirement, not a personal one).**
 
-- **kata.** The strongest tool: rich relations, atomic claims with TTL, labels, comments, an all-projects store outside
-  the repos, JSONL export, active (daily pushes). The cost is a daemon and its socket, plus multi-host through a shared
-  daemon rather than git, so goal 4 (git merges) is out by design. The importer is lossy enough that an own import
-  script (about 84 `kata create` calls with the right relation flags) would be needed, or a fresh start.
-- **ticks.** The best git story (a field-level merge that actually worked) and the closest data model to beads. But
-  it has no out-of-tree store, non-exclusive claims, an unasked network call, 10★, and a lossy import (skips closed
-  issues). Not adopted.
-- **beans.** Out. Too thin (no labels or notes, 3 statuses), the slowest, and its sync loses data unless wrapped.
-  Forking it (planned above at one to two days) would now also mean fixing the journal, so it's no longer small.
+| | Personal (one machine, sometimes two; our `/work-queue`, `/triage`, bd-track) | Team / professional |
+|---|---|---|
+| **kata** | **Best fit.** It has the data model our skills use (labels for `/triage`, `schedule`/`someday` for parking, comments, typed relations), exclusive local claims, one store for every project outside the repos, and federation for a second machine if ever wanted. The cost is a resident daemon. | **Strongest.** Federation with offline spokes, LWW convergence, hub-granted leases, signed receipts, tokens, an optional Postgres. Heavier to operate than a git-only tool. |
+| **ticks** | It fits poorly: the store has to live in the repo (bad for public repos, goal 3), it makes a daily GitHub call, and its agent workflow needs ticfac, which can't be adopted (no licence). By hand it's a pleasant, beads-like tracker. | Good if teams plan epics and let one orchestrator run them: git-native, a field-level merge that worked. Blocked on ticfac's licence and maturity. |
+| **beans** | **Plausible only for small projects outside our skill stack.** Its politeness is real: nothing in the repo, no daemon, no network, an out-of-tree registry, exclusive claims. But there are no labels or notes and only 3 statuses (no parking), about 180 ms per call, and the journal-as-backup trap. | No: a single writer, and its sync loses data. |
 
 ## Tickets: `ticket` vs git-issue vs tk (MH's question)
 
@@ -518,23 +562,27 @@ store, which removes one tool. git-issue's real advantage is GitHub sync, the sa
 1. **Keep beads for now.** The data-loss risk is covered: the export restores (above), and bd-track
    0.10.1+ commits before compacting. Dolt's cost is real but already paid. Moving off it pays only if
    it deletes the ~810 Dolt lines in bd-track and the server/`.envrc` setup.
-2. **Live tests done (chz-vkf): no finalist replaces beads outright.** Every one fails at least one of
-   MH's goals or R1-R5:
-   - kata fails git merges (goal 4).
-   - ticks fails the out-of-tree store (goal 3) and exclusive claims (goal 5).
-   - beans fails merges, labels and notes, and loses data in its own sync flow.
-   - Knots' `ready` ignores the dependency graph and it imposes a fixed workflow.
+2. **Live tests done (chz-vkf; rechecked against each tool's own agent instructions in chz-9sj).**
+   - **kata meets every goal except "through git":**
+     - federation converges across machines, offline included;
+     - one daemon gives exclusive claims, and federation leases make them exclusive across machines;
+     - one store holds every project, outside the repos.
+   - **ticks** is built for a single orchestrator (ticfac, unlicensed), not for agents racing on claims. Its store
+     can't leave the repo.
+   - **beans** is polite and minimal, but lacks labels, notes and parking, and its documented sync loses data.
+   - **Knots'** `ready` ignores the dependency graph, and it imposes a fixed workflow.
 
-   **Recommendation: kata**, if anything replaces beads. It has the best data model, atomic claims, an all-projects
-   store outside the repos, and active development. The price is a daemon, plus a second host through a shared
-   daemon instead of git. If git-based merges between hosts are a hard requirement, nothing tested qualifies:
-   **keep beads**.
+   **Recommendation: kata** for MH's personal stack and as the professional recommendation. Personal and team use
+   differ only in whether federation is turned on. If "merges through git, no daemon" is a hard requirement, nothing
+   tested qualifies: **keep beads**. For a small personal project that uses none of our skills, beans is the
+   no-daemon option (back up `beans.db`, not the journal).
 3. **One-week trial (chz-8fp, MH) of kata, not a migration.** Do it on a new or small private project, starting fresh,
    not through kata's importer. Pass/fail against R1-R6:
    - Map our flows onto kata: `/work-queue` park as `schedule`/`someday` (R3); memories (R5) as a docbank file or a
      plain Markdown file.
    - Measure the daemon's cost: memory, start-up after a reboot, a stale socket after a crash.
-   - Try `KATA_SERVER` from the second machine against the zbook daemon, the multi-host path tested nowhere yet.
+   - Optional: federation from the second machine (hub on zbook over the tailnet, the old MacBook as a spoke). It
+     works in the harness (test 9); this checks it on real machines.
    - Note what `/work-queue` and bd-track would need (a backend behind `show`/`list`/`update`).
    - Log every place kata was slower or clumsier than bd.
    - If the trial passes, migrating this repo needs an own import script (edge types, notes) instead of
@@ -547,8 +595,10 @@ store, which removes one tool. git-issue's real advantage is GitHub sync, the sa
 6. **Out:**
    - beads_rust (licence rider).
    - grite (second clone sees no issues, 0.5.3).
-   - henriquebastos/beans (sync loses data, no labels or notes).
-   - ticks (non-exclusive claims, no out-of-tree store, unasked network call).
+   - henriquebastos/beans for our stack (no labels, notes or parking; its documented sync loses data). It remains an
+     option for small skill-free personal projects.
+   - ticks (its store can't leave the repo, it makes an unasked network call, and its agent workflow depends on
+     unlicensed ticfac).
    - epiq and TrackDown.
 
    tk stays a fallback. Backlog.md is a separate question (chz-1rs).
