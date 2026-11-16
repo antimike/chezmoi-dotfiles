@@ -1,7 +1,7 @@
 # Issue tracker: keep beads or move to something lighter (chz-47g)
 
 Desk evaluation, 2026-11-13, then live tests of the finalists (chz-vkf, "Hands-on: kata, ticks, beans"). Decision:
-draft **D80** in [../decisions.md](../decisions.md). No migration happens here. The follow-up is a one-week trial of
+**D80** (accepted by MH 2026-11-15) in [../decisions.md](../decisions.md). No migration happens here. The follow-up is a one-week trial of
 kata (chz-8fp, MH).
 
 Origin: MH's ticket after a browser review of his repos (`~/Documents/claude/repo-reviews.11132026.md`,
@@ -540,6 +540,66 @@ requirement, not a personal one).**
 | **ticks** | It fits poorly: the store has to live in the repo (bad for public repos, goal 3), it makes a daily GitHub call, and its agent workflow needs ticfac, which can't be adopted (no licence). By hand it's a pleasant, beads-like tracker. | Good if teams plan epics and let one orchestrator run them: git-native, a field-level merge that worked. Blocked on ticfac's licence and maturity. |
 | **beans** | **Plausible only for small projects outside our skill stack.** Its politeness is real: nothing in the repo, no daemon, no network, an out-of-tree registry, exclusive claims. But there are no labels or notes and only 3 statuses (no parking), about 180 ms per call, and the journal-as-backup trap. | No: a single writer, and its sync loses data. |
 
+## Migrating our tooling to kata: cost (MH's question, 2026-11-14)
+
+Estimate: **a staged project of 3-5 days**, mostly in bd-track and the skills, not in the data. Measured coupling:
+
+| Area | Coupling to bd today | Work for kata |
+|---|---|---|
+| bd-track (8.5k lines) | ~16 direct `bd` call sites in 7 modules (`show`, `list`, `update`, `sql` for billing, `config`, `export`, `where`), plus ~810 Dolt-only lines (`doltpush.py`, `server.py`) | A backend layer behind show/list/update/claim/export. The Dolt-only code is deleted. Billing's `bd sql --csv` is rewritten against kata's JSON. 1-2 days with tests. |
+| Skills, commands, rules, references | ~270 lines in 27 files (`/start`, `/stop`, `/work-queue`, `/triage`, `/next`, `/show`, auto-session, beads-migration, `rules/beads.md`, the cheatsheet) | Mostly mechanical rewording, plus re-checking each flow. ~1 day. |
+| Data (5 beads projects) | n/a | An own import script (kata's importer turns every link into `blocks` and drops notes). Keep the old id as a `beads-id:` label so history references still resolve. ~half a day. |
+| No kata equivalent | bd memories (`remember`/`prime`), bd's Jira sync, `bv --robot-triage` behind `/next` | Memories become a Markdown file (docbank is for attachments). **kata has no Jira connector** (it has GitHub, Linear, Notion, Plane, TickTick, Todoist), so the work tooling stays on beads or needs a connector. `/next` becomes `kata next`. |
+| New ongoing cost | none | A per-machine daemon (a systemd user unit). |
+
+Order, if chz-8fp passes:
+1. New projects go on kata, with bd-track supporting both trackers through the backend layer.
+2. Existing projects move one at a time.
+3. The Jira-linked work tooling goes last, or stays on beads.
+
+## CLI ergonomics for a human (MH's question, 2026-11-14)
+
+- **kata.**
+  - Readable `list`/`ready`: 4-character ids, status glyphs (`○ open`, `● blocked`), children as a tree,
+    priorities.
+  - A Bubble Tea TUI (`kata tui`), a web UI (`kata ui`), shell completions.
+  - Friction:
+    - Closing is built for agents. It needs a reason flag, an evidence flag (`--commit`, `--pr`, `--test`,
+      `--reviewed`) and a message of 40 or more characters; a bare `kata close` is refused.
+    - `show` is sparse.
+    - No `$EDITOR` integration (`--body-file`, `--body-stdin` instead).
+  - Fix: a few shell functions (e.g. `kclose` with defaults, an editor wrapper for bodies). The TUI covers browsing.
+- **beans.**
+  - A small surface, and `beans graph` is pleasant (a tree with "← blocked by").
+  - Human output is thin:
+    - `show` prints only id, date and title (body, status and deps only with `--json`).
+    - `list` has no status column.
+    - No TUI or editor support, and ~180 ms per call.
+  - Fine as a dependency-aware checklist for a small writing project with a `bshow` wrapper over the JSON. A
+    Markdown-files tracker (wedow's `tk`) is friendlier if MH is the main reader.
+
+## ticfac: fork, rebuild, or borrow? (MH's question, 2026-11-14)
+
+- **Size:** ~135k lines of non-test Go, 187k lines of Go tests, 110k lines of TypeScript (the Cloudflare "factory") and
+  8k lines of shell.
+  - The largest packages: the reconciler (36k), the CLI (25k), executors (22k).
+  - **12,574 commits since 2026-09-02** (~180 a day): built by its own agent factory.
+  - **No licence**, so it can't legally be forked; reading it for ideas is fine.
+- **Rebuilding the core is realistic, at a few hundred lines for one machine.** The loop:
+  1. Read the ready waves from `tk graph --json` (or `kata ready`).
+  2. Create a worktree per item.
+  3. Run an agent (`claude -p`) on it.
+  4. Run the item's gate command.
+  5. Merge and close.
+
+  ticfac's size goes into crash recovery and resume, merge conflicts, review and close-out roles, cost accounting,
+  remote hosts and dashboards.
+- **Independent value as a general task runner: low.** It talks only to ticks through tk's JSON contract.
+- **Ideas worth borrowing (for `auto-session`, or a small kata runner):**
+  - The tracker and git as the only durable authorities, so a crashed run resumes by re-reading them.
+  - A four-call executor protocol: start, inspect, cancel, collect.
+  - Waves split by shared files and resources, so two tasks touching the same file never run at once.
+
 ## Tickets: `ticket` vs git-issue vs tk (MH's question)
 
 - **Ours.** `ticket` (458 lines of Python) plus `ticket-picker` (80). Per-project inboxes live outside
@@ -557,7 +617,7 @@ requirement, not a personal one).**
 Neither is a drop-in. Keep `ticket`. If the tk trial passes, tickets could become tk tickets in the same
 store, which removes one tool. git-issue's real advantage is GitHub sync, the same as git-bug's.
 
-## Proposal (draft D80)
+## Proposal (D80, accepted 2026-11-15)
 
 1. **Keep beads for now.** The data-loss risk is covered: the export restores (above), and bd-track
    0.10.1+ commits before compacting. Dolt's cost is real but already paid. Moving off it pays only if

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tracker-trial — live-test issue trackers against beads' requirements, in a sandbox (chz-vkf, D80 draft).
+# tracker-trial — live-test issue trackers against beads' requirements, in a sandbox (chz-vkf, D80).
 #
 #   tracker-trial [--dir DIR] fetch              download the pinned kata and ticks releases (sha256-checked)
 #   tracker-trial [--dir DIR] run [-t TOOLS] [-n TESTS] [-v]
