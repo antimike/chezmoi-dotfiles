@@ -25,6 +25,7 @@ seed=$(cat <<'SEED'
 projects:
   chezmoi:
     remote: antimike/chezmoi-dotfiles
+    path: ~/.local/share/chezmoi
     beads: {prefix: chz}
   bd-track:
     remote: antimike/bd-track
