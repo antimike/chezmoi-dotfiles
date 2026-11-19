@@ -119,6 +119,7 @@ packageTargets:
       - xz-devel
       # Misc
       - logrotate
+      - fuse-libs  # libfuse.so.2 for type-2 AppImages and AppImageLauncher; Debian/Ubuntu: libfuse2
       # Pinned-release tools (own installers; inventory entries)
       - { name: amontillado, release: amontillado }  # MH's wallpaper library (D70); pinned tag, checkout left alone
       - { name: appimagelauncher, release: appimagelauncher }
