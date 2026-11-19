@@ -1,0 +1,9 @@
+# pproj host settings (managed by chezmoi: edit home/private_dot_config/pproj/config.yaml.tmpl,
+# not this file; chz-c0m). Schema: project-registry's docs/design.md, "Host settings, paths and
+# cache". The registry itself is ~/.config/projects.yaml. Both values come from
+# .chezmoidata/registry.yaml, shared with bd-track's `global:` and mani-discover.
+# Roots scanned for clones of registry projects with a remote but no path; $PPROJ_SCAN_ROOTS
+# (`:`-separated) overrides.
+scan_roots: [{{ .registry.scan_roots | join ", " }}]
+# Clone URL of an owner/repo shorthand remote = this prefix + owner/repo.
+default_url_prefix: {{ .registry.default_url_prefix | quote }}
