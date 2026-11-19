@@ -1,0 +1,23 @@
+# Pinned kata release (kenn-io/kata, MIT), consumed by run_onchange_install-kata.sh.tmpl.
+# The issue tracker D80 recommends; first used in ~/Documents/baduk for the one-week trial (chz-8fp).
+#
+# Upstream publishes per-OS/arch tarballs; the sha256 digests below are GitHub's asset digests:
+#   gh api repos/kenn-io/kata/releases/tags/<tag> --jq '.assets[]|.name+" "+.digest'
+#
+# Pin rule: exact tag, at least 14 days old. v0.22.0 = 2026-11-05. tools/tracker-trial tested v0.23.0
+# (2026-11-09); bump to it once it qualifies (2026-11-23). Only linux_amd64 has been exercised (zbook).
+#
+# Data lives in ~/.kata (KATA_HOME), outside every repo; the daemon auto-starts on first use.
+#
+# To bump:
+#   1. version: new upstream tag, "v"-prefixed
+#   2. checksums: the digests from the gh command above
+#   3. commit; the rendered installer hash changes, so the re-install triggers.
+
+kata:
+  version: "v0.22.0"
+  checksums:
+    linux_amd64:  "3a730a11b4388e43d62ad60c4877dec531cd3e561d74f200cf8873091a28dbed"
+    linux_arm64:  "3ebd64760f8d65bdf3c3d6fbc6b454a8f46061f0ca813d91669c9594ae9bd4e7"
+    darwin_amd64: "c6f708e6cd40a3bcb6e177f749d70966e9917ed22f3ae413b2475c346aa771c3"
+    darwin_arm64: "28db991864e1d66219b769149d48bec2579d5a214cfef4c07d32cd54f2a93645"
