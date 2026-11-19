@@ -1,0 +1,23 @@
+# Pinned AppImageLauncher release (TheAssassin/AppImageLauncher, MIT), consumed by
+# run_onchange_install-appimagelauncher.sh.tmpl. Integrates AppImages in ~/Applications (Sabaki, Thorium).
+#
+# sha256 digests are GitHub's asset digests:
+#   gh api repos/TheAssassin/AppImageLauncher/releases/tags/<tag> --jq '.assets[]|.name+" "+.digest'
+#
+# Pin rule: exact tag, at least 14 days old. v3.0.0-beta-3 = 2025-10-28, upstream's current line (the 2.x line
+# ended with 2.2.0 in 2020; its old Travis rpm was the previous pin). The tag's packages are labelled
+# 3.0.0-beta-2-gha287 (rpm version 3.0.0_beta_2_gha287~96cb937). The installer compares the installed
+# package's version with the downloaded file's, so no version string is pinned here.
+# Only the Fedora rpm has been exercised (zbook).
+#
+# To bump: tag, asset names and digests below; commit, and the re-install triggers.
+
+appimagelauncher:
+  tag: "v3.0.0-beta-3"
+  assets:
+    linux-fedora:
+      name: "appimagelauncher_3.0.0-beta-2-gha287.96cb937_x86_64.rpm"
+      sha256: "39e140626c72eba87e73851ac3fa5bbc0b43a2a87c3faf2daf1a4f61eea4f205"
+    linux-debian:
+      name: "appimagelauncher_3.0.0-beta-2-gha287.96cb937_amd64.deb"
+      sha256: "4117552105968a8011955d065b5fd55f547a2ed21dac1fe0a046ee9b60220c36"

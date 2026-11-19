@@ -1,18 +1,55 @@
-{{ if not (lookPath "AppImageLauncher") -}}
-#!/bin/env bash
-# Install AppImageLauncher
+#!/usr/bin/env bash
+# run_onchange_install-appimagelauncher.sh.tmpl: install AppImageLauncher (TheAssassin/AppImageLauncher).
+#
+# Pinned tag and per-distro asset sha256 in .chezmoidata/appimagelauncher.yaml; bumping that file re-triggers
+# this installer. Downloads into a temp file (curl -fsSL: GitHub redirects release downloads, and the old
+# installer's plain `curl -o` saved the empty redirect body), verifies the checksum, and installs with the
+# system package manager unless the same package version is already installed. Distros without a pinned
+# asset are skipped (exit 0) rather than failing `chezmoi apply`.
+{{- $asset := dig .osid "" .appimagelauncher.assets }}
+{{- if $asset }}
+set -euo pipefail
 
-declare -a INSTALL
-{{ if eq .osid "linux-fedora" }}
-INSTALL=(sudo dnf install -y)
-EXT=rpm
-URL=https://github.com/TheAssassin/AppImageLauncher/releases/download/v2.2.0/appimagelauncher-2.2.0-travis995.0f91801.x86_64.rpm
-{{ else if eq .osid "linux-debian" }}
-INSTALL=(sudo apt install -y)
-EXT=deb
-URL=https://github.com/TheAssassin/AppImageLauncher/releases/download/v2.2.0/appimagelauncher_2.2.0-travis995.0f91801.bionic_amd64.deb
-{{ end }}
-DEST=~/Downloads/appimagelauncher.$EXT
-curl -o "$DEST" "$URL" &&
-    ${INSTALL[@]} "$DEST"
-{{ end }}
+TAG={{ .appimagelauncher.tag | quote }}
+ASSET_NAME={{ $asset.name | quote }}
+EXPECTED_SHA={{ $asset.sha256 | quote }}
+ASSET_URL="https://github.com/TheAssassin/AppImageLauncher/releases/download/$TAG/$ASSET_NAME"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+pkg="$tmp_dir/$ASSET_NAME"
+
+echo "appimagelauncher installer: downloading $ASSET_URL" >&2
+curl -fsSL -o "$pkg" "$ASSET_URL"
+
+actual=$(sha256sum "$pkg" | awk '{print $1}')
+if [ "$EXPECTED_SHA" != "$actual" ]; then
+  echo "appimagelauncher installer: checksum mismatch for $ASSET_NAME" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+{{ if eq .osid "linux-fedora" -}}
+want=$(rpm -qp --qf '%{VERSION}-%{RELEASE}' "$pkg")
+have=""
+if rpm -q --quiet appimagelauncher; then
+  have=$(rpm -q --qf '%{VERSION}-%{RELEASE}' appimagelauncher)
+fi
+install=(sudo dnf install -y "$pkg")
+{{- else -}}
+want=$(dpkg-deb -f "$pkg" Version)
+have=$(dpkg-query -W -f '${Version}' appimagelauncher 2>/dev/null || true)
+install=(sudo apt-get install -y "$pkg")
+{{- end }}
+
+if [ "$have" = "$want" ]; then
+  echo "appimagelauncher installer: $want already installed" >&2
+  exit 0
+fi
+
+echo "appimagelauncher installer: installing $want (was: ${have:-not installed})" >&2
+"${install[@]}"
+{{- else }}
+# AppImageLauncher: no pinned asset for {{ .osid }}; nothing to install.
+{{- end }}
