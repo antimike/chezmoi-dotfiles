@@ -40,7 +40,12 @@ if ! command -v amo >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
   exit 0
 fi
 
-listing=$(amo -l WARNING list)
+# `amo list` exits 1 without an index (a fresh host) and on an empty library; `amo index`
+# creates the index, and an empty listing then means every seed is missing.
+if ! listing=$(amo -l ERROR list 2>/dev/null); then
+  amo -l WARNING index
+  listing=$(amo -l ERROR list 2>/dev/null) || listing=""
+fi
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 failed=0
