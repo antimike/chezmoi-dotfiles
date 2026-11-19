@@ -129,6 +129,7 @@ packageTargets:
       - { name: cht.sh, release: cht-sh }
       - { name: clipse, release: clipse }
       - { name: d2, release: d2 }
+      - { name: kata, release: kata }  # issue tracker (D80); data in ~/.kata, daemon auto-starts
       - { name: dnote, release: dnote }
       - { name: dolt, release: dolt }
       - { name: dstask, release: dstask }

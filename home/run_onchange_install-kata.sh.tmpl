@@ -1,0 +1,63 @@
+#!/bin/sh
+# run_onchange_install-kata.sh.tmpl — install kata (kenn-io/kata) to ~/.local/bin.
+#
+# Tarball-based, per-OS/arch SHA256 pinning in .chezmoidata/kata.yaml; bumping
+# that file re-triggers this installer. The tarball holds the `kata` binary at
+# its root. Platforms without a pinned checksum are skipped (exit 0) rather than
+# failing `chezmoi apply`. A running daemon keeps the old binary until
+# `kata daemon restart`.
+{{- $v := .kata.version -}}
+{{- $platform := printf "%s_%s" .chezmoi.os .chezmoi.arch -}}
+{{- $vBare := trimPrefix "v" $v -}}
+{{- $assetName := printf "kata_%s_%s.tar.gz" $vBare $platform -}}
+{{- $sha := dig $platform "" .kata.checksums -}}
+{{- $assetURL := printf "https://github.com/kenn-io/kata/releases/download/%s/%s" $v $assetName }}
+
+set -eu
+
+VERSION={{ $v | quote }}
+ASSET_NAME={{ $assetName | quote }}
+ASSET_URL={{ $assetURL | quote }}
+EXPECTED_SHA={{ $sha | quote }}
+INSTALL_PATH={{ joinPath .chezmoi.homeDir ".local" "bin" "kata" | quote }}
+
+if [ -z "$EXPECTED_SHA" ]; then
+  echo "kata installer: no pinned checksum for $ASSET_NAME; skipping" >&2
+  exit 0
+fi
+
+# Idempotency guard via `kata version`, whose first line is "kata v0.22.0".
+# Compare the second field exactly so v0.22.0 does not match v0.22.01.
+if [ -x "$INSTALL_PATH" ] \
+    && [ "$("$INSTALL_PATH" version 2>/dev/null | head -1 | cut -d' ' -f2)" = "$VERSION" ]; then
+  echo "kata installer: $VERSION already installed at $INSTALL_PATH" >&2
+  exit 0
+fi
+
+mkdir -p "$(dirname "$INSTALL_PATH")"
+
+tmp_tar=$(mktemp)
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_tar" "$tmp_dir"' EXIT
+
+echo "kata installer: downloading $ASSET_URL" >&2
+curl -fsSL -o "$tmp_tar" "$ASSET_URL"
+
+actual=$(sha256sum "$tmp_tar" | awk '{print $1}')
+if [ "$EXPECTED_SHA" != "$actual" ]; then
+  echo "kata installer: checksum mismatch for $ASSET_NAME" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "  actual:   $actual" >&2
+  exit 1
+fi
+
+tar -xzf "$tmp_tar" -C "$tmp_dir"
+binary=$(find "$tmp_dir" -type f -name kata | head -1)
+if [ -z "$binary" ]; then
+  echo "kata installer: no 'kata' binary in $ASSET_NAME" >&2
+  exit 1
+fi
+
+chmod u+x "$binary"
+mv "$binary" "$INSTALL_PATH"
+echo "kata installer: $VERSION installed to $INSTALL_PATH" >&2
