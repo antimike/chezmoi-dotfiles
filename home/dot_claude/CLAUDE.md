@@ -58,7 +58,8 @@ Before invoking the Agent tool, use the `spawn-agents` skill — predict tools e
 
 ## Rules and pointers
 
-- **Topic rules** live in `~/.claude/rules/` (chezmoi-managed): `beads.md` and `ticket-inboxes.md` load every session; `chezmoi.md` loads when chezmoi source files are touched.
+- **Topic rules** live in `~/.claude/rules/` (chezmoi-managed): `beads.md`, `ticket-inboxes.md` and `design-gates.md` load every session; `chezmoi.md` loads when chezmoi source files are touched.
+- **Design gates** (`design-gates.md`, chezmoi D81): prior-art entry before designing any tool or subsystem (installing a tested tool is the default); no subsystem without a real client in the same release; MH confirms design decisions before building; `/project-review` before a design is accepted and before a release adds a subsystem.
 - **Editing chezmoi-managed dotfiles from another directory**: read `~/.claude/rules/chezmoi.md` and `~/.local/share/chezmoi/docs/STATUS.md` first.
 - **Jira** comments and drafts: the `jira-conventions` skill.
 
