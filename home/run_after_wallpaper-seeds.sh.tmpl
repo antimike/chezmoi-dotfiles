@@ -6,8 +6,10 @@
 #    seed (~/.local/share/wallpaper/seed.jpg) when the link is missing or
 #    dangling; a wallpaper set by hand or by the theme engine is left alone.
 # 2. Each seed in .chezmoidata/wallpapers.yaml that the library lacks (no
-#    `amo list` path inside a directory of its name) is downloaded, checked
-#    against its sha256, and added with `amo add --name <name>`.
+#    `amo list` path inside a directory of its name) is downloaded and checked
+#    against its sha256; the verified ones are added with one
+#    `amo add --from-json`, which records their provenance (page, image URL,
+#    title, author, SPDX licence) in each record's info.yaml `source` (chz-b87).
 #
 # run_after_ rather than run_onchange_: a fresh machine may apply before it has
 # a network, and a run_onchange script that skipped would not run again until
@@ -38,13 +40,20 @@ if ! command -v amo >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
   exit 0
 fi
 
-listing=$(amo -l WARNING list)
+# `amo list` exits 1 without an index (a fresh host) and on an empty library; `amo index`
+# creates the index, and an empty listing then means every seed is missing.
+if ! listing=$(amo -l ERROR list 2>/dev/null); then
+  amo -l WARNING index
+  listing=$(amo -l ERROR list 2>/dev/null) || listing=""
+fi
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 failed=0
+entries=""
 
-# name|url|sha256 per seed
-while IFS='|' read -r name url sha; do
+# name|url|sha256|JSON entry for --from-json, per seed (the JSON is last, so a `|`
+# inside it stays in it)
+while IFS='|' read -r name url sha entry; do
   [ -n "$name" ] || continue
   case "$listing" in
     */"$name"/*) continue ;;
@@ -63,12 +72,18 @@ while IFS='|' read -r name url sha; do
     failed=1
     continue
   fi
-  amo -l WARNING add --name "$name" "$file"
-  echo "wallpaper-seeds: added $name to the amontillado library" >&2
+  entries="${entries:+$entries,
+}$entry"
 done <<'EOF'
 {{ range .wallpaperSeeds.seeds -}}
-{{ .name }}|{{ .url }}|{{ .sha256 }}
+{{ .name }}|{{ .url }}|{{ .sha256 }}|{{ dict "file" (printf "%s%s" .name (ext .url)) "name" .name "url" .page "image_url" .url "title" .title "author" .author "license" .license | toJson }}
 {{ end -}}
 EOF
+
+if [ -n "$entries" ]; then
+  printf '[\n%s\n]\n' "$entries" >"$tmp_dir/seeds.json"
+  amo -l WARNING add --from-json "$tmp_dir/seeds.json"
+  echo "wallpaper-seeds: added to the amontillado library: $(grep -o '"name":"[^"]*"' "$tmp_dir/seeds.json" | cut -d'"' -f4 | tr '\n' ' ')" >&2
+fi
 
 exit "$failed"
