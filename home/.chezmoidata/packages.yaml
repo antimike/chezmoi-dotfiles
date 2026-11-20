@@ -58,6 +58,7 @@ packageTargets:
       - rlwrap
       - socat
       - tmux
+      - unzip                # zip release assets (KataGo, run_onchange_install-applications)
       - util-linux-script    # `script` (record a terminal session; a pty for probes)
       - { name: vim, dnf: vim-enhanced }
       - { name: wget, dnf: wget2-wget }
@@ -123,6 +124,9 @@ packageTargets:
       # Pinned-release tools (own installers; inventory entries)
       - { name: amontillado, release: amontillado }  # MH's wallpaper library (D70); pinned tag, checkout left alone
       - { name: appimagelauncher, release: appimagelauncher }
+      - { name: katago, release: applications }   # Go engine (Sabaki, KaTrain), ~/.local/bin; pins in applications.yaml
+      - { name: sabaki, release: applications }   # Go board (baduk), AppImage in ~/Applications
+      - { name: thorium, release: applications }  # EPUB reader, AppImage in ~/Applications
       - { name: bd-track, release: bd-track }     # pinned tag; a checkout at or past it is installed editable
       - { name: bd, release: beads }
       - { name: bv, release: beads_viewer }
