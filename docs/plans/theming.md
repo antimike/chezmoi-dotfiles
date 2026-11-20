@@ -1,7 +1,7 @@
 ---
 summary: Long-running theming project: switchable theme bundles kept uniform across apps, wallpaper fetching and palette-aware selection, palette generation, fonts, pickers, nvim via lush
-status: in progress; library and theme engine moved to the standalone project amontillado (D70, 2026-10-27); v0.1 released, v0.2 design agreed (D73)
-updated: 2026-10-30
+status: in progress; library and theme engine in the standalone project amontillado (D70, D73), pinned at v0.9.0; step 2 queued (`theming`, 2026-11-20)
+updated: 2026-11-20
 ---
 
 # Theming plan
@@ -75,8 +75,11 @@ monitor), so rewriting it changes nothing in running apps. A `gtk-theme` toggle 
 which is why wpgtk and flatcolor put the colours in a theme dir; a live GTK3 plan has to do the same. libadwaita uses
 its own resource stylesheet (dropped if `GTK_THEME` is set), applies user `gtk-4.0/gtk.css` at start only, and follows
 `color-scheme` and `accent-color` live through the settings portal (the accent is rounded to a named colour by OKLCH
-hue). Open with MH: theme dir + toggle vs restart-only (depends on amontillado amo-aqp.21, the libadwaita template);
-optional: `amo theme apply` sets `color-scheme`/`accent-color` in gsettings. Checked 2026-11-02 under Hyprland
+hue). **Decided by MH 2026-11-20:** GTK3 goes live through a theme dir + toggle (the plain `libadwaita` template, shipped
+in amontillado v0.3.0, in an adw-gtk3-style theme dir that `@import`s it; a `gtk-theme` flip on reload; chz-q1k). GTK4
+uses `libadwaita-vars` (standalone text colours set by the palette, not the scheme; restart to pick up) **and** keeps
+the gsettings `color-scheme` hook on that app (`prefer-$AMO_VARIANT`; a no-op under `theme.variant: system`, it covers
+manual `--variant` applies, GtkSourceView and per-scheme assets; chz-ht9). Checked 2026-11-02 under Hyprland
 (portals `hyprland;gtk`): the portal relays `color-scheme` but answers "setting not found" for `accent-color`
 (xdg-desktop-portal-gtk 1.15.3 does not serve it; the gnome backend does but is not preferred), so the accent needs
 the gnome backend for `org.freedesktop.impl.portal.Settings` or stays restart-only.
@@ -84,6 +87,8 @@ the gnome backend for `org.freedesktop.impl.portal.Settings` or stays restart-on
 **Dark/light by the clock (D78, chz-2hj, 2026-11-07):** `theme-variant` (`~/.local/bin`) sets `color-scheme` in
 gsettings and runs `amo theme apply --variant <v>`; `theme-variant.timer` switches at 7:00 (light) and 20:00 (dark),
 the times in `.chezmoidata/theme-variant.yaml` (shared with hyprsunset's daytime profile; change both together);
+amontillado's own config takes `theme.variant: system` (v0.5.0; MH 2026-11-20, chz-8bg.4), which settles the open point
+at the end of this paragraph;
 `$mod+w` then `d` (the wallpaper submap; `$mod+Ctrl+d` before chz-1yx, still in SwayFX) toggles until the next switch;
 when the variant actually changes, `wallpaper next --<v>` picks new pictures of that variant and themes from the
 primary's (chz-1yx). Verified live 2026-11-07: the portal's `org.freedesktop.appearance
