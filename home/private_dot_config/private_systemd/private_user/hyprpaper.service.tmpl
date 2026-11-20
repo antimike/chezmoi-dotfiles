@@ -14,6 +14,9 @@ ConditionPathExists=%h/.local/state/wallpaper/current
 [Service]
 ExecStart=/usr/bin/hyprpaper
 Slice=session.slice
+# The saved per-monitor set again (chz-1yx): hyprpaper itself shows `current` on every monitor.
+# wallpaper waits for hyprpaper's IPC; `-`: a failure leaves hyprpaper running.
+ExecStartPost=-%h/.local/bin/wallpaper restore
 Restart=on-failure
 RestartSec=2
 {{- end }}

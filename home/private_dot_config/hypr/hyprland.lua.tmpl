@@ -63,8 +63,13 @@ end
 sync_panel(lid_closed())
 hl.bind("switch:on:Lid Switch",  function() sync_panel(true) end,  { locked = true, description = "Lid closed: panel off while docked" })
 hl.bind("switch:off:Lid Switch", function() sync_panel(false) end, { locked = true, description = "Lid opened: panel on" })
-hl.on("monitor.added",   function() sync_panel(lid_closed()); bar_reconcile() end)
-hl.on("monitor.removed", function() sync_panel(lid_closed()); bar_reconcile() end)
+-- Wallpapers follow too (chz-1yx): the primary's picture moves to the bar's monitor, the
+-- others get new companions; nothing happens while the monitors are the same (bursts, wake).
+local function wallpaper_reconcile()
+    hl.exec_cmd("{{ joinPath .chezmoi.homeDir ".local" "bin" "wallpaper" }} reconcile")
+end
+hl.on("monitor.added",   function() sync_panel(lid_closed()); bar_reconcile(); wallpaper_reconcile() end)
+hl.on("monitor.removed", function() sync_panel(lid_closed()); bar_reconcile(); wallpaper_reconcile() end)
 hl.monitor({
     output   = "desc:Ancor Communications Inc ASUS PB287Q 0x0001EC1B",
     mode     = "3840x2160@60",
@@ -243,7 +248,7 @@ bind(mod .. " + o", run("fuzzel --launch-prefix='uwsm app -- '"), "App launcher"
 bind(mod .. " + t", app("ticket-picker"), "File a ticket (project, then Enter: quick note, Alt+Enter: editor)")
 bind(mod .. " + CTRL + t", run(bin .. "bd-timers toggle"), "bd-track timers: pause all open, or resume the paused")
 bind(mod .. " + CTRL + SHIFT + t", run(bin .. "bd-timers pick"), "bd-track timers: pause/resume one (picker)")
-bind(mod .. " + CTRL + d", run(bin .. "theme-variant toggle"), "Theme: dark/light until the next scheduled switch (D78)")
+-- Theme dark/light and wallpapers: the wallpaper submap ($mod+w; Submaps, below).
 local window_switcher = run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window")
 bind("XF86LaunchA", window_switcher, "Window switcher")
 bind(mod .. " + grave", window_switcher, "Window switcher: all workspaces")
@@ -383,6 +388,12 @@ local submap_notices = {
         ms = 10000,
         close = true,
     },
+    wallpaper = {
+        title = "Wallpaper",
+        body = "n, Super+w: next set  p: pick (Alt+v: dark, light, all)  d: dark/light theme  Esc: leave",
+        ms = 8000,
+        close = true,
+    },
 }
 local notice_id = '"${XDG_RUNTIME_DIR:-/tmp}/hypr-submap-notice.id"'
 local current_notice
@@ -449,6 +460,25 @@ hl.define_submap("capture", function()
     bind("ALT + SHIFT + r", act(rec .. " --audio system"), "Capture: record with the system audio (or stop)")
     bind("CTRL + SHIFT + r", act(rec .. " --audio pick"), "Capture: record, pick the sound source (or stop)")
     bind("Escape", hl.dsp.submap("reset"), "Leave capture mode")
+end)
+-- Wallpaper (chz-1yx): pictures per monitor from the amontillado library (`wallpaper`), and
+-- the theme's dark/light variant (theme-variant, D78; it was $mod+Ctrl+d). Pressing $mod+w
+-- again is "next", as Print twice is the quick shot. Every action leaves the submap.
+bind(mod .. " + w", hl.dsp.submap("wallpaper"), "Wallpaper mode: next set, pick, dark/light")
+hl.define_submap("wallpaper", function()
+    local function act(cmd)
+        return function()
+            hl.dispatch(hl.dsp.submap("reset"))
+            hl.exec_cmd(cmd)
+        end
+    end
+    local wp = bin .. "wallpaper "
+    for _, key in ipairs({ "n", mod .. " + w" }) do
+        bind(key, act(wp .. "next"), "Wallpaper: next set, in the current variant")
+    end
+    bind("p", act(wp .. "pick"), "Wallpaper: pick the primary monitor's picture (rofi; Alt+v: dark, light, all)")
+    bind("d", act(bin .. "theme-variant toggle"), "Theme: dark/light until the next scheduled switch (D78), new wallpapers")
+    bind("Escape", hl.dsp.submap("reset"), "Leave wallpaper mode")
 end)
 -- Passthrough: every other bind off, for VMs, remote desktops and games (i3's "locked" mode).
 bind(mod .. " + CTRL + SHIFT + p", hl.dsp.submap("passthrough"), "Passthrough mode: all keys to the window")

@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# wallpaper — a picture per monitor from the amontillado library, colours going together
+# (chz-1yx; Hyprland + hyprpaper). The primary monitor (waybar-launch main: the bar's
+# monitor) gets the picture the theme follows; the others get companions from `amo group`.
+#
+#   wallpaper next [--dark|--light]   a new set: the least-shown matching picture on the
+#                                     primary (default filter: the current theme variant)
+#   wallpaper set PICTURE             PICTURE on the primary, companions on the others
+#   wallpaper pick                    choose the primary's picture in rofi (thumbnails);
+#                                     Alt+v cycles the filter dark -> light -> all
+#   wallpaper reconcile               after a monitor change: the primary's picture moves to
+#                                     the (new) primary monitor, the others are regrouped
+#   wallpaper restore                 after hyprpaper starts (every login): the saved set
+#                                     again, or reconcile when the monitors changed
+#
+# next, set and pick theme the desktop from the primary's picture (`amo theme apply
+# --variant <current variant>`); reconcile and restore keep the theme. State:
+#   ~/.local/state/wallpaper/current     the primary's picture (hyprpaper's default for every
+#                                        monitor at start; the seed script's fallback target)
+#   ~/.local/state/wallpaper/group.json  the last `amo group --format json` set
+# Pictures are set by amo's group.setter (amontillado config) during `amo group --apply`, and
+# by set_one below for restore, which does not call amo: keep the two the same.
+#
+# Keys: the Hyprland "wallpaper" submap ($mod+w). theme-variant runs `next --dark|--light`
+# when the variant changes (D78). Not available (exit 3, one log line): outside Hyprland, or
+# hyprpaper not answering. Exit status: 0 done, 1 failed, 2 usage, 3 not available.
+#
+# For tests: WALLPAPER_HYPRCTL, _AMO, _ROFI, _GSETTINGS, _NOTIFY and _MAIN (the command that
+# prints the primary's name) replace the commands; WALLPAPER_STATE replaces the state
+# directory; WALLPAPER_WAIT (seconds, default 10) bounds restore's wait for hyprpaper.
+set -euo pipefail
+
+hyprctl_cmd=${WALLPAPER_HYPRCTL:-hyprctl}
+amo_cmd=${WALLPAPER_AMO:-amo}
+rofi_cmd=${WALLPAPER_ROFI:-rofi}
+gsettings_cmd=${WALLPAPER_GSETTINGS:-gsettings}
+notify_cmd=${WALLPAPER_NOTIFY:-notify-send}
+main_cmd=${WALLPAPER_MAIN:-waybar-launch main}
+state=${WALLPAPER_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/wallpaper}
+wait_s=${WALLPAPER_WAIT:-10}
+
+usage() { echo "usage: wallpaper next [--dark|--light] | set PICTURE | pick | reconcile | restore" >&2; exit 2; }
+log() { echo "wallpaper: $*" >&2; }
+notify() { "$notify_cmd" -a wallpaper "$@" 2>/dev/null || true; }
+fail() { log "$1"; notify -u critical "Wallpaper" "$1"; exit 1; }
+
+# hyprpaper >= 0.8; the same command as group.setter in the amontillado config.
+set_one() { "$hyprctl_cmd" hyprpaper wallpaper "$1,$2,cover"; }
+
+available() { "$hyprctl_cmd" hyprpaper listactive >/dev/null 2>&1; }
+require_available() {
+  if ! available; then
+    log "hyprpaper is not answering (not Hyprland, or not started): nothing set"
+    exit 3
+  fi
+}
+
+# The current theme variant: gsettings' color-scheme, as theme-variant reads it.
+variant() {
+  case $("$gsettings_cmd" get org.gnome.desktop.interface color-scheme 2>/dev/null) in
+    *prefer-dark*) echo dark ;;
+    *) echo light ;;
+  esac
+}
+
+# "NAME W:H" per enabled real monitor (no headless outputs: chz-vac), the primary first, then
+# left to right. The ratio is the mode's, reduced; a rotated monitor's sides swap.
+monitors() {
+  local main
+  main=$($main_cmd 2>/dev/null || true)
+  "$hyprctl_cmd" monitors -j | jq -r --arg main "$main" '
+    def gcd(a; b): if b == 0 then a else gcd(b; a % b) end;
+    [.[] | select((.disabled | not) and .description != "" and (.name | test("^HEADLESS-") | not))]
+    | sort_by(if .name == $main then 0 else 1 end, .x, .y)
+    | .[]
+    | (if (.transform % 2) == 1 then [.height, .width] else [.width, .height] end) as [$w, $h]
+    | gcd($w; $h) as $g
+    | "\(.name) \($w / $g):\($h / $g)"'
+}
+
+# group [PICTURE] [FILTER]: amo group --apply over the monitors, PICTURE (or the least-shown
+# match) on the primary; saves the set and points `current` at the primary's picture. A
+# filter that leaves too few pictures is dropped, with a warning. Returns 1 if amo group fails.
+group() {
+  local picture=$1 filter=${2:-} args=() name ratio out
+  while read -r name ratio; do args+=(--monitor "$name=$ratio"); done < <(monitors)
+  ((${#args[@]})) || fail "no monitor found"
+  [[ -n $picture ]] && args=("$picture" "${args[@]}")
+  if ! out=$("$amo_cmd" -l WARNING group "${args[@]}" ${filter:+"$filter"} --format json --non-interactive --apply); then
+    [[ -n $filter ]] || return 1
+    log "amo group $filter failed (too few pictures?): trying without the filter"
+    out=$("$amo_cmd" -l WARNING group "${args[@]}" --format json --non-interactive --apply) || return 1
+  fi
+  mkdir -p "$state"
+  printf '%s\n' "$out" >"$state/group.json.tmp"
+  mv "$state/group.json.tmp" "$state/group.json"
+  ln -sfn "$(jq -r '.monitors[0].path' <<<"$out")" "$state/current"
+}
+
+theme() { # theme VARIANT: the desktop from the primary's picture
+  local out
+  if ! out=$("$amo_cmd" -l WARNING theme apply --variant "$1" "$(readlink "$state/current")" 2>&1); then
+    log "amo theme apply failed: $out"
+    notify -u critical "Wallpaper: amo theme apply failed" "$out"
+    return 1
+  fi
+}
+
+# The saved set's monitor names, and the current ones, sorted: equal means nothing moved.
+saved_names() { jq -r '.monitors[].name' "$state/group.json" 2>/dev/null | sort; }
+current_names() { monitors | cut -d' ' -f1 | sort; }
+
+reconcile() {
+  local primary
+  primary=$(readlink "$state/current" 2>/dev/null || true)
+  if [[ -n $primary && -e $primary ]] && group "$primary"; then return 0; fi
+  log "no usable current picture: picking a new set"
+  group "" "--$(variant)" || fail "amo group failed"
+}
+
+cmd=${1:-}
+[[ -n $cmd ]] || usage
+shift
+mkdir -p "$state"
+# One run at a time: monitor events come in bursts (enabling the panel fires monitor.added again).
+exec 9>"$state/.lock"
+flock -w 30 9 || fail "another wallpaper run did not finish"
+
+case $cmd in
+  next)
+    v=$(variant)
+    case ${1:-} in
+      --dark) v=dark ;;
+      --light) v=light ;;
+      "") ;;
+      *) usage ;;
+    esac
+    require_available
+    group "" "--$v" || fail "amo group failed"
+    theme "$v"
+    ;;
+  set)
+    [[ $# -eq 1 ]] || usage
+    require_available
+    group "$1" || fail "amo group failed for $1"
+    theme "$(variant)"
+    ;;
+  pick)
+    require_available
+    filters=(dark light all)
+    i=0
+    [[ $(variant) == light ]] && i=1
+    while :; do
+      f=${filters[i]}
+      flag=()
+      [[ $f != all ]] && flag=(--"$f")
+      rc=0
+      # Piped, never through a variable: the rows' icon separator is a NUL byte, which bash
+      # drops from $(...), and rofi then shows the bytes instead of the thumbnail. perl adds
+      # rofi's `display` row option: the record's name (its directory) shown, the path returned.
+      choice=$({ "$amo_cmd" -l ERROR list "${flag[@]}" --format rofi 2>/dev/null || true; } |
+        perl -pe 's{^(.*/([^/]+)/[^/\0]+)\0(.*)$}{$1\0$3\x1fdisplay\x1f$2}' |
+        "$rofi_cmd" -dmenu -i -show-icons -theme wallpaper-picker -p "wallpaper · $f" \
+          -mesg "Enter: on the primary monitor, companions on the others   Alt+v: dark → light → all" \
+          -kb-custom-1 Alt+v) || rc=$?
+      case $rc in
+        0)
+          [[ -n $choice ]] || exit 0
+          group "$choice" || fail "amo group failed for $choice"
+          theme "$(variant)"
+          break
+          ;;
+        10) i=$(((i + 1) % 3)) ;;
+        *) exit 0 ;; # cancelled
+      esac
+    done
+    ;;
+  reconcile)
+    [[ $# -eq 0 ]] || usage
+    require_available
+    if [[ -f $state/group.json && $(saved_names) == "$(current_names)" ]]; then
+      exit 0 # the same monitors (a burst, or a monitor waking): nothing to do
+    fi
+    reconcile
+    ;;
+  restore)
+    [[ $# -eq 0 ]] || usage
+    # hyprpaper answers IPC a moment after it starts (ExecStartPost runs at once).
+    for ((t = 0; t < wait_s * 4; t++)); do available && break; sleep 0.25; done
+    require_available
+    if [[ -f $state/group.json && $(saved_names) == "$(current_names)" ]]; then
+      while IFS=$'\t' read -r monitor picture; do
+        [[ -e $picture ]] || { reconcile; exit; }
+        set_one "$monitor" "$picture" >/dev/null || fail "hyprpaper refused $picture on $monitor"
+      done < <(jq -r '.monitors[] | "\(.name)\t\(.path)"' "$state/group.json")
+    elif [[ -e $state/current ]]; then
+      reconcile
+    fi
+    ;;
+  *) usage ;;
+esac
