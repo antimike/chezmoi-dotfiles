@@ -147,6 +147,10 @@ amontillado's own `theme.variant` must follow the clock too, or a wallpaper chan
   installed too, pinned, for trying fonts out. It supports non-interactive font arguments, `--nerd-fonts-version`, and
   installs to `~/.local/share/fonts/`. Fonts installed that way are local experiments; promote a keeper to the chezmoi
   list.
+- **Picker family (chz-8bg.9, 2026-11-20):** every picker shares one look (the bar menus'): rofi's default theme is
+  `~/.config/rofi/picker.rasi` (`bar-menu` and `wallpaper-picker` import it and change only layout), and fuzzel's
+  pickers match through a managed `fuzzel.ini`. Colours live only in `~/.config/rofi/colors.rasi` and
+  `~/.config/fuzzel/colors.ini`; chz-8bg.4 has amontillado render both (and chezmoi stop managing them).
 - **Font pickers:** kitty already has one built in (`kitten choose-fonts`, kitty 0.36+). For dunst, rofi and waybar:
   `fc-list | rofi -dmenu` writing the font into the theme cache, then reload. Font choice becomes part of the theme
   bundle.

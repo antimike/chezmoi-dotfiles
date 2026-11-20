@@ -2,7 +2,8 @@
    colour of its own, so a theme change rewrites only this file (rofi reads it at each launch).
    Today: Blazer, as waybar/style.css and hyprlock.conf. From chz-8bg.4, amontillado's theme
    engine renders it from the palette. Keep the variable names: the themes use them.
-   Users: wallpaper-picker.rasi (chz-1yx); the picker family bead moves bar-menu and the rest. */
+   Imported by picker.rasi, the base of every picker theme (chz-8bg.9). fuzzel's colours are in
+   ~/.config/fuzzel/colors.ini: keep the two in step until amontillado renders both. */
 * {
     bg:         #0d1925eb;   /* window, translucent (Hyprland blurs behind rofi) */
     bg-alt:     #16273a;     /* input bar */

@@ -101,8 +101,8 @@ case $cmd in
     # One line per interval; rofi returns the index (-format i), so titles never get parsed back.
     menu=$(awk -F'\t' '{ printf "%s  %-12s %s  · %s %s\n", ($1 == "open" ? "▶" : "⏸"), $3, $4,
                          gensub(".*/", "", 1, $2), $5 }' <<<"$rows")
-    idx=$(printf '%s\n' "$menu" | "$rofi_cmd" -theme bar-menu \
-      -theme-str 'window { location: center; anchor: center; x-offset: 0; y-offset: 0; width: 60em; }' \
+    # The pickers' family theme (picker.rasi, chz-8bg.9), wider for the titles.
+    idx=$(printf '%s\n' "$menu" | "$rofi_cmd" -theme picker -theme-str 'window { width: 60em; }' \
       -dmenu -i -no-custom -format i -p "Timers" \
       -mesg "Enter: pause ▶ / resume ⏸ the chosen timer") || exit 1
     [[ $idx =~ ^[0-9]+$ ]] || exit 1

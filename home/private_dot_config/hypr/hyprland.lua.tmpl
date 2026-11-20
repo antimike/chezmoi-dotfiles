@@ -216,11 +216,13 @@ if profile == "riced" then
     hl.animation({ leaf = "fade",       enabled = true, speed = 2,   bezier = "snap" })
     hl.animation({ leaf = "layers",     enabled = true, speed = 2,   bezier = "snap",   style = "fade" })
     hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "snap",   style = "slide" })
-    -- Blur behind the bar and rofi (both translucent); ignore_alpha 0: fully transparent pixels
+    -- Blur behind the bar, rofi and fuzzel (all translucent); ignore_alpha 0: fully transparent pixels
     -- (rofi's rounded corners) are not blurred.
     -- waybar's namespace is the bar's "name" (bars/main.jsonc, bars/extra.jsonc).
     hl.layer_rule({ name = "blur-waybar", match = { namespace = "^(main|extra)$" }, blur = true, ignore_alpha = 0 })
     hl.layer_rule({ name = "blur-rofi",   match = { namespace = "^rofi$" },   blur = true, ignore_alpha = 0 })
+    -- fuzzel's pickers match rofi's (chz-8bg.9); its layer namespace is "launcher".
+    hl.layer_rule({ name = "blur-fuzzel", match = { namespace = "^launcher$" }, blur = true, ignore_alpha = 0 })
     -- Video and images stay opaque when unfocused.
     hl.window_rule({ name = "opaque-media", match = { class = "^(mpv|vlc|swayimg)$" }, opaque = true })
 end
@@ -249,7 +251,8 @@ bind(mod .. " + t", app("ticket-picker"), "File a ticket (project, then Enter: q
 bind(mod .. " + CTRL + t", run(bin .. "bd-timers toggle"), "bd-track timers: pause all open, or resume the paused")
 bind(mod .. " + CTRL + SHIFT + t", run(bin .. "bd-timers pick"), "bd-track timers: pause/resume one (picker)")
 -- Theme dark/light and wallpapers: the wallpaper submap ($mod+w; Submaps, below).
-local window_switcher = run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -theme fancy -modi window -show window")
+-- rofi's default theme: the pickers' family (picker.rasi, chz-8bg.9).
+local window_switcher = run("rofi -icon-theme {{ .Xresources.icons }} -show-icons -modi window -show window")
 bind("XF86LaunchA", window_switcher, "Window switcher")
 bind(mod .. " + grave", window_switcher, "Window switcher: all workspaces")
 {{- if lookPath "passmenu" }}

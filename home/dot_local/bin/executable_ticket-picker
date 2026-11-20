@@ -19,9 +19,9 @@ state=${XDG_STATE_HOME:-$HOME/.local/state}/ticket-picker
 recent=$state/recent
 
 notify() { notify-send -a ticket "$@" || true; }
-# The bar menus' theme (readable input text; rofi's default here, fancy, draws it white on light
-# grey), centred instead of under the bar.
-theme=(-theme bar-menu -theme-str 'window { location: center; anchor: center; x-offset: 0; y-offset: 0; width: 44em; }')
+# rofi's default theme is the pickers' family theme (~/.config/rofi/picker.rasi, chz-8bg.9):
+# centred, 44em wide. Named here so a host with another default still gets it.
+theme=(-theme picker)
 
 for cmd in ticket "$rofi_cmd"; do
   command -v "$cmd" >/dev/null 2>&1 || { notify "ticket-picker" "'$cmd' not found"; exit 1; }

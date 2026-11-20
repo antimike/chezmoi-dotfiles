@@ -6,6 +6,11 @@ configuration {
 }
 {{ if eq .rofi.theme "pywal" -}}
 @import {{ fail "PyWal is not yet configured!" }}
+{{- else if eq .rofi.theme "picker" -}}
+{{- /* @theme, not @import: it replaces rofi's built-in (light) theme as -theme does; an
+       @import layers on top of it, and every state picker.rasi left unset showed through
+       (dark row and entry text, a cream "active" row in the window switcher; chz-8bg.9). */}}
+@theme "picker"
 {{- else -}}
 @import {{ list .rofi.theme ".rasi" | join "" | joinPath "/usr/share" "rofi" "themes" | quote }}
 {{- end }}
