@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+# wallpaper-test — tests ~/.local/bin/wallpaper (chz-1yx) with fake hyprctl, amo, rofi,
+# gsettings and waybar-launch; nothing touches the real wallpapers, library or theme.
+#
+#   tools/wallpaper-test/wallpaper-test
+#
+# Checks: monitors are the enabled real ones, primary (waybar's main) first, then left to right,
+# with reduced and rotation-swapped ratios; next filters by the current variant (or --dark /
+# --light), saves the set, points `current` at the primary's picture and themes from it; a
+# filter amo cannot satisfy is dropped; set puts PICTURE first; reconcile does nothing for the
+# same monitors and regroups around `current` for others; restore re-sets the saved set without
+# amo, and reconciles when the monitors changed; hyprpaper not answering exits 3; pick cycles
+# its filter on Alt+v (rofi exit 10) and sets the choice; cancel changes nothing. Exit 1 if any
+# check fails.
+set -euo pipefail
+
+src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin/executable_wallpaper
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+fails=0
+
+# Fake hyprctl: `monitors -j` prints $work/monitors.json; `hyprpaper listactive` fails while
+# $work/hyprpaper-down exists; `hyprpaper wallpaper ARG` is logged.
+cat >"$work/hyprctl" <<EOF
+#!/usr/bin/env bash
+case "\$1 \$2" in
+  "monitors -j") cat "$work/monitors.json" ;;
+  "hyprpaper listactive") [[ ! -e $work/hyprpaper-down ]] ;;
+  "hyprpaper wallpaper") printf '%s\n' "\$3" >>"$work/set-calls" ;;
+esac
+EOF
+# Fake amo: every call logged. `group` answers with a set built from its --monitor arguments
+# (PICTURE, else /lib/least-shown.jpg, on the first; /lib/<name>.jpg on the others) and fails
+# for a --dark/--light filter while $work/filter-fails exists. `list` prints one rofi row per
+# filter. `theme apply` succeeds.
+cat >"$work/amo" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$work/amo-calls"
+[[ \$1 == -l ]] && shift 2
+case \$1 in
+  group)
+    shift
+    pic="" mons=() filt=""
+    while ((\$#)); do
+      case \$1 in
+        --monitor) mons+=("\${2%%=*}"); shift ;;
+        --dark | --light) filt=\$1 ;;
+        --format) shift ;;
+        --*) ;;
+        *) pic=\$1 ;;
+      esac
+      shift
+    done
+    [[ -n \$filt && -e $work/filter-fails ]] && exit 1
+    first=\${pic:-/lib/least-shown.jpg}
+    printf '{"primary": "%s", "monitors": [' "\${mons[0]}"
+    for i in "\${!mons[@]}"; do
+      ((i)) && printf ', '
+      if ((i == 0)); then p=\$first; else p=/lib/\${mons[i]}.jpg; fi
+      printf '{"name": "%s", "aspect": "16:9", "path": "%s"}' "\${mons[i]}" "\$p"
+    done
+    printf ']}\n'
+    ;;
+  list)
+    case " \$* " in
+      *" --dark "*) printf '/lib/dark.jpg\0icon\x1f/lib/.amo/dark.jpg\n' ;;
+      *" --light "*) printf '/lib/light.jpg\0icon\x1f/lib/.amo/light.jpg\n' ;;
+      *) printf '/lib/any.jpg\0icon\x1f/lib/.amo/any.jpg\n' ;;
+    esac
+    ;;
+esac
+EOF
+# Fake rofi: each call logs its prompt and takes the next "rc|choice" line of $work/rofi-script.
+cat >"$work/rofi" <<EOF
+#!/usr/bin/env bash
+cat >/dev/null
+while ((\$#)); do [[ \$1 == -p ]] && printf '%s\n' "\$2" >>"$work/rofi-prompts"; shift; done
+line=\$(head -n 1 "$work/rofi-script"); sed -i 1d "$work/rofi-script"
+printf '%s' "\${line#*|}"
+exit "\${line%%|*}"
+EOF
+cat >"$work/gsettings" <<EOF
+#!/usr/bin/env bash
+echo "'\$(cat "$work/scheme")'"
+EOF
+printf '#!/bin/sh\ncat %q\n' "$work/main" >"$work/main-cmd"
+printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>%q\n' "$work/notes" >"$work/notify"
+chmod +x "$work"/{hyprctl,amo,rofi,gsettings,main-cmd,notify}
+export WALLPAPER_HYPRCTL=$work/hyprctl WALLPAPER_AMO=$work/amo WALLPAPER_ROFI=$work/rofi \
+  WALLPAPER_GSETTINGS=$work/gsettings WALLPAPER_MAIN=$work/main-cmd WALLPAPER_NOTIFY=$work/notify \
+  WALLPAPER_STATE=$work/state WALLPAPER_WAIT=1
+
+ok() { echo "ok    $1"; }
+fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
+same() { if [[ $2 == "$3" ]]; then ok "$1"; else fail "$1: got '$2', want '$3'"; fi; }
+check() { if [[ $2 == *"$3"* ]]; then ok "$1"; else fail "$1: missing '$3' in '$2'"; fi; }
+lacks() { if [[ $2 != *"$3"* ]]; then ok "$1"; else fail "$1: unexpected '$3' in '$2'"; fi; }
+run() { # $1 = expected exit, rest = wallpaper's arguments
+  local want=$1 got=0
+  shift
+  rm -f "$work/amo-calls" "$work/set-calls" "$work/rofi-prompts" "$work/notes"
+  bash "$src" "$@" >"$work/out" 2>"$work/err" || got=$?
+  [[ $got == "$want" ]] || fail "exit $got, want $want for: $* ($(cat "$work/err"))"
+  touch "$work/amo-calls" "$work/set-calls" "$work/rofi-prompts" "$work/notes"
+}
+mon() { # name x width height [transform] [disabled] [description]
+  printf '{"name": "%s", "x": %s, "y": 0, "width": %s, "height": %s, "transform": %s, "disabled": %s, "description": "%s"}' \
+    "$1" "$2" "$3" "$4" "${5:-0}" "${6:-false}" "${7-real}"
+}
+monitors() { printf '[%s]\n' "$(IFS=,; echo "$*")" >"$work/monitors.json"; }
+
+echo prefer-dark >"$work/scheme"
+
+# Docked: panel off, ASUS (main) in the middle, Dell right; a headless output and a rotated one.
+monitors "$(mon eDP-1 0 1920 1080 0 true)" "$(mon DP-5 4480 2560 1440)" "$(mon DP-4 1920 3840 2160)" \
+  "$(mon HEADLESS-2 9000 1920 1080 0 false "")" "$(mon DP-6 7040 3840 2160 1)"
+echo DP-4 >"$work/main"
+run 0 next
+same "next: primary first, then left to right; ratios reduced, rotated swapped; no headless/disabled" \
+  "$(grep '^-l WARNING group' "$work/amo-calls")" \
+  "-l WARNING group --monitor DP-4=16:9 --monitor DP-5=16:9 --monitor DP-6=9:16 --dark --format json --non-interactive --apply"
+same "... current is the primary's picture" "$(readlink "$work/state/current")" "/lib/least-shown.jpg"
+same "... the set is saved" "$(jq -r '[.monitors[].name] | join(" ")' "$work/state/group.json")" "DP-4 DP-5 DP-6"
+check "... themes from it in the current variant" "$(cat "$work/amo-calls")" "theme apply --variant dark /lib/least-shown.jpg"
+
+run 0 next --light
+check "next --light filters light and themes light" "$(cat "$work/amo-calls")" "--light --format json"
+check "..." "$(cat "$work/amo-calls")" "theme apply --variant light"
+
+touch "$work/filter-fails"
+run 0 next
+check "a filter amo cannot satisfy is dropped with a warning" "$(cat "$work/err")" "trying without the filter"
+same "... the unfiltered set is used" "$(readlink "$work/state/current")" "/lib/least-shown.jpg"
+rm -f "$work/filter-fails"
+
+run 0 set /lib/chosen.jpg
+check "set: PICTURE on the primary" "$(cat "$work/amo-calls")" "group /lib/chosen.jpg --monitor DP-4=16:9"
+same "... current follows" "$(readlink "$work/state/current")" "/lib/chosen.jpg"
+
+# reconcile and restore need the pictures to exist.
+mkdir -p "$work/lib"
+for f in chosen DP-5 DP-6 DP-4; do touch "$work/lib/$f.jpg"; done
+ln -sfn "$work/lib/chosen.jpg" "$work/state/current"
+jq --arg d "$work/lib" '.monitors |= map(.path |= sub("^/lib"; $d))' "$work/state/group.json" >"$work/g" &&
+  mv "$work/g" "$work/state/group.json"
+
+run 0 reconcile
+same "reconcile, same monitors: nothing done" "$(cat "$work/amo-calls")$(cat "$work/set-calls")" ""
+
+run 0 restore
+same "restore: the saved set, by IPC" "$(cat "$work/set-calls")" \
+  "DP-4,$work/lib/chosen.jpg,cover
+DP-5,$work/lib/DP-5.jpg,cover
+DP-6,$work/lib/DP-6.jpg,cover"
+same "... without amo" "$(cat "$work/amo-calls")" ""
+
+# Undocked: only the panel.
+monitors "$(mon eDP-1 0 1920 1080)"
+echo eDP-1 >"$work/main"
+run 0 reconcile
+same "reconcile, monitors changed: current's picture on the new primary" \
+  "$(grep '^-l WARNING group' "$work/amo-calls")" \
+  "-l WARNING group $work/lib/chosen.jpg --monitor eDP-1=16:9 --format json --non-interactive --apply"
+lacks "... the theme is kept" "$(cat "$work/amo-calls")" "theme apply"
+
+monitors "$(mon eDP-1 0 1920 1080)" "$(mon DP-4 1920 3840 2160)"
+echo DP-4 >"$work/main"
+run 0 restore
+check "restore, monitors changed: reconciles" "$(cat "$work/amo-calls")" "--monitor DP-4=16:9 --monitor eDP-1=16:9"
+same "... no direct IPC" "$(cat "$work/set-calls")" ""
+
+touch "$work/hyprpaper-down"
+run 3 next
+check "hyprpaper not answering: exit 3" "$(cat "$work/err")" "hyprpaper is not answering"
+same "... nothing set" "$(cat "$work/amo-calls")" ""
+rm -f "$work/hyprpaper-down"
+
+echo prefer-light >"$work/scheme"
+printf '10|\n10|\n0|/lib/any.jpg\n' >"$work/rofi-script"
+run 0 pick
+same "pick: starts at the current variant, Alt+v cycles light -> all -> dark" "$(cat "$work/rofi-prompts")" \
+  "wallpaper · light
+wallpaper · all
+wallpaper · dark"
+check "... the choice goes on the primary" "$(cat "$work/amo-calls")" "group /lib/any.jpg --monitor"
+check "... and themes" "$(cat "$work/amo-calls")" "theme apply --variant light /lib/any.jpg"
+
+printf '1|\n' >"$work/rofi-script"
+run 0 pick
+lacks "pick cancelled: nothing set" "$(cat "$work/amo-calls")" "group"
+
+run 2 bogus
+ok "unknown command exits 2"
+
+echo
+if ((fails)); then echo "$fails check(s) failed"; exit 1; fi
+echo "all checks passed"
