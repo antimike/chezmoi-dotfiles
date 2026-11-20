@@ -63,9 +63,9 @@ case \$1 in
     ;;
   list)
     case " \$* " in
-      *" --dark "*) printf '/lib/dark.jpg\0icon\x1f/lib/.amo/dark.jpg\n' ;;
-      *" --light "*) printf '/lib/light.jpg\0icon\x1f/lib/.amo/light.jpg\n' ;;
-      *) printf '/lib/any.jpg\0icon\x1f/lib/.amo/any.jpg\n' ;;
+      *" --dark "*) printf '/lib/dark-one/dark-one.jpg\0icon\x1f/lib/dark-one/.amo/thumbnail.jpg\n' ;;
+      *" --light "*) printf '/lib/light-one/light-one.jpg\0icon\x1f/lib/light-one/.amo/thumbnail.jpg\n' ;;
+      *) printf '/lib/any-one/any-one.jpg\0icon\x1f/lib/any-one/.amo/thumbnail.jpg\n' ;;
     esac
     ;;
 esac
@@ -184,6 +184,8 @@ wallpaper · all
 wallpaper · dark"
 same "... rows reach rofi with their NUL icon separators (bash drops NULs in \$(...))" \
   "$(tr -dc '\000' <"$work/rofi-stdin" | wc -c)" "3"
+check "... each row is labelled with its record's name (rofi display option)" \
+  "$(tr '\000\037' '|^' <"$work/rofi-stdin")" "/lib/light-one/light-one.jpg|icon^/lib/light-one/.amo/thumbnail.jpg^display^light-one"
 check "... the choice goes on the primary" "$(cat "$work/amo-calls")" "group /lib/any.jpg --monitor"
 check "... and themes" "$(cat "$work/amo-calls")" "theme apply --variant light /lib/any.jpg"
 

@@ -156,9 +156,11 @@ case $cmd in
       [[ $f != all ]] && flag=(--"$f")
       rc=0
       # Piped, never through a variable: the rows' icon separator is a NUL byte, which bash
-      # drops from $(...), and rofi then shows the bytes instead of the thumbnail.
+      # drops from $(...), and rofi then shows the bytes instead of the thumbnail. perl adds
+      # rofi's `display` row option: the record's name (its directory) shown, the path returned.
       choice=$({ "$amo_cmd" -l ERROR list "${flag[@]}" --format rofi 2>/dev/null || true; } |
-        "$rofi_cmd" -dmenu -i -show-icons -p "wallpaper · $f" \
+        perl -pe 's{^(.*/([^/]+)/[^/\0]+)\0(.*)$}{$1\0$3\x1fdisplay\x1f$2}' |
+        "$rofi_cmd" -dmenu -i -show-icons -theme wallpaper-picker -p "wallpaper · $f" \
           -mesg "Enter: on the primary monitor, companions on the others   Alt+v: dark → light → all" \
           -kb-custom-1 Alt+v) || rc=$?
       case $rc in
