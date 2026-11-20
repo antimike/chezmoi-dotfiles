@@ -84,7 +84,9 @@ the gnome backend for `org.freedesktop.impl.portal.Settings` or stays restart-on
 **Dark/light by the clock (D78, chz-2hj, 2026-11-07):** `theme-variant` (`~/.local/bin`) sets `color-scheme` in
 gsettings and runs `amo theme apply --variant <v>`; `theme-variant.timer` switches at 7:00 (light) and 20:00 (dark),
 the times in `.chezmoidata/theme-variant.yaml` (shared with hyprsunset's daytime profile; change both together);
-`$mod+Ctrl+d` toggles until the next switch. Verified live 2026-11-07: the portal's `org.freedesktop.appearance
+`$mod+w` then `d` (the wallpaper submap; `$mod+Ctrl+d` before chz-1yx, still in SwayFX) toggles until the next switch;
+when the variant actually changes, `wallpaper next --<v>` picks new pictures of that variant and themes from the
+primary's (chz-1yx). Verified live 2026-11-07: the portal's `org.freedesktop.appearance
 color-scheme` follows (1 dark, 2 light). The amo step is skipped until the profile has a palette (chz-8bg.4); then
 amontillado's own `theme.variant` must follow the clock too, or a wallpaper change re-renders in `auto` (open, D78).
 
@@ -125,13 +127,17 @@ amontillado's own `theme.variant` must follow the clock too, or a wallpaper chan
      not from a composite.
   Tools: Python with Pillow and a small k-means; or reuse the palette generator's own JSON output per image as the
   features.
-- **Selection:** the existing wallpaper timer (2 h) moves to Wayland and picks from a cluster: **hyprpaper** per output
-  under Hyprland (installed, D63; IPC `hyprctl hyprpaper`), swaybg under SwayFX.
-  Random vs deterministic (seeded by date, for example) is undecided.
+- **Selection (built 2026-11-20, chz-1yx):** `~/.local/bin/wallpaper` sets a picture per monitor with `amo group`
+  (colours going together; least-shown first, so the library is seen before repeats) through hyprpaper's IPC
+  (`group.setter` in the amontillado config). The primary is waybar's main monitor (`waybar-launch main`); its picture
+  is `~/.local/state/wallpaper/current` and the one the theme follows. New sets come at the dark/light switches
+  (`--dark`/`--light`, only on a real change) and on `$mod+w` `n`; no interval timer. Monitor changes keep the
+  primary's picture and regroup the rest; `wallpaper restore` re-applies the set after hyprpaper starts. SwayFX: not
+  covered (no hyprpaper).
   After a theme apply, amontillado runs its `theme.wallpaper.reload` hook (its config, D73; e.g. a `hyprctl hyprpaper`
   command); which setter that hook calls stays chezmoi's choice.
-- **Picker:** rofi with image thumbnails (rofi 2.0 shows them); picking sets the wallpaper and, if wanted,
-  regenerates the theme.
+- **Picker (built 2026-11-20, chz-1yx):** `$mod+w` `p`: rofi with thumbnails (`amo list --format rofi`), filtered by the
+  current variant, `Alt+v` cycling dark, light, all; the pick goes on the primary with companions, and themes.
 
 ## Fonts
 
