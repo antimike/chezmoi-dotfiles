@@ -211,6 +211,22 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    `amo name --from-tags --force`, chz-089); `amo list` prints the paths.
 2. Theme cache layout (**decided**: per profile, D39) and the include line in each app config; one theme end to end,
    including a wallpaper through hyprpaper. The renderer is amontillado v0.2; the include lines stay here.
+   **Built 2026-11-20 (chz-8bg.4, amontillado v0.9.0):** `theme.apps` in the managed amontillado config, with
+   `theme.variant: system` (D78's `theme-variant` owns the scheme) and no `theme.wallpaper.reload` (it would set one
+   picture on every monitor; the `wallpaper` helper sets per-monitor pictures through `group.setter`, chz-1yx).
+   Built-in templates for waybar (`gtk` → `colors.css`, `@import`ed through a link next to `style.css`; `SIGUSR2`),
+   Hyprland (`hyprland.lua`, `dofile` in `pcall` with Blazer as the fallback; borders and hyprbars; `hyprctl reload`),
+   hyprlock (`source =` the cache file) and dunst (a `dunstrc.d/50-theme.conf` link; `dunstctl reload`). Our own
+   templates in `~/.config/amontillado/templates/` for kitty (only today's palette keys: colour 0 is `base11`, colour
+   7 `base06`; the built-in puts the background in colour 0 and sets the tab bar's colours), rofi (the picker
+   variables of chz-8bg.9 with the translucent background) and fuzzel (`colors.ini`). `rofi/colors.rasi` and
+   `fuzzel/colors.ini` are now chezmoi symlinks into the cache, so `chezmoi apply` no longer reverts a theme; kitty
+   keeps `current-theme.conf` as the fallback under a `globinclude` of the cache file. The preset
+   `palettes/blazer.yaml` renders the pre-theming colours (`amo theme apply --palette blazer --no-adjust`; byte-equal
+   values for kitty, rofi and fuzzel; with the contrast check the accent, 4.43:1, would move). Hyprland's borders
+   and hyprbars and dunst used the i3 palette before; they follow the theme now. `run_onchange_after_theme-render`
+   re-renders when the config, the preset or a template changes, and renders Blazer on a fresh machine. The wallpaper
+   comes from the `wallpaper` helper, which themes from the primary monitor's picture.
 3. Switcher + theme picker (switcher: amontillado; picker UI: here).
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.
