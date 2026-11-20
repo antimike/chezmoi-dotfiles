@@ -1,26 +1,36 @@
 #!/usr/bin/env bash
 # run_onchange_install-applications.sh.tmpl: install the pinned applications in .chezmoidata/applications.yaml
-# (Sabaki and Thorium AppImages into ~/Applications, KataGo into ~/.local/bin; chz-i42).
+# (Sabaki and Thorium AppImages into ~/Applications, KataGo extracted under ~/.local/lib; chz-i42).
 #
 # Bumping that file re-triggers this installer. Per entry: download the release asset into a temp dir
-# (curl -fsSL follows GitHub's redirect), verify its sha256, extract `member` from a zip if set, and move the
-# file into place executable. An entry whose dest already holds the same bytes is skipped: for a plain asset
-# the dest's sha256 equals the pin; for a zip member the dest is compared with the extracted file, so the
-# download happens but nothing is replaced. Non-Linux-x86_64 hosts are skipped (exit 0).
+# (curl -fsSL follows GitHub's redirect), verify its sha256, take `member` out of a zip if set, then either
+#   - plain: move the file to `dest`, executable; skipped when dest's sha256 already equals the pin; or
+#   - `extract` (an AppImage CLI): run its --appimage-extract into `extract`, write the pinned asset sha256 to
+#     <extract>/.asset-sha256, and symlink `dest` to <extract>/<entrypoint> (default AppRun). Skipped, without a
+#     download, when that marker matches the pin and dest already links there. Extracting keeps the file away
+#     from AppImageLauncher's binfmt handler, which otherwise opens its "Desktop Integration" dialog on every
+#     run (and hangs headless runs); APPIMAGELAUNCHER_DISABLE=1 lets the extraction itself through.
+# Non-Linux-x86_64 hosts are skipped (exit 0).
 {{- if and (eq .chezmoi.os "linux") (eq .chezmoi.arch "amd64") }}
 set -euo pipefail
 
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 
-# install_app <name> <repo> <tag> <asset> <sha256> <member or ""> <dest>
+# install_app <name> <repo> <tag> <asset> <sha256> <member or ""> <dest> <extract dir or ""> <entrypoint>
 install_app() {
-  local name=$1 repo=$2 tag=$3 asset=$4 sha=$5 member=$6 dest=$7
+  local name=$1 repo=$2 tag=$3 asset=$4 sha=$5 member=$6 dest=$7 extract=$8 entry=$9
   local url="https://github.com/$repo/releases/download/$tag/$asset"
   local work="$tmp_dir/$name" file actual
   mkdir -p "$work"
 
-  if [ -z "$member" ] && [ -f "$dest" ] && [ "$(sha256sum "$dest" | awk '{print $1}')" = "$sha" ]; then
+  if [ -n "$extract" ]; then
+    if [ "$(cat "$extract/.asset-sha256" 2>/dev/null)" = "$sha" ] \
+        && [ "$(readlink "$dest" 2>/dev/null)" = "$extract/$entry" ]; then
+      echo "applications installer: $name $tag already at $extract" >&2
+      return 0
+    fi
+  elif [ -z "$member" ] && [ -f "$dest" ] && [ "$(sha256sum "$dest" | awk '{print $1}')" = "$sha" ]; then
     echo "applications installer: $name $tag already at $dest" >&2
     return 0
   fi
@@ -39,14 +49,31 @@ install_app() {
   if [ -n "$member" ]; then
     unzip -q -o "$work/$asset" "$member" -d "$work/x"
     file="$work/x/$member"
-    if [ -f "$dest" ] && cmp -s "$file" "$dest"; then
-      echo "applications installer: $name $tag already at $dest" >&2
-      return 0
+  fi
+  chmod 0755 "$file"
+
+  if [ -n "$extract" ]; then
+    (cd "$work" && APPIMAGELAUNCHER_DISABLE=1 "$file" --appimage-extract >/dev/null)
+    if [ ! -x "$work/squashfs-root/$entry" ]; then
+      echo "applications installer: no executable $entry in $asset's AppImage" >&2
+      return 1
     fi
+    printf '%s\n' "$sha" >"$work/squashfs-root/.asset-sha256"
+    mkdir -p "$(dirname "$extract")" "$(dirname "$dest")"
+    rm -rf "$extract.tmp.$$"
+    cp -a "$work/squashfs-root" "$extract.tmp.$$"
+    rm -rf "$extract"
+    mv "$extract.tmp.$$" "$extract"
+    ln -sfn "$extract/$entry" "$dest"
+    echo "applications installer: $name $tag extracted to $extract, $dest -> $entry" >&2
+    return 0
   fi
 
+  if [ -n "$member" ] && [ -f "$dest" ] && cmp -s "$file" "$dest"; then
+    echo "applications installer: $name $tag already at $dest" >&2
+    return 0
+  fi
   mkdir -p "$(dirname "$dest")"
-  chmod 0755 "$file"
   # Same-filesystem rename after a copy next to dest, so a running copy keeps its inode.
   cp "$file" "$dest.tmp.$$"
   mv -f "$dest.tmp.$$" "$dest"
@@ -54,7 +81,9 @@ install_app() {
 }
 
 {{ range $name, $a := .applications -}}
-install_app {{ $name | quote }} {{ $a.repo | quote }} {{ $a.tag | quote }} {{ $a.asset | quote }} {{ $a.sha256 | quote }} {{ dig "member" "" $a | quote }} {{ joinPath $.chezmoi.homeDir $a.dest | quote }}
+{{- $extract := dig "extract" "" $a -}}
+{{- if $extract }}{{ $extract = joinPath $.chezmoi.homeDir $extract }}{{ end -}}
+install_app {{ $name | quote }} {{ $a.repo | quote }} {{ $a.tag | quote }} {{ $a.asset | quote }} {{ $a.sha256 | quote }} {{ dig "member" "" $a | quote }} {{ joinPath $.chezmoi.homeDir $a.dest | quote }} {{ $extract | quote }} {{ dig "entrypoint" "AppRun" $a | quote }}
 {{ end -}}
 {{- else }}
 # applications: pins are linux x86_64 only; nothing to install on {{ .chezmoi.os }}/{{ .chezmoi.arch }}.
