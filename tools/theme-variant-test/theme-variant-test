@@ -8,7 +8,9 @@
 # toggle flips the current variant ('default' counts as light) and names the next switch;
 # amo gets the same variant; a profile without a palette and a missing amo are skipped
 # (exit 0); another amo failure exits 1 with a critical notification; the conf file sets the
-# times. Exit 1 if any check fails.
+# times; `wallpaper next --<v>` runs only when the variant changes (chz-1yx), replaces amo's
+# re-render when it succeeds, and falls back to it when wallpaper is unavailable or fails.
+# Exit 1 if any check fails.
 set -euo pipefail
 
 src=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)/home/dot_local/bin
@@ -32,10 +34,18 @@ printf '%s\n' "\$*" >>"$work/amo-calls"
 exit 0
 EOF
 printf '#!/bin/sh\nprintf "%%s\\n" "$*" >>%q\n' "$work/notes" >"$work/notify"
-chmod +x "$work/gsettings" "$work/amo" "$work/notify"
+# Fake wallpaper (chz-1yx): logs its arguments, exits with $work/wallpaper-rc (default 3: not
+# available, so the checks above it see theme-variant's own amo call as before).
+cat >"$work/wallpaper" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$work/wallpaper-calls"
+exit "\$(cat "$work/wallpaper-rc" 2>/dev/null || echo 3)"
+EOF
+chmod +x "$work/gsettings" "$work/amo" "$work/notify" "$work/wallpaper"
 printf 'LIGHT_AT=7:00\nDARK_AT=20:00\n' >"$work/conf"
 export THEME_VARIANT_GSETTINGS=$work/gsettings THEME_VARIANT_AMO=$work/amo \
-  THEME_VARIANT_NOTIFY=$work/notify THEME_VARIANT_CONF=$work/conf
+  THEME_VARIANT_NOTIFY=$work/notify THEME_VARIANT_CONF=$work/conf \
+  THEME_VARIANT_WALLPAPER=$work/wallpaper
 
 ok() { echo "ok    $1"; }
 fail() { echo "FAIL  $1"; fails=$((fails + 1)); }
@@ -49,10 +59,10 @@ run() {  # $1 = expected exit, $2 = clock H:MM, $3 = scheme before, rest = args
   local want=$1 clock=$2 got=0
   echo "$3" >"$work/scheme"
   shift 3
-  rm -f "$work/amo-calls" "$work/notes"
+  rm -f "$work/amo-calls" "$work/notes" "$work/wallpaper-calls"
   THEME_VARIANT_NOW=$clock bash "$src/executable_theme-variant" "$@" >"$work/out" 2>"$work/err" || got=$?
   [[ $got == "$want" ]] || fail "exit $got, want $want for: $* at $clock ($(cat "$work/err"))"
-  touch "$work/amo-calls" "$work/notes"
+  touch "$work/amo-calls" "$work/notes" "$work/wallpaper-calls"
 }
 sched() {  # $1 = clock, $2 = expected variant
   run 0 "$1" default schedule
@@ -88,6 +98,26 @@ rm -f "$work/amo-out"
 
 THEME_VARIANT_AMO=$work/no-such-amo run 0 12:00 prefer-dark schedule
 check "missing amo is skipped" "$(cat "$work/err")" "amo not found"
+
+# Wallpaper rotation (chz-1yx): only when the variant changes.
+echo 0 >"$work/wallpaper-rc"
+run 0 21:00 prefer-light schedule
+same "variant changed: wallpaper next with that variant" "$(cat "$work/wallpaper-calls")" "next --dark"
+same "... and no second theme apply" "$(cat "$work/amo-calls")" ""
+run 0 21:00 prefer-dark schedule
+same "variant unchanged (login, resume): no wallpaper call" "$(cat "$work/wallpaper-calls")" ""
+same "... the palette is re-rendered as before" "$(cat "$work/amo-calls")" "theme apply --variant dark"
+run 0 12:00 prefer-dark toggle
+same "toggle rotates too" "$(cat "$work/wallpaper-calls")" "next --light"
+echo 3 >"$work/wallpaper-rc"
+run 0 21:00 prefer-light schedule
+same "wallpaper not available (exit 3): amo re-renders" "$(cat "$work/amo-calls")" "theme apply --variant dark"
+check "... with a log line" "$(cat "$work/err")" "wallpaper not available"
+echo 1 >"$work/wallpaper-rc"
+run 1 21:00 prefer-light schedule
+same "wallpaper failed: amo still re-renders" "$(cat "$work/amo-calls")" "theme apply --variant dark"
+check "... and the run exits 1" "$(cat "$work/err")" "wallpaper next failed (1)"
+echo 3 >"$work/wallpaper-rc"
 
 printf 'LIGHT_AT=8:30\nDARK_AT=18:15\n' >"$work/conf"
 sched 8:29 dark

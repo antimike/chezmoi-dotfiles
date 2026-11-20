@@ -10,21 +10,25 @@
 # Setting a variant does two things:
 #   1. gsettings org.gnome.desktop.interface color-scheme prefer-dark|prefer-light: libadwaita
 #      and GTK4 apps follow, live through the settings portal (Hyprland's portals relay it).
-#   2. `amo theme apply --variant <v>`: amontillado re-renders the profile's palette in that
-#      variant. Skipped (one log line) while the profile has no palette yet (before chz-8bg.4)
-#      or amo is missing.
+#   2. When the variant changed: `wallpaper next --<v>` (chz-1yx), a new set of pictures of that
+#      variant, which also themes the desktop from the primary's picture. Otherwise, or when
+#      wallpaper is not available (exit 3: not Hyprland, no hyprpaper):
+#   3. `amo theme apply --variant <v>`: amontillado re-renders the profile's palette in that
+#      variant. Skipped (one log line) while the profile has no palette yet or amo is missing.
 # The current variant is gsettings' color-scheme ('default' counts as light). An ad-hoc switch
 # needs no state: the next timer run puts the schedule back.
 #
 # Schedule: ${XDG_CONFIG_HOME:-~/.config}/theme-variant.conf (LIGHT_AT=H:MM, DARK_AT=H:MM, from
 # .chezmoidata/theme-variant.yaml); default 7:00 / 20:00. For tests: THEME_VARIANT_CONF,
-# THEME_VARIANT_NOW (H:MM), and THEME_VARIANT_GSETTINGS / _AMO / _NOTIFY replace the commands.
+# THEME_VARIANT_NOW (H:MM), and THEME_VARIANT_GSETTINGS / _AMO / _NOTIFY / _WALLPAPER replace
+# the commands.
 # Exit status: 0 = done, 1 = a step failed, 2 = usage.
 set -euo pipefail
 
 gsettings_cmd=${THEME_VARIANT_GSETTINGS:-gsettings}
 amo_cmd=${THEME_VARIANT_AMO:-amo}
 notify_cmd=${THEME_VARIANT_NOTIFY:-notify-send}
+wallpaper_cmd=${THEME_VARIANT_WALLPAPER:-wallpaper}
 conf=${THEME_VARIANT_CONF:-${XDG_CONFIG_HOME:-$HOME/.config}/theme-variant.conf}
 
 LIGHT_AT=7:00
@@ -51,11 +55,21 @@ current() {
 }
 
 set_variant() { # set_variant dark|light; 0 = done, 1 = a step failed
-  local v=$1 rc=0 out
+  local v=$1 rc=0 out prev wrc
+  prev=$(current)
   if ! out=$("$gsettings_cmd" set org.gnome.desktop.interface color-scheme "prefer-$v" 2>&1); then
     log "gsettings failed: $out"
     notify -u critical "Theme variant: gsettings failed" "$out"
     rc=1
+  fi
+  if [[ $prev != "$v" ]] && command -v "$wallpaper_cmd" >/dev/null 2>&1; then
+    wrc=0
+    "$wallpaper_cmd" next "--$v" || wrc=$?
+    case $wrc in
+      0) return "$rc" ;; # new pictures, and the theme from the primary's
+      3) log "wallpaper not available: re-rendering the palette only" ;;
+      *) log "wallpaper next failed ($wrc): re-rendering the palette only"; rc=1 ;;
+    esac
   fi
   if ! command -v "$amo_cmd" >/dev/null 2>&1; then
     log "amo not found: skipping the palette re-render"
