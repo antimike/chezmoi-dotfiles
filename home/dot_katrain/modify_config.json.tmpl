@@ -1,0 +1,29 @@
+#!/bin/sh
+# chezmoi modify_ script: KaTrain's engine paths in ~/.katrain/config.json (chz-3z8).
+# KaTrain rewrites this file itself (UI state, game and AI settings), so chezmoi owns two keys only.
+#
+# Managed (always overwritten):
+#   engine.katago           the pinned ~/.local/bin/katago (KaTrain's Linux package ships no binary; it used
+#                           a copy it downloaded, the same release AppImage, which opened AppImageLauncher's
+#                           dialog on every run)
+#   engine.humanlike_model  the pinned human-SL net in ~/.local/share/katago/models
+# Left alone: engine.model (a path inside KaTrain's own package, which KaTrain resolves itself, so it survives
+# Python and venv changes), engine.config, and everything else.
+#
+# Apply with KaTrain closed: it writes the file on exit and would undo the change.
+#
+# Guards: without jq, or with an empty or missing file (KaTrain not started yet; it copies its default
+# config on first run), the input passes through unchanged; run an apply after KaTrain's first start.
+set -eu
+
+input=$(cat)
+if [ -z "$input" ] || ! command -v jq >/dev/null 2>&1; then
+  printf '%s' "$input"
+  exit 0
+fi
+
+# 4-space indent and no trailing newline, like KaTrain's own writes, so an unchanged file is byte-identical.
+printf '%s' "$(printf '%s' "$input" | jq --indent 4 \
+  --arg katago {{ joinPath .chezmoi.homeDir .applications.katago.dest | quote }} \
+  --arg human {{ joinPath .chezmoi.homeDir .applications.katago_model_human.dest | quote }} '
+  .engine.katago = $katago | .engine.humanlike_model = $human')"
