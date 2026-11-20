@@ -25,6 +25,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [plans/theming.md](plans/theming.md) | Theme bundles and switcher, wallpapers and palettes, fonts, pickers, lush.nvim | theming work (after the SwayFX daily driver) |
 | [plans/devices-and-audio.md](plans/devices-and-audio.md) | Audio stack and media control review; hotplug for monitors, audio outputs, Bluetooth, drives, Wi-Fi | audio or device work on the desktop |
 | [plans/project-data.md](plans/project-data.md) | Draft D71: one private repo for Claude memory, ticket inboxes, beads exports and bd-track config; GitHub vs restic split; Dolt options; one project registry | backups, private repos, beads state, the ticket system's storage |
+| [plans/agent-harnesses.md](plans/agent-harnesses.md) | Read-only look at gitagent and Pi (chz-awx): verdicts, what each would replace, switching cost | considering another agent harness or claude-config's sandbox |
 | [plans/ricing-backlog.md](plans/ricing-backlog.md) | Low-priority improvements checklist | looking for spare-time work |
 | [runbooks/memory-and-backups.md](runbooks/memory-and-backups.md) | claude-state + restic: how, restore, failure modes | anything about transcripts, memory, timers |
 | [runbooks/display-session-recovery.md](runbooks/display-session-recovery.md) | Failsafe for DM, greeter, compositor and GPU changes: prep, safe test, symptom table, rollback card | **before** any display manager, greeter, compositor or GPU change |
