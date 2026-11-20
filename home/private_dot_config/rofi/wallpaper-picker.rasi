@@ -1,62 +1,22 @@
-/* The wallpaper picker (`wallpaper pick`, $mod+w p; chz-1yx): a centred grid of thumbnails
-   with each record's name under it. Colours: colors.rasi, shared by every picker.
-   Icon size: amontillado's thumbnails are 400 px wide, about 16em at 12pt on a scale-1.5
-   monitor; larger would upscale them (blurry). Use: rofi -theme wallpaper-picker */
-@import "colors.rasi"
+/* The wallpaper picker (`wallpaper pick`, $mod+w p; chz-1yx): the pickers' base theme
+   (picker.rasi, colours in colors.rasi) as a centred grid of thumbnails with each record's
+   name under it. Icon size: amontillado's thumbnails are 400 px wide, about 16em at 12pt on a
+   scale-1.5 monitor; larger would upscale them (blurry). Use: rofi -theme wallpaper-picker */
+@import "picker.rasi"
 
-* {
-    background-color: transparent;
-    text-color: @fg;
-    font: "Source Code Pro 12";
-}
-
-window {
-    location: center;
-    anchor: center;
-    width: 70em;
-    background-color: @bg;
-    border: 2px;
-    border-color: @accent;
-    border-radius: 10px;
-    padding: 10px;
-}
-
-mainbox { children: [ inputbar, message, listview ]; spacing: 8px; }
-
-inputbar {
-    children: [ prompt, entry ];
-    spacing: 8px;
-    padding: 6px 8px;
-    background-color: @bg-alt;
-    border-radius: 6px;
-}
-prompt { text-color: @accent; }
-entry { placeholder: "filter by name"; placeholder-color: @fg-dim; }
-
+window { width: 70em; padding: 10px; }
+entry { placeholder: "filter by name"; }
 message { padding: 2px 8px; }
-textbox { text-color: @fg-dim; }
 
 listview {
     columns: 4;
     lines: 3;
     fixed-columns: true;
+    fixed-height: true;
     flow: horizontal;
-    scrollbar: false;
     spacing: 8px;
 }
 
-element {
-    orientation: vertical;
-    padding: 6px;
-    spacing: 4px;
-    border-radius: 8px;
-}
-element normal.normal, element alternate.normal { background-color: transparent; }
-element selected.normal { background-color: @accent; text-color: @on-accent; }
-element-icon { size: 15em; horizontal-align: 0.5; background-color: inherit; }
-element-text {
-    horizontal-align: 0.5;
-    font: "Source Code Pro 9";
-    background-color: inherit;
-    text-color: inherit;
-}
+element { orientation: vertical; padding: 6px; spacing: 4px; border-radius: 8px; }
+element-icon { size: 15em; horizontal-align: 0.5; }
+element-text { horizontal-align: 0.5; font: "Source Code Pro 9"; }

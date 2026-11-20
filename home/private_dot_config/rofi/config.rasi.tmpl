@@ -6,6 +6,8 @@ configuration {
 }
 {{ if eq .rofi.theme "pywal" -}}
 @import {{ fail "PyWal is not yet configured!" }}
+{{- else if eq .rofi.theme "picker" -}}
+@import "picker.rasi"
 {{- else -}}
 @import {{ list .rofi.theme ".rasi" | join "" | joinPath "/usr/share" "rofi" "themes" | quote }}
 {{- end }}
