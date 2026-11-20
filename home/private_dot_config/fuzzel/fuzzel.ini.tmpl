@@ -1,8 +1,8 @@
 # fuzzel (managed by chezmoi: edit home/private_dot_config/fuzzel/fuzzel.ini.tmpl; chz-8bg.9).
 # fuzzel's pickers (app launcher, keys cheat sheet, clipboard, marks, sound and path prompts)
 # match rofi's picker family (~/.config/rofi/picker.rasi): font, border, radius, padding here,
-# colours only in colors.ini (included below; amontillado renders it from chz-8bg.4, in step
-# with ~/.config/rofi/colors.rasi). Callers set --width/--lines/--prompt as before.
+# colours only in colors.ini (included below: a link to amontillado's fuzzel-colors.ini in the
+# theme cache, chz-8bg.4; the same palette as ~/.config/rofi/colors.rasi). Callers set --width/--lines/--prompt as before.
 
 [main]
 include={{ joinPath .chezmoi.homeDir ".config" "fuzzel" "colors.ini" }}

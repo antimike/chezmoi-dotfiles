@@ -113,15 +113,25 @@ if not ok then
     profile = "work"
 end
 
--- hyprbars: title bars on floating windows only (MH, 2026-10-25), in the i3 palette.
+-- Theme colours (chz-8bg.4): amontillado's hyprland.lua, a table of "rrggbb" strings
+-- (base00-base17 and the roles), rendered into the theme cache; `amo theme apply` runs
+-- `hyprctl reload`. In pcall, as plugins.lua: before the first render (a fresh machine) or
+-- on a broken file the Blazer preset's colours stand in.
+local theme_ok, c = pcall(dofile, "{{ joinPath .chezmoi.homeDir ".cache" "theme" "current" "hyprland.lua" }}")
+if not theme_ok or type(c) ~= "table" then
+    c = { base01 = "16273a", base05 = "d9e5f1", accent = "7979b8", on_accent = "0d1925",
+          border = "7979b8", border_inactive = "647384", error = "b87979" }
+end
+
+-- hyprbars: title bars on floating windows only (MH, 2026-10-25), in the theme's colours.
 -- Buttons run shell commands, so hyprctl's Lua dispatch syntax; a click focuses the window first.
 if hl.plugin.hyprbars then
     hl.config({
         plugin = {
             hyprbars = {
                 bar_height                 = 28,
-                bar_color                  = "rgba({{ trimPrefix "#" .i3.colors.unfocused_bg.default }}e6)",
-                ["col.text"]               = "rgba({{ trimPrefix "#" .i3.colors.fg.default }}ff)",
+                bar_color                  = "rgba(" .. c.base01 .. "e6)",
+                ["col.text"]               = "rgba(" .. c.base05 .. "ff)",
                 bar_text_font              = "Iosevka Nerd Font",
                 bar_text_size              = 13,
                 bar_padding                = 8,
@@ -131,9 +141,9 @@ if hl.plugin.hyprbars then
             },
         },
     })
-    hl.plugin.hyprbars.add_button({ bg_color = "rgb(d05050)", fg_color = "rgb(ffffff)", size = 16, icon = "󰖭",
+    hl.plugin.hyprbars.add_button({ bg_color = "rgb(" .. c.error .. ")", fg_color = "rgb(" .. c.on_accent .. ")", size = 16, icon = "󰖭",
         action = "hyprctl dispatch 'hl.dsp.window.close()'" })
-    hl.plugin.hyprbars.add_button({ bg_color = "rgb({{ trimPrefix "#" .i3.colors.bg.default }})", fg_color = "rgb(ffffff)", size = 16, icon = "󰊓",
+    hl.plugin.hyprbars.add_button({ bg_color = "rgb(" .. c.accent .. ")", fg_color = "rgb(" .. c.on_accent .. ")", size = 16, icon = "󰊓",
         action = "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\", action = \"toggle\" })'" })
     hl.window_rule({ name = "hyprbars-tiled-off", match = { float = false }, ["hyprbars:no_bar"] = true })
 end
@@ -147,8 +157,8 @@ hl.config({
         gaps_out    = 4,
         border_size = 2,
         col = {
-            active_border   = "rgba({{ trimPrefix "#" .i3.colors.fg.default }}ff)",
-            inactive_border = "rgba(595959aa)",
+            active_border   = "rgba(" .. c.border .. "ff)",
+            inactive_border = "rgba(" .. c.border_inactive .. "aa)",
         },
         layout = "dwindle",
     },
