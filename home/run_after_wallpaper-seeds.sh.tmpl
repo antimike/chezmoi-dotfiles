@@ -82,7 +82,7 @@ EOF
 
 if [ -n "$entries" ]; then
   printf '[\n%s\n]\n' "$entries" >"$tmp_dir/seeds.json"
-  amo -l WARNING add --from-json "$tmp_dir/seeds.json"
+  amo -l WARNING add --non-interactive --from-json "$tmp_dir/seeds.json"
   echo "wallpaper-seeds: added to the amontillado library: $(grep -o '"name":"[^"]*"' "$tmp_dir/seeds.json" | cut -d'"' -f4 | tr '\n' ' ')" >&2
 fi
 
