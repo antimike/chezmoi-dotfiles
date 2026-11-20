@@ -1,0 +1,48 @@
+# Blazer: the hand-made dark preset (kitty's built-in Blazer with a lighter colour 8, #647384),
+# the colours kitty, waybar, hyprlock, rofi and fuzzel used before theming (chz-8bg.4).
+# `amo theme apply --palette blazer --no-adjust` renders them unchanged; without --no-adjust the
+# contrast check lightens the accent a little (base0D/accent are 4.43:1 on base00, under 4.5).
+# Not from Blazer itself: base01 (rofi's input bar), base02, base09 and base0F (Blazer has no
+# orange or brown), base10. base06 is kitty's colour 7, base11 its colour 0.
+version: 1
+name: blazer
+variants:
+  dark:
+    base24:
+      base00: '#0d1925'
+      base01: '#16273a'
+      base02: '#2a3a4c'
+      base03: '#647384'
+      base04: '#9aa7b4'
+      base05: '#d9e5f1'
+      base06: '#d9d9d9'
+      base07: '#ffffff'
+      base08: '#b87979'
+      base09: '#b89979'
+      base0A: '#b8b879'
+      base0B: '#79b879'
+      base0C: '#79b8b8'
+      base0D: '#7979b8'
+      base0E: '#b879b8'
+      base0F: '#9a8070'
+      base10: '#081019'
+      base11: '#000000'
+      base12: '#dabdbd'
+      base13: '#dadabd'
+      base14: '#bddabd'
+      base15: '#bddada'
+      base16: '#bdbdda'
+      base17: '#dabdda'
+    roles:
+      accent: '#7979b8'
+      on_accent: '#0d1925'
+      secondary: '#b879b8'
+      on_secondary: '#0d1925'
+      border: '#7979b8'
+      border_inactive: '#647384'
+      selection: '#d9e6f2'
+      on_selection: '#0d1925'
+      error: '#b87979'
+      warning: '#b8b879'
+      success: '#79b879'
+      info: '#79b8b8'

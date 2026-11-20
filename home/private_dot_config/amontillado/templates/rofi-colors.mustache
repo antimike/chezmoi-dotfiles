@@ -1,0 +1,13 @@
+/* amontillado {{scheme-slug}} ({{scheme-variant}}): the pickers' colours (chz-8bg.4, chz-8bg.9).
+   ~/.config/rofi/colors.rasi links here; picker.rasi @imports it, and every picker theme imports
+   picker.rasi. Keep the variable names: the themes use them. fuzzel's colours come from the same
+   palette (fuzzel-colors.ini). rofi reads this at each launch. */
+* {
+    bg:         #{{base00-hex}}eb;   /* window, translucent (Hyprland blurs behind rofi) */
+    bg-alt:     #{{base01-hex}};     /* input bar */
+    fg:         #{{base05-hex}};
+    fg-dim:     #{{base03-hex}};     /* placeholder, message */
+    accent:     #{{accent-hex}};     /* border, prompt, selection */
+    urgent:     #{{error-hex}};
+    on-accent:  #{{on_accent-hex}};  /* text on the accent */
+}
