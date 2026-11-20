@@ -153,6 +153,7 @@ packageTargets:
       - { name: docformatter, pipx: true }
       - { name: dvc, pipx: true }
       - { name: hererocks, pipx: true }      # Lua builds for luarocks (nvim's lazy.nvim rocks)
+      - { name: katrain, pipx: true }        # Go trainer GUI (Kivy); engine settings from dot_katrain/modify_config.json
       - { name: mypy, pipx: true }
       - { name: nbdime, pipx: true }         # ~/.gitconfig renders its diff/merge drivers when present
       - { name: neovim-remote, pipx: true }

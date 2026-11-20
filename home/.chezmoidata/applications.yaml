@@ -3,6 +3,8 @@
 #
 # Each entry is one release asset with GitHub's asset digest:
 #   gh api repos/<owner>/<repo>/releases/tags/<tag> --jq '.assets[]|.name+" "+.digest'
+# `url` (optional) replaces the release-asset URL built from repo/tag/asset (a file in a repo at a tag).
+# `mode` (optional, default 0755): the installed file's mode; data files (models) use 0644.
 # `member` (optional): the asset is a zip and this file inside it is installed. The checksum is the asset's
 # (the zip's), checked before extracting.
 # `dest`: relative to $HOME. AppImages go to ~/Applications, where appimagelauncherd (AppImageLauncher, pinned
@@ -19,7 +21,13 @@
 #   sabaki   v0.60.0 = 2026-07-03 (v0.60.2 is a pre-release)
 #   thorium  v3.5.1  = 2026-09-02
 #   katago   v1.18.1 = 2026-08-24, OpenCL backend (v1.18.2 only changes the CUDA backend; its notes point
-#            every other backend to v1.18.1). No network file: Sabaki and KaTrain use KaTrain's models.
+#            every other backend to v1.18.1).
+#   KataGo networks (chz-3z8) in ~/.local/share/katago/models/, read by Sabaki's engine entry and KaTrain's
+#   humanlike_model (their modify_ scripts take the paths from here). Neither source publishes a digest
+#   (GitHub had none for these): the pins are the sha256 of MH's existing copies (KaTrain's bundled model
+#   and the humanv0 KaTrain downloaded), checked equal to fresh downloads on 2026-11-20.
+#     katago_model_fast    KaTrain's bundled b10c384 net at its v1.20.0 tag (~72 visits/s on the T1000)
+#     katago_model_human   the human-SL net from KataGo v1.15.0's release assets
 #
 # To bump: tag, asset, sha256 (and dest if it names the version); commit, and the re-install triggers.
 # Stale versions in ~/Applications are not removed: delete the old file (appimagelauncherd drops its entry).
@@ -45,3 +53,18 @@ applications:
     member: "katago"
     extract: ".local/lib/katago/v1.18.1"  # the AppImage's payload; dest links to its AppRun
     dest: ".local/bin/katago"
+  katago_model_fast:
+    repo: sanderland/katrain
+    tag: "v1.20.0"
+    asset: "b10c384h6nbttflrs.bin.gz"
+    url: "https://raw.githubusercontent.com/sanderland/katrain/v1.20.0/katrain/models/b10c384h6nbttflrs.bin.gz"
+    sha256: "0ba27eced5180b3e3d0b898b280c541112989765e789d1eb6cd0d31b2b2c1229"
+    mode: "0644"
+    dest: ".local/share/katago/models/b10c384h6nbttflrs.bin.gz"
+  katago_model_human:
+    repo: lightvector/KataGo
+    tag: "v1.15.0"
+    asset: "b18c384nbt-humanv0.bin.gz"
+    sha256: "637746e44f0efe00ad1245a50aa9bbf0716efe364c43965ead97bd6835d84ab5"
+    mode: "0644"
+    dest: ".local/share/katago/models/b18c384nbt-humanv0.bin.gz"

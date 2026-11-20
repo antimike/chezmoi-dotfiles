@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # run_onchange_install-applications.sh.tmpl: install the pinned applications in .chezmoidata/applications.yaml
-# (Sabaki and Thorium AppImages into ~/Applications, KataGo extracted under ~/.local/lib; chz-i42).
+# (Sabaki and Thorium AppImages into ~/Applications, KataGo extracted under ~/.local/lib, its networks into
+# ~/.local/share/katago/models; chz-i42, chz-3z8).
 #
 # Bumping that file re-triggers this installer. Per entry: download the release asset into a temp dir
 # (curl -fsSL follows GitHub's redirect), verify its sha256, take `member` out of a zip if set, then either
-#   - plain: move the file to `dest`, executable; skipped when dest's sha256 already equals the pin; or
+#   - plain: move the file to `dest` (mode `mode`, default 0755); skipped when dest's sha256 already equals
+#     the pin; or
 #   - `extract` (an AppImage CLI): run its --appimage-extract into `extract`, write the pinned asset sha256 to
 #     <extract>/.asset-sha256, and symlink `dest` to <extract>/<entrypoint> (default AppRun). Skipped, without a
 #     download, when that marker matches the pin and dest already links there. Extracting keeps the file away
@@ -18,9 +20,10 @@ tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 
 # install_app <name> <repo> <tag> <asset> <sha256> <member or ""> <dest> <extract dir or ""> <entrypoint>
+#             <url or ""> <mode>
 install_app() {
-  local name=$1 repo=$2 tag=$3 asset=$4 sha=$5 member=$6 dest=$7 extract=$8 entry=$9
-  local url="https://github.com/$repo/releases/download/$tag/$asset"
+  local name=$1 repo=$2 tag=$3 asset=$4 sha=$5 member=$6 dest=$7 extract=$8 entry=$9 url=${10} mode=${11}
+  [ -n "$url" ] || url="https://github.com/$repo/releases/download/$tag/$asset"
   local work="$tmp_dir/$name" file actual
   mkdir -p "$work"
 
@@ -50,7 +53,7 @@ install_app() {
     unzip -q -o "$work/$asset" "$member" -d "$work/x"
     file="$work/x/$member"
   fi
-  chmod 0755 "$file"
+  chmod "$mode" "$file"
 
   if [ -n "$extract" ]; then
     (cd "$work" && APPIMAGELAUNCHER_DISABLE=1 "$file" --appimage-extract >/dev/null)
@@ -83,7 +86,7 @@ install_app() {
 {{ range $name, $a := .applications -}}
 {{- $extract := dig "extract" "" $a -}}
 {{- if $extract }}{{ $extract = joinPath $.chezmoi.homeDir $extract }}{{ end -}}
-install_app {{ $name | quote }} {{ $a.repo | quote }} {{ $a.tag | quote }} {{ $a.asset | quote }} {{ $a.sha256 | quote }} {{ dig "member" "" $a | quote }} {{ joinPath $.chezmoi.homeDir $a.dest | quote }} {{ $extract | quote }} {{ dig "entrypoint" "AppRun" $a | quote }}
+install_app {{ $name | quote }} {{ $a.repo | quote }} {{ $a.tag | quote }} {{ $a.asset | quote }} {{ $a.sha256 | quote }} {{ dig "member" "" $a | quote }} {{ joinPath $.chezmoi.homeDir $a.dest | quote }} {{ $extract | quote }} {{ dig "entrypoint" "AppRun" $a | quote }} {{ dig "url" "" $a | quote }} {{ dig "mode" "0755" $a | quote }}
 {{ end -}}
 {{- else }}
 # applications: pins are linux x86_64 only; nothing to install on {{ .chezmoi.os }}/{{ .chezmoi.arch }}.

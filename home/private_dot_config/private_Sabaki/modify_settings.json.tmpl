@@ -1,0 +1,38 @@
+#!/bin/sh
+# chezmoi modify_ script: Sabaki's KataGo engine entry in ~/.config/Sabaki/settings.json (chz-3z8).
+# Sabaki rewrites this file itself (window state, preferences, 100+ keys), so chezmoi owns one entry only.
+#
+# Managed (always overwritten): the engines.list entry named below, placed first, running the pinned
+# ~/.local/bin/katago with the pinned fast net and ~/.config/katago/gtp.cfg (paths from
+# .chezmoidata/applications.yaml). Dropped: any other entry whose path is ~/.local/bin/katago (an older
+# managed entry after a bump) or the old KaTrain-downloaded binary (one-time migration, 2026-11-20).
+# Everything else, including other engines, is left as is.
+#
+# Apply with Sabaki closed: it writes the file on exit and would undo the change. The sabaki-plus fork
+# (baduk) shares this directory for now.
+#
+# Guards: without jq, or with an empty or missing file (Sabaki not started yet; it writes its defaults on
+# first run), the input passes through unchanged; run an apply after Sabaki's first start.
+{{- $k := .applications.katago }}
+{{- $katago := joinPath .chezmoi.homeDir $k.dest }}
+{{- $model := joinPath .chezmoi.homeDir .applications.katago_model_fast.dest }}
+{{- $config := joinPath .chezmoi.homeDir ".config" "katago" "gtp.cfg" }}
+{{- $legacy := joinPath .chezmoi.homeDir ".katrain" "katago-v1.18.1-opencl-linux-x64" }}
+set -eu
+
+input=$(cat)
+if [ -z "$input" ] || ! command -v jq >/dev/null 2>&1; then
+  printf '%s' "$input"
+  exit 0
+fi
+
+# No trailing newline, like Sabaki's own writes, so an unchanged file is byte-identical.
+printf '%s' "$(printf '%s' "$input" | jq \
+  --arg name {{ printf "KataGo %s OpenCL" $k.tag | quote }} \
+  --arg path {{ $katago | quote }} \
+  --arg args {{ printf "gtp -model %s -config %s" $model $config | quote }} \
+  --arg legacy {{ $legacy | quote }} '
+  ."engines.list" = (
+    [{name: $name, path: $path, args: $args}]
+    + [(."engines.list" // [])[] | select(.name != $name and .path != $path and .path != $legacy)]
+  )')"
