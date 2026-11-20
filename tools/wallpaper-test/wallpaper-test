@@ -73,7 +73,7 @@ EOF
 # Fake rofi: each call logs its prompt and takes the next "rc|choice" line of $work/rofi-script.
 cat >"$work/rofi" <<EOF
 #!/usr/bin/env bash
-cat >/dev/null
+cat >>"$work/rofi-stdin"
 while ((\$#)); do [[ \$1 == -p ]] && printf '%s\n' "\$2" >>"$work/rofi-prompts"; shift; done
 line=\$(head -n 1 "$work/rofi-script"); sed -i 1d "$work/rofi-script"
 printf '%s' "\${line#*|}"
@@ -98,10 +98,10 @@ lacks() { if [[ $2 != *"$3"* ]]; then ok "$1"; else fail "$1: unexpected '$3' in
 run() { # $1 = expected exit, rest = wallpaper's arguments
   local want=$1 got=0
   shift
-  rm -f "$work/amo-calls" "$work/set-calls" "$work/rofi-prompts" "$work/notes"
+  rm -f "$work/amo-calls" "$work/set-calls" "$work/rofi-prompts" "$work/rofi-stdin" "$work/notes"
   bash "$src" "$@" >"$work/out" 2>"$work/err" || got=$?
   [[ $got == "$want" ]] || fail "exit $got, want $want for: $* ($(cat "$work/err"))"
-  touch "$work/amo-calls" "$work/set-calls" "$work/rofi-prompts" "$work/notes"
+  touch "$work/amo-calls" "$work/set-calls" "$work/rofi-prompts" "$work/rofi-stdin" "$work/notes"
 }
 mon() { # name x width height [transform] [disabled] [description]
   printf '{"name": "%s", "x": %s, "y": 0, "width": %s, "height": %s, "transform": %s, "disabled": %s, "description": "%s"}' \
@@ -182,6 +182,8 @@ same "pick: starts at the current variant, Alt+v cycles light -> all -> dark" "$
   "wallpaper · light
 wallpaper · all
 wallpaper · dark"
+same "... rows reach rofi with their NUL icon separators (bash drops NULs in \$(...))" \
+  "$(tr -dc '\000' <"$work/rofi-stdin" | wc -c)" "3"
 check "... the choice goes on the primary" "$(cat "$work/amo-calls")" "group /lib/any.jpg --monitor"
 check "... and themes" "$(cat "$work/amo-calls")" "theme apply --variant light /lib/any.jpg"
 

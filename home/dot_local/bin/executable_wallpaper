@@ -154,11 +154,13 @@ case $cmd in
       f=${filters[i]}
       flag=()
       [[ $f != all ]] && flag=(--"$f")
-      rows=$("$amo_cmd" -l ERROR list "${flag[@]}" --format rofi 2>/dev/null || true)
       rc=0
-      choice=$(printf '%s\n' "$rows" | "$rofi_cmd" -dmenu -i -show-icons -p "wallpaper · $f" \
-        -mesg "Enter: on the primary monitor, companions on the others   Alt+v: dark → light → all" \
-        -kb-custom-1 Alt+v) || rc=$?
+      # Piped, never through a variable: the rows' icon separator is a NUL byte, which bash
+      # drops from $(...), and rofi then shows the bytes instead of the thumbnail.
+      choice=$({ "$amo_cmd" -l ERROR list "${flag[@]}" --format rofi 2>/dev/null || true; } |
+        "$rofi_cmd" -dmenu -i -show-icons -p "wallpaper · $f" \
+          -mesg "Enter: on the primary monitor, companions on the others   Alt+v: dark → light → all" \
+          -kb-custom-1 Alt+v) || rc=$?
       case $rc in
         0)
           [[ -n $choice ]] || exit 0
