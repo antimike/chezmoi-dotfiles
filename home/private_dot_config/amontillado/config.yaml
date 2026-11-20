@@ -1,0 +1,15 @@
+# amontillado config (managed by chezmoi: edit home/private_dot_config/amontillado/config.yaml,
+# not this file; chz-8bg.7). Only the keys we set are here; every other key keeps its default.
+# The full, commented reference for the installed version: `amo config init --stdout`.
+# Validate after any change: `amo config check --shellcheck`.
+#
+# Library: the default root $XDG_DATA_HOME/amontillado/library, a local git-annex repository
+# (images annexed and locked, info files and thumbnails in git; no remotes yet). Setup and the
+# encrypted NSFW variant: chezmoi docs/runbooks/amontillado-library.md. No NSFW root is set up.
+#
+# Still to come: theme.apps and theme.variant (chz-8bg.4), the libadwaita reload hook (chz-ht9),
+# group.setter for per-monitor wallpapers (chz-1yx).
+
+# Commit what each amo command writes to the library repository: one commit per command, info
+# files merged with `amo info merge` so hand edits stay uncommitted, new images `git annex add`ed.
+on_change: amo hook git-commit
