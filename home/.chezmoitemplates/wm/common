@@ -127,7 +127,7 @@ bindsym $mod+Shift+q kill
 # execute command
 set $rofi rofi -icon-theme {{.Xresources.icons}} -window-thumbnail -show-icons -drun-match-fields name
 set $rofi_open_opts -theme docu -modi drun -show drun
-set $rofi_find_opts -theme fancy -modi window -show window -window-thumbnail
+set $rofi_find_opts -modi window -show window -window-thumbnail
 bindsym $mod+o      exec --no-startup-id $rofi $rofi_open_opts
 bindsym XF86LaunchA exec --no-startup-id $rofi $rofi_find_opts
 bindsym $mod+grave  exec --no-startup-id $rofi $rofi_find_opts
