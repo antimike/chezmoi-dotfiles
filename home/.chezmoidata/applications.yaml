@@ -1,0 +1,41 @@
+# Pinned desktop applications and engines (chz-i42), consumed by run_onchange_install-applications.sh.tmpl.
+# Package-map entries: `release: applications` (packages.yaml).
+#
+# Each entry is one release asset with GitHub's asset digest:
+#   gh api repos/<owner>/<repo>/releases/tags/<tag> --jq '.assets[]|.name+" "+.digest'
+# `member` (optional): the asset is a zip and this file inside it is installed. The checksum is the asset's
+# (the zip's), checked before extracting.
+# `dest`: relative to $HOME. AppImages go to ~/Applications, where appimagelauncherd (AppImageLauncher, pinned
+# in appimagelauncher.yaml) integrates them: desktop entry and icon, no rename for installer-placed files.
+# KataGo is a CLI engine (Sabaki, KaTrain), so it goes on PATH and gets no app-menu entry.
+#
+# Pin rule: exact tag, at least 14 days old, stable (not a pre-release). linux x86_64 only (zbook); other
+# platforms are skipped.
+#   sabaki   v0.60.0 = 2026-07-03 (v0.60.2 is a pre-release)
+#   thorium  v3.5.1  = 2026-09-02
+#   katago   v1.18.1 = 2026-08-24, OpenCL backend (v1.18.2 only changes the CUDA backend; its notes point
+#            every other backend to v1.18.1). No network file: Sabaki and KaTrain use KaTrain's models.
+#
+# To bump: tag, asset, sha256 (and dest if it names the version); commit, and the re-install triggers.
+# Stale versions in ~/Applications are not removed: delete the old file (appimagelauncherd drops its entry).
+
+applications:
+  sabaki:
+    repo: SabakiHQ/Sabaki
+    tag: "v0.60.0"
+    asset: "sabaki-v0.60.0-linux-x64.AppImage"
+    sha256: "51105f5308b4f563ffd9284e17508fe2a52a3662457ed8a0c3f23308d4a026ff"
+    dest: "Applications/sabaki-v0.60.0-linux-x64.AppImage"
+  thorium:
+    repo: edrlab/thorium-reader
+    tag: "v3.5.1"
+    asset: "Thorium-3.5.1-x86_64.AppImage"
+    sha256: "906675d518197a4e88eff1d349818db21e49c7979806c325b52e30e31dd22312"
+    dest: "Applications/Thorium-3.5.1-x86_64.AppImage"
+  katago:
+    repo: lightvector/KataGo
+    tag: "v1.18.1"
+    asset: "katago-v1.18.1-opencl-linux-x64.zip"
+    sha256: "81ecea81526adb412a392ec728dbdf9627e754df7cf1a7a3dbb8ef220182184a"
+    member: "katago"
+    dest: ".local/bin/katago"

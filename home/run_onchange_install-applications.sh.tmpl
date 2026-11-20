@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# run_onchange_install-applications.sh.tmpl: install the pinned applications in .chezmoidata/applications.yaml
+# (Sabaki and Thorium AppImages into ~/Applications, KataGo into ~/.local/bin; chz-i42).
+#
+# Bumping that file re-triggers this installer. Per entry: download the release asset into a temp dir
+# (curl -fsSL follows GitHub's redirect), verify its sha256, extract `member` from a zip if set, and move the
+# file into place executable. An entry whose dest already holds the same bytes is skipped: for a plain asset
+# the dest's sha256 equals the pin; for a zip member the dest is compared with the extracted file, so the
+# download happens but nothing is replaced. Non-Linux-x86_64 hosts are skipped (exit 0).
+{{- if and (eq .chezmoi.os "linux") (eq .chezmoi.arch "amd64") }}
+set -euo pipefail
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+# install_app <name> <repo> <tag> <asset> <sha256> <member or ""> <dest>
+install_app() {
+  local name=$1 repo=$2 tag=$3 asset=$4 sha=$5 member=$6 dest=$7
+  local url="https://github.com/$repo/releases/download/$tag/$asset"
+  local work="$tmp_dir/$name" file actual
+  mkdir -p "$work"
+
+  if [ -z "$member" ] && [ -f "$dest" ] && [ "$(sha256sum "$dest" | awk '{print $1}')" = "$sha" ]; then
+    echo "applications installer: $name $tag already at $dest" >&2
+    return 0
+  fi
+
+  echo "applications installer: downloading $url" >&2
+  curl -fsSL -o "$work/$asset" "$url"
+  actual=$(sha256sum "$work/$asset" | awk '{print $1}')
+  if [ "$sha" != "$actual" ]; then
+    echo "applications installer: checksum mismatch for $asset" >&2
+    echo "  expected: $sha" >&2
+    echo "  actual:   $actual" >&2
+    return 1
+  fi
+
+  file="$work/$asset"
+  if [ -n "$member" ]; then
+    unzip -q -o "$work/$asset" "$member" -d "$work/x"
+    file="$work/x/$member"
+    if [ -f "$dest" ] && cmp -s "$file" "$dest"; then
+      echo "applications installer: $name $tag already at $dest" >&2
+      return 0
+    fi
+  fi
+
+  mkdir -p "$(dirname "$dest")"
+  chmod 0755 "$file"
+  # Same-filesystem rename after a copy next to dest, so a running copy keeps its inode.
+  cp "$file" "$dest.tmp.$$"
+  mv -f "$dest.tmp.$$" "$dest"
+  echo "applications installer: $name $tag installed to $dest" >&2
+}
+
+{{ range $name, $a := .applications -}}
+install_app {{ $name | quote }} {{ $a.repo | quote }} {{ $a.tag | quote }} {{ $a.asset | quote }} {{ $a.sha256 | quote }} {{ dig "member" "" $a | quote }} {{ joinPath $.chezmoi.homeDir $a.dest | quote }}
+{{ end -}}
+{{- else }}
+# applications: pins are linux x86_64 only; nothing to install on {{ .chezmoi.os }}/{{ .chezmoi.arch }}.
+{{- end }}
