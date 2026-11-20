@@ -6,7 +6,38 @@ restore. amontillado itself never runs git, git-annex, gpg or gcrypt; it decided
 reasoning is its `docs/design.md`, "git-annex libraries: decisions" 1-5). This runbook is the step-by-step part, which
 amontillado's decision 2 placed with the dotfiles (chz-iqp, 2026-11-13).
 
-## Layout
+## The regular (SFW) library: local git-annex, no remotes (chz-8bg.7, 2026-11-19)
+
+The default root `~/.local/share/amontillado/library` has been a git-annex repository on zbook since 2026-11-19:
+images annexed and locked (symlinks into `.git/annex/objects`, one copy on disk), `info.yaml` and thumbnails in git.
+It has **no remotes and no encryption** (SFW only; its images can all be fetched again). Annex from the start, not
+plain git: the `on_change` hook `git add`s new images in a plain repository, so a large `amo fetch` would put every
+JPEG into git history for good. The managed amontillado config (`home/private_dot_config/amontillado/config.yaml`)
+sets `on_change: amo hook git-commit`, so every amo write is one commit ("amo index: ...", "amo add: ...").
+Backup to the PortableSSD is chz-8bg.8 (a `directory` special remote; not restic).
+
+On a new machine with no remote to clone from (the library's own records are then re-fetched or re-seeded):
+
+```sh
+cd ~/.local/share/amontillado/library     # exists after the first amo index or seed run
+git init -b main && git annex init "$(hostname -s)"
+# amontillado's layout (its docs/version-control.md, "A git-annex root" and "Merging info files"):
+printf '%s\n' '* annex.largefiles=nothing' '*.jpg annex.largefiles=anything' '*.jpeg annex.largefiles=anything' \
+  '*.png annex.largefiles=anything' '*.webp annex.largefiles=anything' '**/.amo/** annex.largefiles=nothing' \
+  'info.yaml merge=amo-info' 'info.yml merge=amo-info' > .gitattributes
+git config merge.amo-info.name "amontillado info files"
+git config merge.amo-info.driver 'amo info merge %O %A %B --name %P'
+git add .gitattributes && git commit -m "Library layout"
+git annex add . && git add -A && git commit -m "Existing records"
+amo config check --shellcheck                # the managed config, on_change included
+```
+
+Check: `git annex find | wc -l` equals the number of images, and `git ls-files -s -- '*.jpg'` shows images as mode
+120000 (symlinks) and only thumbnails as 100644. Commit signing is off globally, so the hook needs no YubiKey.
+Once the library has a remote, a second machine clones it instead and runs only the two `git config merge.amo-info`
+lines and `git annex init`.
+
+## Layout (NSFW library)
 
 The NSFW root (`$XDG_DATA_HOME/amontillado/library-nsfw` unless the config moves it) is a git-annex repository:
 `info.yaml` files and thumbnails in git, images annexed. It leaves the machine only encrypted, through two remotes:
