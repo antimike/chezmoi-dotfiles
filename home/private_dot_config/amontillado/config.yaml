@@ -7,9 +7,14 @@
 # (images annexed and locked, info files and thumbnails in git; no remotes yet). Setup and the
 # encrypted NSFW variant: chezmoi docs/runbooks/amontillado-library.md. No NSFW root is set up.
 #
-# Still to come: theme.apps and theme.variant (chz-8bg.4), the libadwaita reload hook (chz-ht9),
-# group.setter for per-monitor wallpapers (chz-1yx).
+# Still to come: theme.apps and theme.variant (chz-8bg.4), the libadwaita reload hook (chz-ht9).
 
 # Commit what each amo command writes to the library repository: one commit per command, info
 # files merged with `amo info merge` so hand edits stay uncommitted, new images `git annex add`ed.
 on_change: amo hook git-commit
+
+# Per-monitor wallpapers (chz-1yx): `amo group --apply` runs the setter once per monitor. The
+# `wallpaper` helper (~/.local/bin) drives amo group and uses the same hyprpaper (>= 0.8) command
+# for `wallpaper restore`: keep the two the same.
+group:
+  setter: 'hyprctl hyprpaper wallpaper "$AMO_MONITOR,$AMO_WALLPAPER,cover"'
