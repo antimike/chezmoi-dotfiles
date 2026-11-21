@@ -6,8 +6,7 @@
 # Library: the default root $XDG_DATA_HOME/amontillado/library, a local git-annex repository
 # (images annexed and locked, info files and thumbnails in git; no remotes yet). Setup and the
 # encrypted NSFW variant: chezmoi docs/runbooks/amontillado-library.md. No NSFW root is set up.
-#
-# Still to come: the GTK3 theme dir (chz-q1k).
+
 
 # Commit what each amo command writes to the library repository: one commit per command, info
 # files merged with `amo info merge` so hand edits stay uncommitted, new images `git annex add`ed.
@@ -76,3 +75,8 @@ theme:
     # amontillado docs/colour-scheme-hooks.md). A one-variant preset (Blazer: dark) sets its own.
     libadwaita-vars:
       reload: 'gsettings set org.gnome.desktop.interface color-scheme "prefer-$AMO_VARIANT"'
+    # GTK3, live (D82, chz-q1k): libadwaita's named colours, imported after adw-gtk3 by the theme
+    # dirs ~/.local/share/themes/amontillado-{dark,light}; gtk3-theme-reload switches gtk-theme to
+    # the variant's dir (or flips away and back), and running GTK3 apps re-read it.
+    libadwaita:
+      reload: gtk3-theme-reload
