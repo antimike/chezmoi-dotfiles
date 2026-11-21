@@ -209,6 +209,15 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    foreground at tone 95 (fsh's bracket highlight and less's prompt want fg at 3:1 on blue). palette-compare will
    import the hue and distinctness metrics from `amontillado.accents` through its uv script header rather than keep
    a copy (MH 2026-11-03, chz-98w).
+   **Reproduced here 2026-11-21 (chz-98w, amontillado v0.9.0):** `palette-compare` scores `amo palette` output
+   (settings `amo`, `amo-light`, `amo-generator`; base24 mapped to ANSI as chezmoi's kitty template does) and imports
+   `amontillado.accents` (pinned in its uv header at chezmoi's amontillado tag). On the 8 test-set pictures: **amo
+   dark** 0 failures, fg/bg 16.64-16.73, accent min 5.25-5.28, distinct 8.9-10.8, 6/6 hues on every picture; **amo
+   light** 2 failures each (the fsh 256-colour pair above), 16.26-16.37, 4.95-4.97, 9.2-9.5, 6/6; **amo with the
+   generator's hues** 0-2 failures, accent 4.95-4.99, but distinct 0.0-5.4 and 0-2/6 hues (the contrast fix saves
+   contrast, not hue); raw matugen 6-24 failures, accent 1.00; wallust-ansi 3-7, 6/6 hues. Blazer (now scored from
+   `kitty/current-theme.conf`, since the live config follows the theme): 0, 13.89, 4.43, 7.9, 6/6, the same as with
+   palette-compare's former own metrics.
    **Test set fetched 2026-10-28** (amontillado v0.1.0: `amo fetch --test-set --atleast 3840x2160 --ratio 16:9`;
    8 kept of 23 thumbnails), records in `~/.local/share/amontillado/library/` by Wallhaven id: dark `xed63v`, light
    `739r63`, muted `dp2mol`, saturated `43ey53`, busy `3qz176`, sparse `j5wmyp`, monochrome `og3vv9`, multi-hue
