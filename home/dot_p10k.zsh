@@ -38,13 +38,17 @@
   [[ $ZSH_VERSION == (5.<1->*|<6->.*) ]] || return
 
   # Prompt colors.
-  local grey='242'
-  local red='#FF5C57'
-  local yellow='#F3F99D'
-  local blue='#57C7FF'
-  local magenta='#FF6AC1'
-  local cyan='#9AEDFE'
-  local white='#F1F1F0'
+  # ANSI 0-15, not the wizard's "snazzy" truecolour (#FF5C57, #F3F99D, ...) or the 256-colour grey
+  # 242, so the prompt follows the terminal palette in both variants (chezmoi chz-djc): under a
+  # light theme snazzy's yellow was 1.06:1 and its cyan 1.25:1. These are pure's original colours,
+  # with 8 (the palette's dim grey) for 242.
+  local grey='8'
+  local red='1'
+  local yellow='3'
+  local blue='4'
+  local magenta='5'
+  local cyan='6'
+  local white='7'
 
   # Left prompt segments.
   typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
