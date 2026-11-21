@@ -1,8 +1,8 @@
 /* The pickers' base theme (chz-8bg.9): every rofi picker looks like one family, the bar menus'
    look (MH, 2026-11-20). A centred list; it is rofi's default (config.rasi), so a plain `rofi`
    call gets it. Variants @import this file and change only layout: bar-menu.rasi (under the
-   bar), wallpaper-picker.rasi (thumbnail grid). Colours: colors.rasi only (amontillado renders
-   it from chz-8bg.4); fuzzel's pickers match through ~/.config/fuzzel/fuzzel.ini. */
+   bar), wallpaper-picker.rasi (thumbnail grid). Colours: colors.rasi only (a link to amontillado's
+   rofi-colors.rasi in the theme cache, chz-8bg.4); fuzzel's pickers match through ~/.config/fuzzel/fuzzel.ini. */
 @import "colors.rasi"
 
 * {

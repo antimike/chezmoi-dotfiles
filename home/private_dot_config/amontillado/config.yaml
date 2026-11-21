@@ -7,7 +7,8 @@
 # (images annexed and locked, info files and thumbnails in git; no remotes yet). Setup and the
 # encrypted NSFW variant: chezmoi docs/runbooks/amontillado-library.md. No NSFW root is set up.
 #
-# Still to come: theme.apps and theme.variant (chz-8bg.4), the libadwaita reload hook (chz-ht9).
+# Still to come: the libadwaita apps (chz-ht9: GTK4 libadwaita-vars + colour-scheme hook; chz-q1k:
+# the GTK3 theme dir).
 
 # Commit what each amo command writes to the library repository: one commit per command, info
 # files merged with `amo info merge` so hand edits stay uncommitted, new images `git annex add`ed.
@@ -18,3 +19,51 @@ on_change: amo hook git-commit
 # for `wallpaper restore`: keep the two the same.
 group:
   setter: 'hyprctl hyprpaper wallpaper "$AMO_MONITOR,$AMO_WALLPAPER,cover"'
+
+# The theme engine (chz-8bg.4; docs/plans/theming.md, step 2). Each app renders one file into
+# ~/.cache/theme/<profile>/, and the app's config (chezmoi-managed) includes it from
+# ~/.cache/theme/current/, directly or through a link next to the config. The preset
+# palettes/blazer.yaml renders the pre-theming colours (`amo theme apply --palette blazer
+# --no-adjust`); a wallpaper change (the `wallpaper` helper) themes from the primary's picture.
+# chezmoi's run_onchange_after_theme-render script re-renders after a change here or to a template.
+theme:
+  # theme-variant (D78) owns the dark/light choice: it sets gsettings' color-scheme at 7:00 and
+  # 20:00, and every apply (a wallpaper change included) follows it. No wallpaper.reload: the
+  # `wallpaper` helper sets per-monitor pictures through group.setter (chz-1yx), and one picture
+  # on every monitor would clobber them.
+  variant: system
+  apps:
+    # Our template: today's kitty palette keys only (see the template's header). Always dark (MH
+    # 2026-11-21): CLI tools with fixed dark-only colours (256-colour cube and grey ramp,
+    # truecolour) are unreadable on a light background. Lift once chz-djc, chz-n6i and the
+    # amontillado tickets (kitty colours 16-255, vivid template) are done.
+    kitty:
+      variant: dark
+      source: path
+      path: ~/.config/amontillado/templates/kitty.mustache
+      format: mustache
+      output: kitty.conf
+      reload: pkill -USR1 -x kitty
+    # @define-color per colour: waybar's style.css @imports colors.css (a link to this file).
+    gtk:
+      reload: pkill -USR2 -x waybar
+    # A Lua table: hyprland.lua dofile()s it for borders and hyprbars (Blazer if it fails).
+    hyprland:
+      reload: hyprctl reload
+    # hyprlang $variables: hyprlock.conf sources it at each lock.
+    hyprlock: {}
+    # The picker variables (bg, bg-alt, fg, fg-dim, accent, urgent, on-accent): ~/.config/rofi/colors.rasi
+    # links here. rofi and fuzzel read their colours at each launch: no reload.
+    rofi:
+      source: path
+      path: ~/.config/amontillado/templates/rofi-colors.mustache
+      format: mustache
+      output: rofi-colors.rasi
+    fuzzel:
+      source: path
+      path: ~/.config/amontillado/templates/fuzzel-colors.mustache
+      format: mustache
+      output: fuzzel-colors.ini
+    # A dunstrc.d drop-in (urgency colours): ~/.config/dunst/dunstrc.d/50-theme.conf links here.
+    dunst:
+      reload: dunstctl reload

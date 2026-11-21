@@ -1,0 +1,50 @@
+#!/bin/sh
+# run_onchange_after_theme-render.sh.tmpl — render the theme cache (chz-8bg.4).
+#
+# App configs include amontillado's rendered files from ~/.cache/theme/current/ (kitty,
+# waybar, Hyprland, hyprlock, rofi, fuzzel, dunst; docs/plans/theming.md, step 2), so the
+# files must exist and follow the amontillado config and templates. Runs whenever those
+# change (hashes below) and on a fresh machine:
+#   - a profile with a palette already: `amo theme apply` re-renders that palette (the
+#     picture's, or a preset's; Blazer with --no-adjust) with the new config, keeping its
+#     wallpaper link;
+#   - none yet: `amo theme apply --palette blazer --no-adjust`, the pre-theming colours.
+# Each apply reloads the running apps (kitty, waybar, Hyprland, dunst). Exits 1 on a failed
+# render, so chezmoi runs it again at the next apply (the hash is recorded only on success).
+# Only on hosts whose `display_server` host key is "wayland"; skips without amo.
+#
+# config.yaml       {{ include "private_dot_config/amontillado/config.yaml" | sha256sum }}
+# palettes/blazer   {{ include "private_dot_config/amontillado/palettes/blazer.yaml" | sha256sum }}
+# kitty template    {{ include "private_dot_config/amontillado/templates/kitty.mustache" | sha256sum }}
+# rofi template     {{ include "private_dot_config/amontillado/templates/rofi-colors.mustache" | sha256sum }}
+# fuzzel template   {{ include "private_dot_config/amontillado/templates/fuzzel-colors.mustache" | sha256sum }}
+# amontillado       {{ .amontillado.ref }}
+{{- $ds := dig "display_server" "x11" . }}
+
+set -eu
+
+ENABLED={{ if and (eq .chezmoi.os "linux") (eq $ds "wayland") }}1{{ else }}0{{ end }}
+CURRENT={{ joinPath .chezmoi.homeDir ".cache/theme/current" | quote }}
+
+if [ "$ENABLED" != 1 ]; then
+  exit 0
+fi
+if ! command -v amo >/dev/null 2>&1; then
+  echo "theme-render: amo not found; theme cache not rendered" >&2
+  exit 0
+fi
+
+if [ -f "$CURRENT/palette.yaml" ]; then
+  set -- theme apply
+  # Blazer is applied without the contrast check (palettes/blazer.yaml says why): keep it so.
+  if grep -qx 'name: blazer' "$CURRENT/palette.yaml"; then
+    set -- "$@" --no-adjust
+  fi
+else
+  set -- theme apply --palette blazer --no-adjust
+fi
+if ! amo -l WARNING "$@"; then
+  echo "theme-render: amo $* failed; app colours fall back or break until it succeeds" >&2
+  exit 1
+fi
+echo "theme-render: amo $*" >&2
