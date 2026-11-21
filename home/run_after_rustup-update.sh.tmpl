@@ -1,0 +1,45 @@
+#!/bin/sh
+# run_after_rustup-update.sh.tmpl — keep rustup and its toolchain current
+# (chz-if3). Runs on every `chezmoi apply`, but calls `rustup update` (self-update
+# plus the toolchain in .chezmoidata/rustup.yaml) at most once every
+# `update_every_days` days, judged by the toolchain's update-hash file, which
+# rustup rewrites on each successful update. Quiet when not due.
+#
+# Never fails the apply: an offline host or a failed update prints a warning and
+# retries on the next apply. Warns when a distro Rust (/usr/bin/cargo, rustc) is
+# installed, since one toolchain per host is the rule; removing it needs root,
+# so it only prints the command.
+{{- $r := .rustup }}
+
+TOOLCHAIN={{ $r.toolchain | quote }}
+EVERY_DAYS={{ $r.update_every_days }}
+
+CARGO_HOME=${CARGO_HOME:-$HOME/.cargo}
+export CARGO_HOME
+RUSTUP_HOME=${RUSTUP_HOME:-$HOME/.rustup}
+export RUSTUP_HOME
+rustup="$CARGO_HOME/bin/rustup"
+
+for f in /usr/bin/cargo /usr/bin/rustc; do
+  if [ -e "$f" ]; then
+    owner=$(rpm -qf "$f" 2>/dev/null || echo "a distro package")
+    echo "rustup-update: $f ($owner) duplicates the rustup toolchain; remove it, e.g. sudo dnf remove cargo rust" >&2
+    break
+  fi
+done
+
+[ -x "$rustup" ] || exit 0
+
+stamp=$(find "$RUSTUP_HOME/update-hashes" -maxdepth 1 -name "$TOOLCHAIN-*" 2>/dev/null | head -n 1)
+if [ -n "$stamp" ] && [ -z "$(find "$stamp" -mtime +"$((EVERY_DAYS - 1))" 2>/dev/null)" ]; then
+  exit 0
+fi
+
+echo "rustup-update: running rustup update $TOOLCHAIN (every $EVERY_DAYS days)" >&2
+if "$rustup" update "$TOOLCHAIN" >&2 && "$rustup" self update >&2; then
+  touch "$RUSTUP_HOME/update-hashes/$TOOLCHAIN"-* 2>/dev/null
+  "$CARGO_HOME/bin/rustc" --version >&2
+else
+  echo "rustup-update: update failed (offline?); retrying on the next apply" >&2
+fi
+exit 0

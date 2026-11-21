@@ -1,0 +1,28 @@
+# Pinned rustup-init, consumed by run_onchange_before_install-rustup.sh.tmpl;
+# the toolchain update policy is read by run_after_rustup-update.sh.tmpl.
+#
+# One Rust toolchain per host (chz-if3, MH 2026-11-21): rustup in ~/.cargo, kept
+# current by chezmoi apply; no distro rust/cargo (Fedora's lagged, and two
+# toolchains on PATH meant ~/.cargo/bin's stale one won, several times).
+#
+# rustup-init only bootstraps: once ~/.cargo/bin/rustup exists the installer does
+# nothing, and rustup self-updates from then on (run_after_rustup-update).
+# The pin is the archive's sha256 per architecture, from
+#   https://static.rust-lang.org/rustup/archive/<version>/<triple>/rustup-init.sha256
+#
+# Pin rule: exact version, at least 14 days old. 1.29.3 = 2026-11-03 (Last-Modified
+# of the archive file); MIT/Apache-2.0.
+#
+# To bump: version + both sha256 lines, then commit; the rendered installer hash
+# changes, but an existing rustup is left alone (it self-updates).
+rustup:
+  version: "1.29.3"
+  sha256:
+    x86_64:  "b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c55"
+    aarch64: "9f608c142e0e38a78957d0661ba1dfaf0b6fb37184cfaa4b9a0aa57af6184282"
+  # Toolchain and components rustup-init installs, and `rustup update` keeps current.
+  toolchain: "stable"
+  profile: "default"          # rustc, cargo, rust-std, rust-docs, rustfmt, clippy
+  components: ["rust-src"]
+  # run_after_rustup-update: at most one `rustup update` per this many days.
+  update_every_days: 7
