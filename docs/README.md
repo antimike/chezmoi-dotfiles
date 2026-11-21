@@ -35,6 +35,7 @@ Facts live in one place and are linked, not copied. Update `updated:` when you c
 | [runbooks/gpg-and-signing.md](runbooks/gpg-and-signing.md) | GPG keys, git signing config, verification | signing, `pass`, YubiKey problems |
 | [runbooks/keychron-launcher.md](runbooks/keychron-launcher.md) | Remapping the Keychron Q3 Pro (Launcher/WebHID), the udev rule, layout backup; open mic-key → F20 task | Keychron keys, VIA/Launcher access |
 | [runbooks/home-network.md](runbooks/home-network.md) | Network layout (wired via the GL-AR750S repeater, Wi-Fi fallback), router firmware and pitfalls, NetworkManager commands, slow-link diagnosis | network problems, router work, Wi-Fi band, `tcp_metrics` |
+| [log/sessions.md](log/sessions.md) | Session-by-session history moved out of STATUS.md, newest first | when or how something was done |
 | [log/migration-steps.md](log/migration-steps.md) | Completed Claude Code migration work log | history or provenance questions |
 | [../tools/README.md](../tools/README.md) | Dev scripts: `compare-trees.py` (tree survey) and `zsh-probe/` (scratch-home zsh harness) | re-running the BOCO survey; testing zsh changes without touching `$HOME` |
 
