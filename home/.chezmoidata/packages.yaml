@@ -235,6 +235,7 @@ packageTargets:
       - wtype
       - swayimg              # default image viewer (Wayland native; Lua config)
       - wev                  # shows the keysyms and modifiers a Wayland client receives (key debugging)
+      - adw-gtk3-theme       # GTK3 base of the amontillado-dark/-light theme dirs (D82, chz-q1k)
       # uwsm build and runtime deps (uwsm itself: run_onchange_install-uwsm.sh.tmpl)
       - meson
       - scdoc
