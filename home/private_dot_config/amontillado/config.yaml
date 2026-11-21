@@ -7,8 +7,7 @@
 # (images annexed and locked, info files and thumbnails in git; no remotes yet). Setup and the
 # encrypted NSFW variant: chezmoi docs/runbooks/amontillado-library.md. No NSFW root is set up.
 #
-# Still to come: the libadwaita apps (chz-ht9: GTK4 libadwaita-vars + colour-scheme hook; chz-q1k:
-# the GTK3 theme dir).
+# Still to come: the GTK3 theme dir (chz-q1k).
 
 # Commit what each amo command writes to the library repository: one commit per command, info
 # files merged with `amo info merge` so hand edits stay uncommitted, new images `git annex add`ed.
@@ -67,3 +66,13 @@ theme:
     # A dunstrc.d drop-in (urgency colours): ~/.config/dunst/dunstrc.d/50-theme.conf links here.
     dunst:
       reload: dunstctl reload
+    # GTK4/libadwaita (chz-ht9): libadwaita's named colours plus the standalone text colours as CSS
+    # variables, so accent/success/warning/error text follows the palette, not the scheme.
+    # ~/.config/gtk-4.0/gtk.css links here; GTK4 reads it at app start (restart to pick it up).
+    # The reload keeps the global colour scheme in step with the variant rendered: under
+    # variant: system it writes back the scheme just read (theme-variant owns it, D78); after a
+    # manual `amo theme apply --variant X` it flips the scheme to match, for what the stylesheet
+    # cannot reach (GtkSourceView styles, per-scheme assets, apps' prefers-color-scheme CSS;
+    # amontillado docs/colour-scheme-hooks.md). A one-variant preset (Blazer: dark) sets its own.
+    libadwaita-vars:
+      reload: 'gsettings set org.gnome.desktop.interface color-scheme "prefer-$AMO_VARIANT"'
