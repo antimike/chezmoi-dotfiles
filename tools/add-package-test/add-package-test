@@ -10,7 +10,11 @@
 # (true and a pip spec), mise (version from `mise latest`, exact pin, already pinned refused),
 # two targets (one install), a name already in the target (nothing done), --dry-run (nothing
 # written), the rofi picker without -t, a failing install (nothing written), --release (a ticket
-# with the probe's evidence, nothing installed or written). Needs mikefarah's yq.
+# with the probe's evidence, nothing installed or written). Commits (chz-9o2), in a scratch git
+# repo with an isolated git config: the edit committed alone with the boilerplate message (dnf
+# and mise), a file already dirty left uncommitted, another staged file kept out, a note on a
+# branch other than main, --no-commit, mid-merge, a failing commit hook (exit 1, file written);
+# outside a git repo (the other cases) the commit is only suggested. Needs mikefarah's yq.
 # Exit 1 if any case fails.
 # ok() always succeeds, so `check && ok || bad` is safe; stubs expand $* at their run time.
 # shellcheck disable=SC2015,SC2016
@@ -21,6 +25,8 @@ script=$root/home/dot_local/bin/executable_add-package
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 export STATE=$work/state
+export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=$work/gitconfig
+printf '[user]\n\tname = test\n\temail = test@example.invalid\n[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n' >"$GIT_CONFIG_GLOBAL"
 fails=0
 
 mkdir -p "$work/bin"
@@ -50,6 +56,12 @@ fresh() {  # a fresh scratch source and state
   cp "$root/home/private_dot_config/mise/config.toml" "$work/src/private_dot_config/mise/"
   : >"$STATE/calls"
 }
+gitfresh() {  # fresh(), then the scratch source as a git repo with one commit
+  fresh
+  git -C "$work/src" init -q && git -C "$work/src" add -A && git -C "$work/src" commit -qm init
+}
+head_subject() { git -C "$work/src" log -1 --format=%s; }
+commits() { git -C "$work/src" rev-list --count HEAD; }
 pkgs=$work/src/.chezmoidata/packages.yaml
 toml=$work/src/private_dot_config/mise/config.toml
 run() {  # args... -> rc, out, err
@@ -65,7 +77,7 @@ last() { yq -o json -I0 ".packageTargets.$1.packages[-1]" "$pkgs"; }
 case_name="dnf: installed, entry last in the target, with a comment"
 fresh; run -t base --comment "a cow" cowsay
 [[ $rc == 0 && $(last base) == '"cowsay"' ]] && called "sudo dnf install -y cowsay" &&
-  grep -q '^      - cowsay  # a cow$' "$pkgs" && grep -q 'commit -m "chore(packages): add cowsay (base)"' "$work/out" &&
+  grep -q '^      - cowsay  # a cow$' "$pkgs" && grep -q 'commit -m "chore(packages): add cowsay (base; dnf)"' "$work/out" && grep -q 'not in a git repository' "$work/out" &&
   ok || bad "rc=$rc last=$(last base)"
 
 case_name="already installed: recorded, not installed"
@@ -133,6 +145,43 @@ fresh; run --release someone/tool
 case_name="--release: a repo mise knows points at a mise pin"
 fresh; run --release josephburnett/jd
 [[ $rc == 0 ]] && grep -q 'add-package --mise jd' "$STATE/calls" && ok || bad "rc=$rc"
+
+case_name="commit: the edit committed alone, boilerplate message"
+gitfresh; run -t base cowsay
+[[ $rc == 0 && $(head_subject) == 'chore(packages): add cowsay (base; dnf)' && $(commits) == 2 ]] &&
+  [[ -z $(git -C "$work/src" status --porcelain) ]] && grep -q '^Committed [0-9a-f]* on main: ' "$work/out" &&
+  ! grep -q 'is not main' "$work/out" && ok || bad "rc=$rc subject=$(head_subject)"
+
+case_name="commit: mise pin"
+gitfresh; run --mise eza
+[[ $rc == 0 && $(head_subject) == 'chore(mise): pin eza 9.9.9' ]] && ok || bad "rc=$rc subject=$(head_subject)"
+
+case_name="commit: a file already dirty is written, not committed"
+gitfresh; echo '# hand edit' >>"$pkgs"; run -t base cowsay
+[[ $rc == 0 && $(commits) == 1 ]] && grep -q 'already had uncommitted changes' "$work/out" && grep -q '^# hand edit$' "$pkgs" &&
+  [[ $(last base) == '"cowsay"' ]] && ok || bad "rc=$rc commits=$(commits)"
+
+case_name="commit: another staged file stays out (and staged)"
+gitfresh; echo x >"$work/src/other"; git -C "$work/src" add other; run -t base cowsay
+[[ $rc == 0 && $(commits) == 2 ]] && [[ $(git -C "$work/src" show --name-only --format= HEAD) == .chezmoidata/packages.yaml ]] &&
+  [[ $(git -C "$work/src" diff --cached --name-only) == other ]] && ok || bad "rc=$rc"
+
+case_name="commit: on another branch, committed there with a note"
+gitfresh; git -C "$work/src" switch -qc feat; run -t base cowsay
+[[ $rc == 0 && $(git -C "$work/src" log -1 --format=%s feat) == 'chore(packages): add cowsay (base; dnf)' ]] &&
+  grep -q 'Note: feat is not main' "$work/out" && ok || bad "rc=$rc"
+
+case_name="commit: --no-commit writes only"
+gitfresh; run --no-commit -t base cowsay
+[[ $rc == 0 && $(commits) == 1 && $(last base) == '"cowsay"' ]] && grep -q 'not committed (--no-commit)' "$work/out" && ok || bad "rc=$rc"
+
+case_name="commit: not during a merge"
+gitfresh; git -C "$work/src" rev-parse HEAD >"$work/src/.git/MERGE_HEAD"; run -t base cowsay
+[[ $rc == 0 && $(commits) == 1 ]] && grep -q 'in the middle of a merge' "$work/out" && ok || bad "rc=$rc"
+
+case_name="commit: a failing hook exits 1, the file stays written"
+gitfresh; printf '#!/bin/sh\nexit 1\n' >"$work/src/.git/hooks/pre-commit"; chmod +x "$work/src/.git/hooks/pre-commit"; run -t base cowsay
+[[ $rc == 1 && $(commits) == 1 && $(last base) == '"cowsay"' ]] && grep -q 'git commit failed' "$work/err" && ok || bad "rc=$rc"
 
 if ((fails)); then echo "$fails failed"; exit 1; fi
 echo "all passed"

@@ -25,10 +25,17 @@ name is skipped. The entry goes at the end of the target's list, or after --afte
 Something already installed (rpm -q, pipx list, mise where) is not installed again, only
 recorded: the usual case for a package first installed by hand. The edit goes to the
 chezmoi source (`chezmoi source-path`, or --source), never to the target, and is checked
-by parsing the file again. Nothing is committed and chezmoi apply is not run: the diff
-and a suggested commit are printed. --dry-run prints the commands and the diff only.
+by parsing the file again, then committed on its own, as `pass` does (chz-9o2): `git commit
+-- <file>` with a boilerplate message (`chore(packages): add NAME (TARGETS; METHOD)`, `chore(mise):
+pin TOOL VERSION`), so whatever else is staged stays out; the repository's hooks run, nothing is
+pushed. On a branch other than main or master it commits there and says so. It prints the
+suggested commit instead, leaving the file uncommitted, when: --no-commit; the file already had
+uncommitted changes before this run (they are not swept into a boilerplate commit); git is in
+the middle of a merge, rebase, cherry-pick or revert; HEAD is detached; or the source is not
+in a git repository. chezmoi apply is not run. --dry-run prints the commands and the diff only.
 
-Exit status: 0 = done (or nothing to do), 1 = a command failed, 2 = usage error.
+Exit status: 0 = done (or nothing to do), 1 = a command failed (including the commit: the
+file is then written but not committed), 2 = usage error.
 """
 
 from __future__ import annotations
@@ -79,6 +86,7 @@ def get_cli_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pipx-spec", metavar="SPEC", help="pipx: a pip spec when it is not NAME")
     parser.add_argument("--source", type=Path, help="chezmoi source dir (default: chezmoi source-path)")
     parser.add_argument("-n", "--dry-run", action="store_true", help="print commands and the diff only")
+    parser.add_argument("--no-commit", action="store_true", help="write the file but do not commit it")
     parser.add_argument(
         "--loglevel",
         "-l",
@@ -375,10 +383,10 @@ def do_mise(args: argparse.Namespace, src: Path) -> int:
         logger.info("%s@%s is already installed; recording it only", args.name, version)
     else:
         run(["mise", "install", f"{args.name}@{version}"], dry_run=args.dry_run)
-    write(src, MISE, old, new, args, f"chore(mise): pin {args.name} {version}")
+    status = write(src, MISE, old, new, args, f"chore(mise): pin {args.name} {version}")
     if not args.dry_run:
         print(f"Active after: chezmoi apply ~/.config/mise/config.toml (then `mise which {args.name}`)")
-    return 0
+    return status
 
 
 def do_release(args: argparse.Namespace) -> int:
@@ -441,17 +449,56 @@ def do_release(args: argparse.Namespace) -> int:
     return 0
 
 
-def write(src: Path, rel: Path, old: str, new: str, args: argparse.Namespace, message: str) -> None:
-    """Print the diff; unless --dry-run, write the file and suggest the commit."""
+def git(src: Path, *cmd: str) -> subprocess.CompletedProcess:
+    return probe(["git", "-C", str(src), *cmd])
+
+
+def commit_blocker(src: Path, rel: Path) -> str:
+    """Why the edit must not be committed automatically; empty when it may be (checked before writing)."""
+    if not shutil.which("git") or git(src, "rev-parse", "--git-dir").returncode != 0:
+        return "the source is not in a git repository"
+    for marker, what in (
+        ("MERGE_HEAD", "a merge"),
+        ("rebase-merge", "a rebase"),
+        ("rebase-apply", "a rebase"),
+        ("CHERRY_PICK_HEAD", "a cherry-pick"),
+        ("REVERT_HEAD", "a revert"),
+    ):
+        if Path(src, git(src, "rev-parse", "--git-path", marker).stdout.strip()).exists():
+            return f"git is in the middle of {what}"
+    if not git(src, "branch", "--show-current").stdout.strip():
+        return "HEAD is detached"
+    if git(src, "status", "--porcelain", "--", str(rel)).stdout.strip():
+        return f"{rel} already had uncommitted changes"
+    return ""
+
+
+def write(src: Path, rel: Path, old: str, new: str, args: argparse.Namespace, message: str) -> int:
+    """Print the diff; unless --dry-run, write the file and commit it on its own (or suggest the commit)."""
     sys.stdout.writelines(
         difflib.unified_diff(old.splitlines(True), new.splitlines(True), f"a/{rel}", f"b/{rel}")
     )
     if args.dry_run:
-        return
+        return 0
+    blocker = "--no-commit" if args.no_commit else commit_blocker(src, rel)
     (src / rel).write_text(new)
-    print(
-        f'\nWritten to the chezmoi source, not committed. Suggested:\n  git -C {src} commit -m "{message}" -- {rel}'
+    suggestion = f'git -C {src} commit -m "{message}" -- {rel}'
+    if blocker:
+        print(f"\nWritten to the chezmoi source, not committed ({blocker}). Suggested:\n  {suggestion}")
+        return 0
+    result = subprocess.run(
+        ["git", "-C", str(src), "commit", "-m", message, "--", str(rel)], text=True, capture_output=True, check=False
     )
+    if result.returncode != 0:
+        logger.error("written, but git commit failed:\n%s", (result.stdout + result.stderr).strip())
+        print(f"\nWritten to the chezmoi source, not committed. Fix, then:\n  {suggestion}")
+        return 1
+    branch = git(src, "branch", "--show-current").stdout.strip()
+    sha = git(src, "rev-parse", "--short", "HEAD").stdout.strip()
+    print(f"\nCommitted {sha} on {branch}: {message}")
+    if branch not in ("main", "master"):
+        print(f"Note: {branch} is not main; the commit lands with that branch's merge.")
+    return 0
 
 
 def main_flow(args: argparse.Namespace) -> int:
@@ -474,8 +521,8 @@ def main_flow(args: argparse.Namespace) -> int:
         install_pipx(args)
     else:
         install_native(args, data)
-    write(src, PACKAGES, old, new, args, f"chore(packages): add {args.name} ({', '.join(written)})")
-    return 0
+    method = "pipx" if args.pipx else f"copr {args.copr}" if args.copr else "dnf"
+    return write(src, PACKAGES, old, new, args, f"chore(packages): add {args.name} ({', '.join(written)}; {method})")
 
 
 def main() -> None:
