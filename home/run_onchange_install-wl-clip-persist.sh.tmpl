@@ -29,6 +29,9 @@ if [ "$ENABLED" != 1 ]; then
   echo "wl-clip-persist installer: needs Linux with display_server=wayland (this host: {{ .chezmoi.os }}, {{ $ds }}); skipping" >&2
   exit 0
 fi
+# rustup's toolchain (chz-if3; run_onchange_before_install-rustup) first on PATH,
+# so a fresh host finds it in the same apply.
+PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 for tool in git cargo; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "wl-clip-persist installer: '$tool' not found; install it (see packages.yaml) and re-run; skipping" >&2

@@ -103,7 +103,7 @@ packageTargets:
       - meld                 # graphical diff and merge
       # Dev toolchain and python build deps (for mise-built interpreters)
       - bzip2-devel
-      - cargo
+      # Rust: rustup in ~/.cargo, not the distro cargo/rust (chz-if3; run_onchange_before_install-rustup)
       - gcc
       - libffi-devel
       - luarocks
