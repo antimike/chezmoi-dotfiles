@@ -79,7 +79,10 @@ hue). **Decided by MH 2026-11-20:** GTK3 goes live through a theme dir + toggle 
 in amontillado v0.3.0, in an adw-gtk3-style theme dir that `@import`s it; a `gtk-theme` flip on reload; chz-q1k). GTK4
 uses `libadwaita-vars` (standalone text colours set by the palette, not the scheme; restart to pick up) **and** keeps
 the gsettings `color-scheme` hook on that app (`prefer-$AMO_VARIANT`; a no-op under `theme.variant: system`, it covers
-manual `--variant` applies, GtkSourceView and per-scheme assets; chz-ht9). **GTK4 built 2026-11-21 (chz-ht9):** the `libadwaita-vars`
+manual `--variant` applies, GtkSourceView and per-scheme assets; chz-ht9). **GTK3 built 2026-11-21 (chz-q1k, D82):** theme dirs
+`~/.local/share/themes/amontillado-{dark,light}` (adw-gtk3 + amontillado's `libadwaita.css`, plus an override: adw-gtk3
+writes white text on the accent, unreadable on a dark variant's light accent), switched by `gtk3-theme-reload`; a running
+GTK3 window recoloured dark → light → dark under Hyprland, suggested-action text 11.72:1 (dark), 4.88:1 (light). **GTK4 built 2026-11-21 (chz-ht9):** the `libadwaita-vars`
 app, `~/.config/gtk-4.0/gtk.css` a chezmoi link to its render; text colours checked at 6.6:1 or more (dark) and
 4.58:1 or more (light) on window, view and card backgrounds. Checked 2026-11-02 under Hyprland
 (portals `hyprland;gtk`): the portal relays `color-scheme` but answers "setting not found" for `accent-color`
