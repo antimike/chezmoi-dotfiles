@@ -1,0 +1,63 @@
+#!/bin/sh
+# run_onchange_before_install-rustup.sh.tmpl — bootstrap rustup and the stable
+# toolchain into ~/.cargo (chz-if3: one toolchain per host, rustup-managed).
+#
+# Runs in chezmoi's "before" phase, so the toolchain exists before any cargo
+# installer (rano, wallust, wl-clip-persist) runs on a fresh host. Downloads the
+# pinned rustup-init (.chezmoidata/rustup.yaml), refuses it unless the sha256
+# matches, and runs it with --no-modify-path (~/.profile sources ~/.cargo/env).
+# Does nothing when rustup is already installed: rustup updates itself and the
+# toolchain from run_after_rustup-update.sh.tmpl.
+#
+# Linux only (x86_64, aarch64). Honours CARGO_HOME / RUSTUP_HOME. Fails the apply
+# on a checksum mismatch or a failed install; a missing curl or an offline host
+# fails too (run_onchange records only a successful run, so the next apply retries).
+{{- $arch := "" -}}
+{{- if eq .chezmoi.arch "amd64" }}{{ $arch = "x86_64" }}{{ end -}}
+{{- if eq .chezmoi.arch "arm64" }}{{ $arch = "aarch64" }}{{ end -}}
+{{- $r := .rustup }}
+
+set -eu
+
+VERSION={{ $r.version | quote }}
+TRIPLE={{ printf "%s-unknown-linux-gnu" $arch | quote }}
+EXPECTED_SHA={{ index $r.sha256 $arch | default "" | quote }}
+TOOLCHAIN={{ $r.toolchain | quote }}
+PROFILE={{ $r.profile | quote }}
+COMPONENTS={{ join "," $r.components | quote }}
+OS={{ .chezmoi.os | quote }}
+
+CARGO_HOME=${CARGO_HOME:-$HOME/.cargo}
+export CARGO_HOME
+RUSTUP_HOME=${RUSTUP_HOME:-$HOME/.rustup}
+export RUSTUP_HOME
+
+if [ "$OS" != linux ] || [ -z "$EXPECTED_SHA" ]; then
+  echo "rustup installer: no pinned rustup-init for $OS/{{ .chezmoi.arch }}; skipping" >&2
+  exit 0
+fi
+
+if [ -x "$CARGO_HOME/bin/rustup" ]; then
+  echo "rustup installer: rustup already in $CARGO_HOME/bin; nothing to do" >&2
+  exit 0
+fi
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+url="https://static.rust-lang.org/rustup/archive/$VERSION/$TRIPLE/rustup-init"
+echo "rustup installer: downloading rustup-init $VERSION ($TRIPLE)" >&2
+curl -fsSL --retry 3 -o "$tmp_dir/rustup-init" "$url"
+actual=$(sha256sum "$tmp_dir/rustup-init" | cut -d' ' -f1)
+if [ "$actual" != "$EXPECTED_SHA" ]; then
+  echo "rustup installer: sha256 mismatch for $url" >&2
+  echo "  expected $EXPECTED_SHA" >&2
+  echo "  got      $actual" >&2
+  exit 1
+fi
+chmod +x "$tmp_dir/rustup-init"
+
+set -- -y --no-modify-path --default-toolchain "$TOOLCHAIN" --profile "$PROFILE"
+[ -n "$COMPONENTS" ] && set -- "$@" --component "$COMPONENTS"
+"$tmp_dir/rustup-init" "$@"
+
+"$CARGO_HOME/bin/rustc" --version >&2

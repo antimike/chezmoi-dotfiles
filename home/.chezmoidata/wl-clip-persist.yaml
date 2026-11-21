@@ -9,7 +9,7 @@
 # build uses `cargo build --locked`.
 #
 # Pin rule: exact tag, at least 14 days old. v0.5.0 = 2025-09-23 (upstream's
-# latest); MIT. Builds in under a minute with Fedora's cargo 1.98.1 (needs Rust
+# latest); MIT. Builds in under a minute with rustup's stable cargo (chz-if3; needs Rust
 # 1.85). Needs a compositor with ext-data-control-v1 or wlr-data-control
 # (Sway has them; GNOME does not), so it only builds where the `display_server`
 # host key is "wayland".

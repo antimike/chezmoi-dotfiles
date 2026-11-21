@@ -9,10 +9,10 @@
 # from the crate's Cargo.lock. Cargo runs dependency build scripts; that is the
 # trust this takes beyond the pin.
 #
-# Toolchain: Fedora's /usr/bin/cargo and /usr/bin/rustc when both exist (cargo
-# is in the base target), else cargo and rustc from PATH. A stale rustup
-# toolchain in ~/.cargo/bin otherwise wins on PATH, and wallust's dependencies
-# need rustc >= 1.75.
+# Toolchain: rustup's in ~/.cargo/bin (chz-if3; bootstrapped by
+# run_onchange_before_install-rustup, kept current by run_after_rustup-update),
+# put first on PATH so a fresh host finds it in the same apply. wallust's
+# dependencies need rustc >= 1.75.
 #
 # Only runs on Linux hosts whose `display_server` host key is "wayland"
 # (see .chezmoi.yml.tmpl). Skips with a note (exit 0), rather than failing
@@ -34,13 +34,8 @@ if [ "$ENABLED" != 1 ]; then
   exit 0
 fi
 
-if [ -x /usr/bin/cargo ] && [ -x /usr/bin/rustc ]; then
-  CARGO=/usr/bin/cargo
-  RUSTC=/usr/bin/rustc
-  export RUSTC
-else
-  CARGO=cargo
-fi
+PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+CARGO=cargo
 for tool in curl "$CARGO"; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "wallust installer: '$tool' not found; install it (see packages.yaml) and re-run; skipping" >&2
