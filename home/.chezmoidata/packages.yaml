@@ -141,6 +141,7 @@ packageTargets:
       - { name: nb, release: nb }
       - { name: pproj, release: project-registry }  # project registry CLI (D76); pinned tag, checkout left alone
       - { name: the-way, release: the-way }
+      - bfs
 
   python-tools:
     description: Python CLI tools, installed with pipx (pipx itself is in base)
