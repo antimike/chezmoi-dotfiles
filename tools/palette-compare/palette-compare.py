@@ -1,9 +1,15 @@
 #!/usr/bin/env -S uv run --script
 # /// script
-# requires-python = ">=3.10"
-# dependencies = ["pyyaml", "rich", "rich-argparse"]
+# requires-python = ">=3.11"
+# dependencies = [
+#     # Keep the tag at chezmoi's amontillado pin (home/.chezmoidata/amontillado.yaml, `ref`).
+#     "amontillado @ git+https://github.com/antimike/amontillado@v0.9.0",
+#     "pyyaml",
+#     "rich",
+#     "rich-argparse",
+# ]
 # ///
-"""Compare palette generators (matugen, wallust) on wallpapers as terminal palettes.
+"""Compare palette generators (matugen, wallust, amontillado) on wallpapers as terminal palettes.
 
 Runs each generator setting on each picture, turns the result into a 16-colour terminal palette
 (background, foreground, color0-15, written as a kitty .conf), and scores it next to the live kitty
@@ -19,6 +25,9 @@ palette (the hand-made Blazer baseline):
               promises (red, green, yellow, blue, magenta, cyan) with some chroma; git, ls and
               compiler errors rely on that
 
+distinct and hues are amontillado's own metrics (amontillado.accents, imported through the uv
+script header, not copied), so the two projects score palettes the same way.
+
 Settings compared (--settings picks some):
   matugen       matugen image --source-color-index 0, dark mode; base16 mapped to ANSI as
                 base16-shell does (color1 = base08 red, color2 = base0B green, ...)
@@ -26,6 +35,10 @@ Settings compared (--settings picks some):
   wallust-k     the same with --check-contrast
   wallust-ansi  --check-contrast --colorspace lchansi --palette ansidark16 (wallust's mode that
                 keeps the tty colour order)
+  amo           amo palette PICTURE (amontillado's named hues, contrast-adjusted), dark variant;
+                base24 mapped to ANSI as chezmoi's kitty template does (colour 0 base11, 7 base06)
+  amo-light     the same, light variant
+  amo-generator amo palette --hues generator (the generator's own accents), dark variant
 
 Generators run in a throwaway XDG config and cache home with terminal sequences off, so the live
 terminals, ~/.config and ~/.cache are untouched. Output in --out: one kitty .conf per picture and
@@ -44,7 +57,6 @@ import html
 import importlib.util
 import itertools
 import json
-import math
 import os
 import subprocess
 import sys
@@ -55,6 +67,7 @@ from pathlib import Path
 from types import ModuleType
 
 import yaml
+from amontillado import accents as accents_metrics
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
@@ -65,21 +78,16 @@ logger = getLogger(__name__)
 TERM_CONTRAST = (
     Path(__file__).resolve().parent.parent / "term-contrast/term-contrast.py"
 )
+BLAZER_CONF = Path.home() / ".config/kitty/current-theme.conf"
 TC_SOURCES = ("palette", "fsh", "autosuggest", "git", "less")
 
 # base16-shell's ANSI mapping: color0-15 from base00-0F.
 BASE16_ANSI = ["base00", "base08", "base0b", "base0a", "base0d", "base0e", "base0c", "base05",
                "base03", "base08", "base0b", "base0a", "base0d", "base0e", "base0c", "base07"]  # fmt: skip
-ANSI_PRIMARIES = {
-    1: "#ff0000",
-    2: "#00ff00",
-    3: "#ffff00",
-    4: "#0000ff",
-    5: "#ff00ff",
-    6: "#00ffff",
-}
-HUE_TOLERANCE = 45.0
-MIN_CHROMA = 0.03
+# chezmoi's kitty template (home/private_dot_config/amontillado/templates/kitty.mustache): what
+# kitty gets from an amo palette. Keep the two in step.
+KITTY_ANSI = ["base11", "base08", "base0B", "base0A", "base0D", "base0E", "base0C", "base06",
+              "base03", "base12", "base14", "base13", "base16", "base17", "base15", "base07"]  # fmt: skip
 
 SETTINGS = {
     "matugen": ["--source-color-index", "0"],
@@ -92,6 +100,9 @@ SETTINGS = {
         "--palette",
         "ansidark16",
     ],
+    "amo": ["dark"],
+    "amo-light": ["light"],
+    "amo-generator": ["dark", "--hues", "generator"],
 }
 
 WALLUST_TEMPLATE = (
@@ -99,8 +110,6 @@ WALLUST_TEMPLATE = (
     + ",".join(f'"{{{{color{i}}}}}"' for i in range(16))
     + "]}\n"
 )
-
-RGB = tuple[int, int, int]
 
 
 class HelpFormatter(
@@ -174,64 +183,19 @@ def load_term_contrast() -> ModuleType:
     return module
 
 
-# --- colour maths -------------------------------------------------------------------------------
-
-
-def rgb(hex_colour: str) -> RGB:
-    h = hex_colour.lstrip("#")
-    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
-
-
-def oklab(c: RGB) -> tuple[float, float, float]:
-    def linear(v: int) -> float:
-        v /= 255
-        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-
-    r, g, b = (linear(v) for v in c)
-    lms = (
-        0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
-        0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
-        0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
-    )
-    l_, m_, s_ = (math.copysign(abs(v) ** (1 / 3), v) for v in lms)
-    return (
-        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
-        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
-        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
-    )
-
-
-def chroma_hue(c: RGB) -> tuple[float, float]:
-    _, a, b = oklab(c)
-    return math.hypot(a, b), math.degrees(math.atan2(b, a)) % 360
-
-
-def hue_gap(h1: float, h2: float) -> float:
-    d = abs(h1 - h2) % 360
-    return min(d, 360 - d)
+# --- scoring ------------------------------------------------------------------------------------
 
 
 def score(tc: ModuleType, styles: list, palette, minimum: float) -> Score:
     bg = palette.background
     accents = [palette.colors[i] for i in range(1, 7)]
-    nominal = {i: chroma_hue(rgb(h))[1] for i, h in ANSI_PRIMARIES.items()}
-    hues = 0
-    for i, colour in zip(range(1, 7), accents):
-        c, h = chroma_hue(colour)
-        hues += c >= MIN_CHROMA and hue_gap(h, nominal[i]) <= HUE_TOLERANCE
+    hexes = [tc.hexs(c) for c in accents]
     return Score(
         tc_fails=sum(r.ratio < minimum for r in tc.check(palette, styles)),
         fg_bg=round(tc.contrast(palette.foreground, bg), 2),
         accent_min=round(min(tc.contrast(c, bg) for c in accents), 2),
-        distinct=round(
-            100
-            * min(
-                math.dist(oklab(a), oklab(b))
-                for a, b in itertools.combinations(accents, 2)
-            ),
-            1,
-        ),
-        hues=hues,
+        distinct=accents_metrics.distinctness(hexes),
+        hues=accents_metrics.hue_fidelity(hexes),
     )
 
 
@@ -294,8 +258,24 @@ def run_wallust(
     return data
 
 
+def run_amo(picture: Path, args: list[str], work: Path, env: dict[str, str]) -> dict:
+    variant, *flags = args
+    out = run(["amo", "-l", "ERROR", "palette", *flags, str(picture)], env)
+    base24 = yaml.safe_load(out)["variants"][variant]["base24"]
+    return {
+        "background": base24["base00"],
+        "foreground": base24["base05"],
+        "colors": [base24[k] for k in KITTY_ANSI],
+    }
+
+
 def generate(setting: str, picture: Path, work: Path, env: dict[str, str]) -> dict:
-    runner = run_matugen if setting.startswith("matugen") else run_wallust
+    if setting.startswith("amo"):
+        runner = run_amo
+    elif setting.startswith("matugen"):
+        runner = run_matugen
+    else:
+        runner = run_wallust
     return runner(picture, SETTINGS[setting], work, env)
 
 
@@ -446,7 +426,9 @@ def main() -> None:
         sys.exit(
             f"palette-compare: unknown setting(s) {', '.join(unknown)}; known: {', '.join(SETTINGS)}"
         )
-    pictures = [p.expanduser().resolve() for p in args.pictures] or amo_pictures()
+    # absolute(), not resolve(): library images are git-annex symlinks into .git/annex/objects,
+    # and the record directory (its name, its info.yaml) is the link's parent.
+    pictures = [p.expanduser().absolute() for p in args.pictures] or amo_pictures()
     if not pictures:
         sys.exit("palette-compare: no pictures (amo list is empty)")
 
@@ -454,9 +436,12 @@ def main() -> None:
     styles = [style for name in TC_SOURCES for style in tc.SOURCES[name]()]
     args.out.mkdir(parents=True, exist_ok=True)
 
-    live = tc.load_palette(tc.KITTY_CONF, "live kitty")
-    baseline = Entry("", "live kitty (Blazer)", tc.hexs(live.background), tc.hexs(live.foreground),
-                     [tc.hexs(c) for c in live.colors], score(tc, styles, live, args.min))  # fmt: skip
+    # Blazer, the hand-made baseline: kitty's fallback palette (the live config includes the
+    # theme cache since chz-8bg.4, so it is whatever theme is applied).
+    blazer = tc.load_palette(BLAZER_CONF, "Blazer")
+    baseline = Entry("", "Blazer (kitty/current-theme.conf)", tc.hexs(blazer.background),
+                     tc.hexs(blazer.foreground), [tc.hexs(c) for c in blazer.colors],
+                     score(tc, styles, blazer, args.min))  # fmt: skip
 
     entries: list[Entry] = []
     with tempfile.TemporaryDirectory() as tmp:
