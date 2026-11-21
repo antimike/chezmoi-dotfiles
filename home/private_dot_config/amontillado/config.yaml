@@ -33,8 +33,12 @@ theme:
   # on every monitor would clobber them.
   variant: system
   apps:
-    # Our template: today's kitty palette keys only (see the template's header).
+    # Our template: today's kitty palette keys only (see the template's header). Always dark (MH
+    # 2026-11-21): CLI tools with fixed dark-only colours (256-colour cube and grey ramp,
+    # truecolour) are unreadable on a light background. Lift once chz-djc, chz-n6i and the
+    # amontillado tickets (kitty colours 16-255, vivid template) are done.
     kitty:
+      variant: dark
       source: path
       path: ~/.config/amontillado/templates/kitty.mustache
       format: mustache
