@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=amontillado-dark
+Comment=adw-gtk3 dark coloured by amontillado's theme cache (chezmoi D82)
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=amontillado-dark

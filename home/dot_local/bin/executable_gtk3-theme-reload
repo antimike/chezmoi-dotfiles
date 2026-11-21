@@ -1,0 +1,40 @@
+#!/bin/sh
+# gtk3-theme-reload — point GTK3 at the amontillado theme dir for a variant, live (D82, chz-q1k).
+#
+#   gtk3-theme-reload [dark|light]     (default: $AMO_VARIANT, as amo theme apply sets it)
+#
+# GTK3 reads ~/.config/gtk-3.0/gtk.css once per process, but re-reads the named theme's files
+# when gsettings' gtk-theme changes. ~/.local/share/themes/amontillado-{dark,light} import
+# adw-gtk3 and amontillado's libadwaita.css through ~/.cache/theme/current/, so:
+#   - a variant change sets gtk-theme to amontillado-<variant>: running GTK3 apps re-read it;
+#   - the same variant again (a new palette, same scheme) flips gtk-theme to Adwaita and back,
+#     since setting an unchanged value notifies nobody (a brief flash in open GTK3 apps).
+# Run by the `libadwaita` app's reload in the amontillado config. Exits 2 on a bad variant,
+# 1 if the theme dir or adw-gtk3 is missing (gtk-theme is then left alone).
+set -eu
+
+variant=${1:-${AMO_VARIANT:-}}
+case $variant in
+  dark | light) ;;
+  *)
+    echo "gtk3-theme-reload: variant must be dark or light, got '${variant}'" >&2
+    exit 2
+    ;;
+esac
+
+theme=amontillado-$variant
+dir=${XDG_DATA_HOME:-$HOME/.local/share}/themes/$theme
+if [ ! -f "$dir/gtk-3.0/gtk.css" ]; then
+  echo "gtk3-theme-reload: $dir/gtk-3.0/gtk.css missing (chezmoi apply)" >&2
+  exit 1
+fi
+if [ ! -d /usr/share/themes/adw-gtk3 ]; then
+  echo "gtk3-theme-reload: adw-gtk3 not installed (dnf install adw-gtk3-theme)" >&2
+  exit 1
+fi
+
+key=org.gnome.desktop.interface
+if [ "$(gsettings get "$key" gtk-theme)" = "'$theme'" ]; then
+  gsettings set "$key" gtk-theme Adwaita
+fi
+gsettings set "$key" gtk-theme "$theme"

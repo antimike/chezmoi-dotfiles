@@ -1,0 +1,18 @@
+/* amontillado-light: GTK3 theme dir (D82, chz-q1k). adw-gtk3's light style, coloured by amontillado's
+   libadwaita.css (libadwaita's named colours from the palette). Absolute imports: the second
+   goes through ~/.cache/theme/current/, so a gtk-theme switch (gtk3-theme-reload, run by
+   amo theme apply) re-reads the profile just applied. Needs adw-gtk3-theme (package map). */
+@import url("file:///usr/share/themes/adw-gtk3/gtk-3.0/gtk.css");
+@import url("file://{{ joinPath .chezmoi.homeDir ".cache/theme/current/libadwaita.css" }}");
+
+/* adw-gtk3 writes white text on the accent, which suits Adwaita's stock blue; a palette's accent
+   can be light (a dark variant's usually is), so use its accent_fg_color (amontillado's on_accent,
+   contrast-checked against the accent). Found in chz-q1k's live test: white on #96ccf8. */
+button.suggested-action,
+button.suggested-action:hover,
+button.suggested-action:active,
+button.suggested-action:checked,
+.terminal selection,
+.terminal text selection {
+  color: @accent_fg_color;
+}
