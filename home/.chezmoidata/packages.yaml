@@ -142,6 +142,7 @@ packageTargets:
       - { name: pproj, release: project-registry }  # project registry CLI (D76); pinned tag, checkout left alone
       - { name: the-way, release: the-way }
       - bfs
+      - papirus-icon-theme  # icons: dunst, rofi, fuzzel (chz-8bg.5)
 
   python-tools:
     description: Python CLI tools, installed with pipx (pipx itself is in base)
