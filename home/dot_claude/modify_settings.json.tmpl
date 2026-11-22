@@ -7,7 +7,9 @@
 #   hooks, permissions.allow, cleanupPeriodDays
 # Set only if absent (defaults for a fresh machine; /config and /model
 # changes survive later applies):
-#   model, effortLevel, editorMode, autoCompactEnabled, awaySummaryEnabled
+#   model, effortLevel, editorMode, autoCompactEnabled, awaySummaryEnabled, theme
+#   (theme "auto": dark or light from the terminal's background, OSC 11, re-queried when
+#   the terminal reports a colour-scheme change; follows amontillado's kitty variant)
 # Not touched: enabledPlugins / extraKnownMarketplaces. claude-mem is on hold
 # pending re-evaluation; re-add it here if it stays.
 #
@@ -91,4 +93,5 @@ printf '%s\n' "$input" | jq \
    .effortLevel        //= "medium" |
    .editorMode         //= "vim" |
    .autoCompactEnabled //= false |
-   .awaySummaryEnabled //= false'
+   .awaySummaryEnabled //= false |
+   .theme              //= "auto"'
