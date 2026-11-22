@@ -22,7 +22,7 @@
         "separate-outputs": true
     },
     "clock": {
-        "format": "{:%a %d %b  %H:%M}",
+        "format": "󰃭 {:%a %d %b  󰥔 %H:%M}",
         "tooltip-format": "<tt>{calendar}</tt>",
         "on-click": "kitty -c $HOME/.config/kitty/popup.conf --class bar-popup -e calcurse",
         "calendar": {
@@ -120,6 +120,19 @@
         "icon-size": 16,
         "spacing": 8,
         "ignore-list": ["blueman"]
+    },
+    // Pills on the riced bar (style-riced.css); plain boxes on the work bar.
+    "group/when": {
+        "orientation": "inherit",
+        "modules": ["clock", "custom/weather", "custom/sunset"]
+    },
+    "group/hw": {
+        "orientation": "inherit",
+        "modules": ["group/system", "group/audio"]
+    },
+    "group/conn": {
+        "orientation": "inherit",
+        "modules": ["network", "bluetooth", "battery"]
     },
     "group/system": {
         "orientation": "inherit",
