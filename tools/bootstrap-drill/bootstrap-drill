@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# bootstrap-drill: follow docs/runbooks/new-host.md (D83) in a scratch HOME and check that the
+# bootstrap reaches the restore hand-off: bootstrap-check passes, and bd-track's own loaders
+# (registry, host config) read the scratch HOME's files.
+#
+#   tools/bootstrap-drill/bootstrap-drill [--keep] [--ref <branch-or-sha>]
+#
+# Runs runbook steps 1 (chezmoi init --apply from this repo at <ref>, default the current
+# branch), 4 (pass) and 5 (claude-state, cloned from the local clones, origin reset to the real
+# remote), then `bootstrap-check --no-yubikey`. Not covered (the live run on a new host does them):
+# step 0, installers and externals (--exclude scripts,externals; tools come from the real
+# ~/.local/bin on PATH), step 3 (YubiKey), 7-8. The hostname is this host's, so zbook-only keys
+# render as on zbook; display_server is forced to x11 (the MacBook case). Nothing outside the
+# scratch HOME is written. Exit 0 on pass.
+set -euo pipefail
+
+keep=0
+repo=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+ref=$(git -C "$repo" rev-parse --abbrev-ref HEAD)
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --keep) keep=1 ;;
+        --ref) ref=$2; shift ;;
+        -h | --help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "bootstrap-drill: unknown option '$1'" >&2; exit 2 ;;
+    esac
+    shift
+done
+
+real_home=$HOME
+# chezmoi comes from dnf on a new host (runbook step 0); here it may be a mise install.
+chezmoi_dir=$(dirname "$(command -v chezmoi)") || { echo "bootstrap-drill: no chezmoi" >&2; exit 2; }
+base=${XDG_CACHE_HOME:-$real_home/.cache}/bootstrap-drill
+mkdir -p "$base"
+s=$(mktemp -d "$base/home.XXXXXX")
+cleanup() { if [ "$keep" = 1 ]; then echo "kept: $s"; else rm -rf "$s"; fi; }
+trap cleanup EXIT
+
+# A clean environment: only the scratch HOME, an X11 session, and PATH with the real tools.
+run() {
+    env -i HOME="$s" USER="$USER" LANG="${LANG:-C.UTF-8}" TERM=dumb \
+        XDG_SESSION_TYPE=x11 DISPLAY=:99 \
+        PATH="$s/.local/bin:$real_home/.local/bin:$chezmoi_dir:/usr/local/bin:/usr/bin:/bin" \
+        "$@"
+}
+
+fail() { echo "FAIL: $*" >&2; exit 1; }
+
+echo "== step 1: chezmoi init --apply ($ref) into $s"
+run chezmoi init --apply --branch "$ref" --exclude scripts,externals \
+    --no-tty "file://$repo" >"$s/.drill-chezmoi.log" 2>&1 ||
+    { tail -20 "$s/.drill-chezmoi.log" >&2; fail "chezmoi init --apply"; }
+[ -x "$s/.local/bin/bootstrap-check" ] || fail "bootstrap-check was not deployed"
+
+echo "== step 4: pass store (local clone)"
+run git clone -q "$real_home/.password-store" "$s/.password-store"
+
+echo "== step 5: claude-state (local clone, origin reset)"
+cs_remote=$(git -C "$real_home/.claude/projects" remote get-url origin)
+run git clone -q --depth 1 "file://$real_home/.claude/projects" "$s/.claude/projects"
+run git -C "$s/.claude/projects" remote set-url origin "$cs_remote"
+
+echo "== bootstrap-check --no-yubikey"
+out=$(run bootstrap-check --no-yubikey) && rc=0 || rc=$?
+printf '%s\n' "$out"
+[ "$rc" = 0 ] || fail "bootstrap-check exit $rc"
+for want in "ok    1  display_server: x11" "ok    6  registry:" "ok    6  bd-track host config" \
+    "ok    5  claude-state clone"; do
+    grep -qF "$want" <<<"$out" || fail "missing: $want"
+done
+
+echo "== bd-track's loaders read the scratch HOME"
+bdt_py=$(head -1 "$(command -v bd-track)" | sed 's/^#!//; s/ .*//')
+run "$bdt_py" -I - "$s" <<'EOF' || fail "bd-track loaders"
+import sys
+from pathlib import Path
+
+from bd_track import registry
+
+home = Path(sys.argv[1])
+reg = registry.load_registry(scan=False)
+src = registry.registry_path()
+assert src is not None and home in src.parents, f"registry outside the scratch HOME: {src}"
+names = sorted(reg.projects) if hasattr(reg, "projects") else sorted(reg)
+for need in ("chezmoi", "bd-track", "claude-state"):
+    assert need in names, f"{need} not in registry: {names}"
+cfg = registry.load_host_config()
+roots = cfg.get("scan_roots")
+assert roots, f"no scan_roots in host config: {cfg}"
+print(f"  registry {src}: {len(names)} projects; host config scan_roots {roots}")
+EOF
+
+echo "PASS: the bootstrap reaches the hand-off in a scratch HOME"
