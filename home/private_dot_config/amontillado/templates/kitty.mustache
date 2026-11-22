@@ -1,7 +1,7 @@
 # amontillado {{scheme-slug}} ({{scheme-variant}}): included last from kitty.conf (chz-8bg.4).
 # chezmoi's template (~/.config/amontillado/templates/kitty.mustache), not the built-in one: it sets
-# only what kitty/current-theme.conf sets (the tab bar keeps its own colours), colour 0 is base11
-# and colour 7 base06, so the Blazer preset renders today's kitty palette unchanged.
+# only what kitty/current-theme.conf sets, plus the tab bar; colour 0 is base11 and colour 7
+# base06, so the Blazer preset renders today's kitty palette unchanged.
 
 background #{{base00-hex}}
 foreground #{{base05-hex}}
@@ -24,3 +24,14 @@ color6 #{{base0C-hex}}
 color14 #{{base15-hex}}
 color7 #{{base06-hex}}
 color15 #{{base07-hex}}
+
+# Tab bar (chz-8bg.12): the riced waybar/dunst look. Active tab in the accent; inactive tabs a
+# foreground veil like the waybar pills (alpha(mix(base05, accent, 0.5), 0.16) over base00).
+# kitty takes no alpha and mustache cannot blend, so base02 stands in (6-15 RGB units from the
+# true veil; amontillado ticket for derived colours). Bar background base00, so the pills float
+# on the terminal (review base00 vs base10 after use: chz-tjv).
+tab_bar_background #{{base00-hex}}
+active_tab_background #{{accent-hex}}
+active_tab_foreground #{{on_accent-hex}}
+inactive_tab_background #{{base02-hex}}
+inactive_tab_foreground #{{base04-hex}}
