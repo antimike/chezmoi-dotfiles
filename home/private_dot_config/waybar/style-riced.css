@@ -6,12 +6,12 @@
    (recording, idle, dunst, submap) are pills of their own when shown. Radii follow the
    pickers (rofi/picker.rasi: 10px frame, 6px rows). chz-8bg.5. */
 @import url("style.css");
+@import url("variant.css");   /* bar_bg per variant: amontillado templates/waybar-variant.mustache */
 
 /* Knobs (MH's pick, 2026-11-21, from screenshots of both variants). Built from base00/base05,
-   which swap lightness between the dark and light variants, so one rule suits both: the bar
-   is a background veil (60%: busy light wallpapers stay readable); a pill is a foreground
-   veil (lightens in dark, darkens in light) pulled halfway to the accent for a tint. */
-@define-color bar_bg  alpha(@base00, 0.60);
+   which swap lightness between the dark and light variants, so one rule suits both: a pill
+   is a foreground veil (lightens in dark, darkens in light) pulled halfway to the accent for
+   a tint. The bar's own veil, bar_bg, differs by variant: variant.css. */
 @define-color pill_bg alpha(mix(@base05, @accent, 0.5), 0.16);
 
 window#waybar {

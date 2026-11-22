@@ -45,6 +45,13 @@ theme:
     # @define-color per colour: waybar's style.css @imports colors.css (a link to this file).
     gtk:
       reload: pkill -USR2 -x waybar
+    # The riced bar's per-variant settings (chz-8bg.5): ~/.config/waybar/variant.css links here.
+    # No reload of its own: amo renders every app before running reloads, so gtk's covers it.
+    waybar:
+      source: path
+      path: ~/.config/amontillado/templates/waybar-variant.mustache
+      format: mustache
+      output: waybar-variant.css
     # A Lua table: hyprland.lua dofile()s it for borders and hyprbars (Blazer if it fails).
     hyprland:
       reload: hyprctl reload

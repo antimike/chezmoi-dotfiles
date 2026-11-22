@@ -1,0 +1,11 @@
+/* amontillado {{scheme-slug}} ({{scheme-variant}}): the riced bar's settings that differ by
+   variant (chz-8bg.5). ~/.config/waybar/variant.css links here; style-riced.css @imports it
+   after style.css. waybar's CSS cannot tell the variants apart, so they live here; the gtk
+   app's reload (SIGUSR2) re-reads it. Light: a light bar over a dark wallpaper blends to
+   mid-grey, where neither dark nor light text reads (accents measured 1.6-2.2:1 at 60%). */
+{{#scheme-is-dark-variant}}
+@define-color bar_bg alpha(@base00, 0.60);
+{{/scheme-is-dark-variant}}
+{{#scheme-is-light-variant}}
+@define-color bar_bg alpha(@base00, 0.85);
+{{/scheme-is-light-variant}}

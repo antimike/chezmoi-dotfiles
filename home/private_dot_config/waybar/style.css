@@ -24,12 +24,14 @@ window#waybar {
     color: @base05;
 }
 
+/* Tooltips as the pickers and dunst: accent frame, 10px radius, translucent (Hyprland blurs
+   popups, blur.popups), the bar's font. */
 tooltip {
-    background: @base00;
-    border: 1px solid @accent;
-    border-radius: 6px;
+    background: alpha(@base00, 0.88);
+    border: 2px solid @accent;
+    border-radius: 10px;
 }
-tooltip label { color: @base05; }
+tooltip label { color: @base05; padding: 6px 8px; }
 
 #workspaces button {
     padding: 0 7px;
@@ -48,19 +50,20 @@ tooltip label { color: @base05; }
 #disk, #backlight, #custom-weather, #custom-recording, #custom-idle, #custom-dunst,
 #custom-sunset { padding: 0 8px; }
 
-/* One accent per module. */
+/* One accent per module, pulled 30% toward the text colour (base05): darker on light themes,
+   lighter on dark ones, so the accents keep reading over a see-through bar (chz-8bg.5). */
 #window          { color: @base05; }
-#clock           { color: @base0D; }
-#custom-weather  { color: @base0C; }
-#custom-sunset   { color: @base09; }
-#cpu             { color: @base08; }
-#memory          { color: @base0E; }
-#disk            { color: @base0A; }
-#pulseaudio      { color: @base0B; }
-#backlight       { color: @base0A; }
-#network         { color: @base0C; }
-#bluetooth       { color: @base0D; }
-#battery         { color: @base0B; }
+#clock           { color: mix(@base0D, @base05, 0.3); }
+#custom-weather  { color: mix(@base0C, @base05, 0.3); }
+#custom-sunset   { color: mix(@base09, @base05, 0.3); }
+#cpu             { color: mix(@base08, @base05, 0.3); }
+#memory          { color: mix(@base0E, @base05, 0.3); }
+#disk            { color: mix(@base0A, @base05, 0.3); }
+#pulseaudio      { color: mix(@base0B, @base05, 0.3); }
+#backlight       { color: mix(@base0A, @base05, 0.3); }
+#network         { color: mix(@base0C, @base05, 0.3); }
+#bluetooth       { color: mix(@base0D, @base05, 0.3); }
+#battery         { color: mix(@base0B, @base05, 0.3); }
 
 #pulseaudio.muted, #network.disconnected, #bluetooth.off, #bluetooth.disabled { color: @base03; }
 #battery.warning:not(.charging) { color: @warning; }
