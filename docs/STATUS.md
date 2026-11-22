@@ -11,7 +11,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 ## Where we are
 - **Priority (D50, 2026-10-18): functional daily driver first**; MH is job searching. Ricing, the keybinding manifest and other compositors are spare-time side quests ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 - **Desktop: Hyprland is the daily driver (D62)**, SwayFX the fallback; "work" and "riced" logins (D66). Daily-driver checklist done except 2.9 (i3 off zbook) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"). NVIDIA 615.78.08 installed; D61 (no docked suspend) still in force.
-- **Theming: done through amontillado v0.9.0** (pinned, D70/D73): every app's colours come from amontillado's theme cache; GTK3/GTK4 live (D82); kitty pinned dark until chz-n6i.
+- **Theming: done through amontillado v0.9.0** (pinned, D70/D73): every app's colours come from amontillado's theme cache; GTK3/GTK4 live (D82); riced bar/dunst/blur done (chz-8bg.5); kitty pinned dark until chz-n6i; kitty tab bar next.
 - **Work tracking:** beads (prefix `chz`, D80 keep beads); ticket inboxes (D72) with `/triage`; work queues via `/work-queue <scope>`. Design gates (D81) in `~/.claude/rules/design-gates.md`.
 - **Infrastructure:** project registry via `pproj` (D76); `sync-repos` and transcript backups run on systemd credentials (D74), backups to every drive in `.chezmoidata/backups.yaml`; package map (D32) with `add-package`.
 - **Git:** `main` is trunk, pushed 2026-11-21. Finished branches are archived as `refs/archive/<name>` or deleted (D65, `git retire-branch`; [conventions.md](conventions.md)).
@@ -19,7 +19,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 - MH's untracked `ricing.md` stays unmodified at the repo root for MH's review; never commit it.
 
 ## Next actions
-**Latest (2026-11-21, evening): chz-if3 closed (one rustup-managed Rust toolchain, merge `9d1c0bc`); STATUS trimmed to a summary (history in [log/sessions.md](log/sessions.md)); beads rescoped; `main` pushed.** Rust: pinned rustup-init bootstrap in the before phase, weekly `rustup update` on apply, Fedora cargo/rust removed (Rust 1.100.0). Rescoped with MH: **chz-8bg.5** = waybar flair + dunst matching the rofi pickers + built-in layer blur (hyprglass → chz-8bg.10, swaync + wlogout → chz-8bg.11); **chz-pc5** (bootstrap, for the MacBook) and chz-if3 to P1; **chz-1tp** stays one bead, notes backend design first. **Next:** `/clear`, then chz-8bg.5 with MH at the screen (Sonnet); then chz-pc5 in its own session (Opus); chz-n6i when amontillado tags the vivid template (amo-c0i merged there). Detail: [open-items.md](open-items.md), Next up and "Closed recently".
+**Latest (2026-11-21, night): chz-8bg.5 closed (merge `5a2060e`, `main` not pushed):** floating riced waybar with pills, bar opacity per variant (amo template), dunst restyled to the pickers (our `dunst.mustache`, blurred in riced), Papirus icons per variant (review chz-w95), `tools/variant-shots`. Parked: **chz-50g** (work/riced login check, MH). **Next:** `/clear`, then the kitty tab bar restyle (Sonnet); chz-pc5 in its own session (Opus); chz-n6i when amontillado tags the vivid template. Detail: [open-items.md](open-items.md), "Closed recently".
 
 Standing items (in order):
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
