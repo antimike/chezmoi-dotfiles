@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     # Keep the tag at chezmoi's amontillado pin (home/.chezmoidata/amontillado.yaml, `ref`).
-#     "amontillado @ git+https://github.com/antimike/amontillado@v0.9.0",
+#     "amontillado @ git+https://github.com/antimike/amontillado@v0.11.0",
 #     "pyyaml",
 #     "rich",
 #     "rich-argparse",
