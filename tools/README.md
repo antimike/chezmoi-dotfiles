@@ -7,6 +7,7 @@ Dev scripts for this repo. Not deployed: `tools/` sits outside the chezmoi sourc
 | [compare-trees.py](compare-trees.py) | Path-level comparison of two chezmoi source trees (the BOCO survey) |
 | [zsh-probe/](zsh-probe/) | Render the zsh files into a scratch home, dump the resulting shell state, and diff two dumps |
 | [home-snapshot/](home-snapshot/) | Save paths under `$HOME` and restore them exactly: the escape route for a risky apply |
+| [bootstrap-drill/](bootstrap-drill/) | Follow the new-host runbook (D83) in a scratch HOME (chezmoi init from this branch without installers, local pass/claude-state clones) and require `bootstrap-check` to pass and bd-track's registry/host-config loaders to read the scratch files: `tools/bootstrap-drill/bootstrap-drill [--keep] [--ref <rev>]`; ~11 s |
 | [public-scan/](public-scan/) | Pre-commit scan for this public repo: client/employer terms (pattern read from the private repo at run time) and gitleaks |
 | [resume-check/](resume-check/) | One line per suspend/resume this boot with the NVIDIA errors each resume logged (the sync-FD resume bug) |
 | [pick-path/](pick-path/) | Tests for `~/.local/bin/pick-path` (the shared save-path prompt): `uv run --no-project --with pytest python3 -m pytest tools/pick-path` |

@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# bootstrap-check: report how far this host has got through the bootstrap runbook
+# (docs/runbooks/new-host.md in the chezmoi source, D83) and print the next step.
+#
+#   bootstrap-check                 check every step; exit 1 if a required one is missing
+#   bootstrap-check --no-yubikey    skip step 3 (GPG/YubiKey/SSH): scratch-HOME drills only
+#
+# Read-only: it changes nothing on the host. Step numbers match the runbook. The last line is
+# the hand-off: `bd-track restore --all --dry-run` once bd-track has that command
+# (bd-timew-q9o.3), otherwise a pointer to the manual route.
+#
+# Marks: ok, MISS (required; exit 1), warn (works, but check it), info (nothing to check).
+set -uo pipefail
+
+no_yubikey=0
+case "${1:-}" in
+    --no-yubikey) no_yubikey=1 ;;
+    -h | --help)
+        sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
+    "") ;;
+    *)
+        echo "bootstrap-check: unknown option '$1' (try --help)" >&2
+        exit 2
+        ;;
+esac
+
+config_home=${XDG_CONFIG_HOME:-$HOME/.config}
+missing=0
+first_missing=""
+
+mark() { # mark <ok|MISS|warn|info> <step> <text>
+    printf '  %-4s  %-2s %s\n' "$1" "$2" "$3"
+    if [ "$1" = MISS ]; then
+        missing=$((missing + 1))
+        [ -n "$first_missing" ] || first_missing=$2
+    fi
+}
+
+# 1. chezmoi initialised and applied
+chezmoi_cfg=""
+for f in "$config_home"/chezmoi/chezmoi.{yml,yaml,toml,json}; do
+    [ -f "$f" ] && chezmoi_cfg=$f && break
+done
+if ! command -v chezmoi >/dev/null; then
+    mark MISS 1 "chezmoi is not on PATH"
+elif [ -z "$chezmoi_cfg" ]; then
+    mark MISS 1 "no chezmoi config in $config_home/chezmoi (run chezmoi init)"
+elif ! src=$(chezmoi source-path 2>/dev/null) || [ ! -d "$src" ]; then
+    mark MISS 1 "chezmoi source directory missing"
+else
+    mark ok 1 "chezmoi config and source ($src)"
+    ds=$(chezmoi execute-template '{{ dig "display_server" "" . }}' 2>/dev/null)
+    case "$ds" in
+        wayland | x11) mark ok 1 "display_server: $ds" ;;
+        *) mark warn 1 "display_server: '${ds}' (re-run chezmoi init from the graphical session)" ;;
+    esac
+fi
+
+# 2. tools the apply installs
+tools=(git gpg pass restic yq gitleaks bd bd-track pproj)
+absent=()
+for t in "${tools[@]}"; do command -v "$t" >/dev/null || absent+=("$t"); done
+if [ ${#absent[@]} -eq 0 ]; then
+    mark ok 2 "tools: ${tools[*]}"
+else
+    mark MISS 2 "not on PATH: ${absent[*]} (finish chezmoi apply)"
+fi
+if command -v yq >/dev/null && ! yq --version 2>/dev/null | grep -q mikefarah; then
+    mark warn 2 "yq is not mikefarah's yq (the registry seed needs it)"
+fi
+
+# 3. GPG public key, YubiKey stubs, SSH through gpg-agent
+if [ "$no_yubikey" = 1 ]; then
+    mark info 3 "GPG/YubiKey/SSH skipped (--no-yubikey)"
+else
+    key=$(chezmoi execute-template '{{ .gpg.keys.signing }}' 2>/dev/null)
+    if [ -z "$key" ]; then
+        mark MISS 3 "no gpg.keys.signing in chezmoi data"
+    elif ! gpg --list-keys "$key" >/dev/null 2>&1; then
+        mark MISS 3 "public key $key not imported"
+    elif ! gpg --list-secret-keys "$key" >/dev/null 2>&1; then
+        mark MISS 3 "no secret-key stubs for $key (plug in the YubiKey, gpg --card-status)"
+    else
+        mark ok 3 "GPG key $key with card stubs"
+    fi
+    if ssh-add -L >/dev/null 2>&1; then
+        mark ok 3 "SSH key available from gpg-agent"
+    else
+        mark MISS 3 "ssh-add -L lists no key (SSH_AUTH_SOCK, YubiKey)"
+    fi
+fi
+
+# 4. pass store
+store=${PASSWORD_STORE_DIR:-$HOME/.password-store}
+if [ -d "$store/.git" ] && [ -f "$store/.gpg-id" ]; then
+    mark ok 4 "pass store ($store)"
+else
+    mark MISS 4 "no pass store clone at $store"
+fi
+
+# 5. claude-state in ~/.claude/projects
+cs=$HOME/.claude/projects
+if [ -d "$cs/.git" ] && git -C "$cs" remote get-url origin 2>/dev/null | grep -q 'claude-state'; then
+    mark ok 5 "claude-state clone ($cs)"
+else
+    mark MISS 5 "$cs is not a claude-state clone"
+fi
+if [ -d "$cs" ]; then
+    want="-$(printf '%s' "$HOME" | sed 's/[^[:alnum:]]/-/g' | sed 's/^-//')"
+    if [ -d "$cs/.git" ] && ! ls -d "$cs/$want"* >/dev/null 2>&1; then
+        mark warn 5 "no folder for this home ($want): rename the old host's folders (runbook step 5)"
+    fi
+fi
+
+# 6. registry and bd-track host config (both rendered by chezmoi apply)
+registry=$config_home/projects.yaml
+if [ ! -s "$registry" ]; then
+    mark MISS 6 "registry $registry missing or empty"
+elif ! command -v pproj >/dev/null; then
+    mark MISS 6 "pproj missing, cannot read the registry"
+elif ! names=$(pproj list 2>&1); then
+    mark MISS 6 "pproj cannot load the registry: $(printf '%s' "$names" | tail -1)"
+else
+    mark ok 6 "registry: $(printf '%s\n' "$names" | wc -l) projects ($registry)"
+    # Findings such as "key claimed by no installed plugin" are expected until bd-track and
+    # sync-repos register as pproj plugins; they do not block the bootstrap.
+    if ! out=$(pproj check 2>&1); then
+        mark warn 6 "pproj check: $(printf '%s\n' "$out" | wc -l) finding(s), e.g. $(printf '%s' "$out" | head -1)"
+    fi
+fi
+bdt=$config_home/bd-track/config.yaml
+if [ ! -s "$bdt" ]; then
+    mark MISS 6 "bd-track host config $bdt missing"
+elif ! roots=$(yq -e '.global.scan_roots | join(" ")' "$bdt" 2>/dev/null); then
+    mark MISS 6 "bd-track host config has no global.scan_roots"
+else
+    mark ok 6 "bd-track host config (scan roots: $roots)"
+fi
+
+# 7. lingering (user timers without a login session)
+if [ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" = yes ]; then
+    mark ok 7 "lingering on"
+else
+    mark warn 7 "lingering off: sync-repos and bd-track timers need a login session"
+fi
+
+# 8. transcripts (lost host only)
+mark info 8 "transcripts: restore from restic only when replacing a lost host"
+
+# 9. beads state repo (D71 placeholder)
+state_repo=""
+[ -s "$bdt" ] && state_repo=$(yq '.global.state_repo // ""' "$bdt" 2>/dev/null)
+if [ -z "$state_repo" ]; then
+    mark info 9 "no beads state repo configured (D71 pending)"
+elif [ -d "${state_repo/#\~/$HOME}/.git" ]; then
+    mark ok 9 "beads state repo ($state_repo)"
+else
+    mark MISS 9 "beads state repo $state_repo not cloned"
+fi
+
+echo
+if [ "$missing" -gt 0 ]; then
+    echo "Next: runbook step $first_missing ($missing required item(s) missing)."
+    exit 1
+fi
+echo "Bootstrap complete. Hand-off (not run by the bootstrap):"
+if bd-track restore --help >/dev/null 2>&1; then
+    echo "  bd-track restore --all --dry-run"
+else
+    echo "  bd-track has no 'restore' yet (bd-timew-q9o.3): clone projects and restore beads by hand,"
+    echo "  following bd-track's restore runbook (bd-timew-q9o.4) when it exists."
+fi
