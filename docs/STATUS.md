@@ -11,7 +11,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 ## Where we are
 - **Priority (D50, 2026-10-18): functional daily driver first**; MH is job searching. Ricing, the keybinding manifest and other compositors are spare-time side quests ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 - **Desktop: Hyprland is the daily driver (D62)**, SwayFX the fallback; "work" and "riced" logins (D66). Daily-driver checklist done except 2.9 (i3 off zbook) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"). NVIDIA 615.78.08 installed; D61 (no docked suspend) still in force.
-- **Theming: done through amontillado v0.9.0** (pinned, D70/D73): every app's colours come from amontillado's theme cache; GTK3/GTK4 live (D82); riced bar/dunst/blur (chz-8bg.5) and kitty tab bar (chz-8bg.12) done; LS_COLORS from vivid (chz-n6i); kitty and vivid pinned dark until chz-8bg.13 (amontillado v0.11.0, light tone soft).
+- **Theming: done through amontillado v0.9.0** (pinned, D70/D73): every app's colours come from amontillado's theme cache; GTK3/GTK4 live (D82); riced bar/dunst/blur (chz-8bg.5) and kitty tab bar (chz-8bg.12) done; LS_COLORS from vivid (chz-n6i); kitty and vivid follow the variant (pins lifted, chz-8bg.13; amontillado v0.11.0, light tone soft).
 - **Work tracking:** beads (prefix `chz`, D80 keep beads); ticket inboxes (D72) with `/triage`; work queues via `/work-queue <scope>`. Design gates (D81) in `~/.claude/rules/design-gates.md`.
 - **Infrastructure:** project registry via `pproj` (D76); `sync-repos` and transcript backups run on systemd credentials (D74), backups to every drive in `.chezmoidata/backups.yaml`; package map (D32) with `add-package`.
 - **Git:** `main` is trunk, pushed 2026-11-21. Finished branches are archived as `refs/archive/<name>` or deleted (D65, `git retire-branch`; [conventions.md](conventions.md)).
@@ -19,7 +19,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 - MH's untracked `ricing.md` stays unmodified at the repo root for MH's review; never commit it.
 
 ## Next actions
-**Latest (2026-11-21, late night): `/work-queue theming` done** (queue empty; `main` not pushed). chz-n6i closed (merge `72c57f6`): LS_COLORS now come from vivid on amontillado's theme via the `ls-colors.zsh` snippet, refreshed at the next prompt after a theme change (trapd00r removed); `apps.vivid` pinned dark with kitty. term-contrast clean on light-soft for every source; kitty's pin waits on MH's check of fixed-truecolour tools (**chz-8bg.13**). Still parked for MH: **chz-97j**, **chz-mfq** (`triage.operator`). **Next:** MH's checks on 97j/mfq/8bg.13; **chz-hbu** live MacBook run; **`/triage`** (1 open ticket). Detail: [open-items.md](open-items.md).
+**Latest (2026-11-22): kitty and vivid follow the theme variant** (chz-8bg.13 closed, `d48adaa`): MH checked a light-soft kitty; bd show's fixed tags stay faint on cream (accepted). chz-n6i done the night before (LS_COLORS from vivid via `ls-colors.zsh`, merge `72c57f6`, pushed). chz-mfq closed won't-fix (MH: menu usable, bar occludes it only in edge cases). **Next:** **`/triage`** (2 tickets: MH's chz-97j response, GTK3 hook); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
 
 Standing items (in order):
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.

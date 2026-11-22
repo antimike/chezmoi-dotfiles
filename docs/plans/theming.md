@@ -253,9 +253,10 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    fork), from `vivid generate` on its `vivid.yml`, cached per generation in `~/.cache/zsh/ls-colors/`; fallbacks
    vivid's `ansi`, then dircolors. `apps.vivid` is pinned dark with kitty (LS_COLORS draw on kitty's background):
    lift the two together. `term-contrast` (all sources, `--vivid` with each render): 0 failures on 3qz176 dark,
-   3qz176 light-soft (pins removed in a scratch config) and Blazer. Before lifting kitty's pin: MH checks the tools
-   with fixed truecolour in a light kitty; `bd show`'s accents (#ffb454, #e6b450, #59c2ff, #d2a6ff) measure
-   1.4-1.6:1 on cream when bd assumes a dark background (lipgloss may detect a light one; not checked).
+   3qz176 light-soft (pins removed in a scratch config) and Blazer.
+   **Pins lifted (chz-8bg.13, 2026-11-22):** kitty and vivid follow the variant. MH checked glow, ls, git log and
+   `bd show` in a light-soft kitty: all palette-driven colours read well; bd does not detect the light background,
+   so its fixed truecolour tags (`(EPIC)` #d2a6ff, priority #ffb454; 1.4-1.6:1 on cream) are faint. Accepted.
 3. Switcher + theme picker (switcher: amontillado; picker UI: here).
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.
