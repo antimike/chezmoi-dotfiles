@@ -25,6 +25,11 @@ color14 #{{base15-hex}}
 color7 #{{base06-hex}}
 color15 #{{base07-hex}}
 
+# kitty >= 0.47 (chz-lfs): derive colours 22-255 (cube and grey ramp) from the palette, as
+# amontillado's built-in kitty template does since v0.10.0, so 256-colour tools stay readable
+# under a light variant.
+palette_generate semantic
+
 # Tab bar (chz-8bg.12): the riced waybar/dunst look. Active tab in the accent; inactive tabs a
 # foreground veil like the waybar pills (alpha(mix(base05, accent, 0.5), 0.16) over base00).
 # kitty takes no alpha and mustache cannot blend, so base02 stands in (6-15 RGB units from the
