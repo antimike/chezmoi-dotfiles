@@ -124,13 +124,16 @@ if not theme_ok or type(c) ~= "table" then
 end
 
 -- hyprbars: title bars on floating windows only (MH, 2026-10-25), in the theme's colours.
+-- Nearly opaque (f2) and blurred (chz-97j): at e6 busy windows behind showed through the title.
+-- bar_blur needs decoration blur, so only the riced login blurs; the work login relies on f2.
 -- Buttons run shell commands, so hyprctl's Lua dispatch syntax; a click focuses the window first.
 if hl.plugin.hyprbars then
     hl.config({
         plugin = {
             hyprbars = {
                 bar_height                 = 28,
-                bar_color                  = "rgba(" .. c.base01 .. "e6)",
+                bar_color                  = "rgba(" .. c.base01 .. "f2)",
+                bar_blur                   = true,
                 ["col.text"]               = "rgba(" .. c.base05 .. "ff)",
                 bar_text_font              = "Iosevka Nerd Font",
                 bar_text_size              = 13,
