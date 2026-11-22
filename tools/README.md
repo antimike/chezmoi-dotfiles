@@ -183,3 +183,4 @@ daemons; the enrollment token printed by `enroll` is run, never recorded. Before
 instructions (skills, `AGENTS.md`, contract) and test the workflow it documents, not one inferred from `--help` (chz-9sj).
 Each tool is driven through adapter functions (`<tool>_create`, `_title`, `_label`, `_block`, `_ready`, `_claim`, `_sync`,
 ...), so adding a tracker means one adapter block and its store setup in tests 3-5. Results: [../docs/plans/issue-tracker.md](../docs/plans/issue-tracker.md), "Hands-on: kata, ticks, beans".
+| [variant-shots/](variant-shots/) | Screenshot a screen region (default: the focused monitor's bar) in the dark and the light theme variant via `amo theme apply --variant` (same wallpaper; the starting variant restored on exit), stacked with captions; `-p` runs a setup command first (e.g. a test notification): `tools/variant-shots/variant-shots -l LABEL [-g 'X,Y WxH'] [-p CMD]` | styling reviews (chz-8bg.5) |
