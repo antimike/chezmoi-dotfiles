@@ -13,8 +13,7 @@ zstyle ':completion:*' group-name ''
 zstyle ':completion:*' verbose yes
 zstyle ':completion::complete:*' use-cache on
 zstyle ':completion::complete:*' cache-path "$HOME/.zcompcache"
-# Set by LS_COLORS plugin
-# zstyle ':completion:*' list-colors $LS_COLORS
+# list-colors from LS_COLORS: set by the ls-colors.zsh snippet at each theme change (chz-n6i)
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
 zstyle ':completion:*:functions' ignored-patterns '(_*|pre(cmd|exec))'

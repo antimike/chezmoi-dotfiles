@@ -41,9 +41,8 @@ Desktop work has two plans: [wayland-desktop.md](wayland-desktop.md) (compositor
   Blazer's selection; the Gogh `colors.conf`, the `theme.conf` link into a stale `dexpota/kitty-themes` clone and the
   vendored themes kitten are removed; fsh comments use colour 8 (`~/.config/zsh/fsh-styles.zsh`); pywal's include moved
   after the theme so a generated palette wins. Side fix: curly quotes in the `LS_COLORS` completion zstyle.
-  **Open:** (1) trapd00r `LS_COLORS` has 12 colour pairs below 3:1 on this background (fixed 256-colour dims such as
-  `ca` 17, archive parts 239, `.iso`/`.img` 124); they fail on any dark theme, so the fix is a palette-aware generator
-  (`vivid`) in [theming.md](theming.md), not a per-entry patch. (2) Run `term-contrast --theme <name>` on any theme
+  **Open:** (1) Done (chz-n6i): trapd00r's `LS_COLORS` (12 pairs below 3:1 here, fixed 256-colour dims) gave way to
+  vivid on amontillado's theme, see [theming.md](theming.md) step 2. (2) Run `term-contrast --theme <name>` on any theme
   before adopting it. (3) The rest of the kitty assessment (the full merge-and-debug pass).
 - [ ] Investigate browser options
 - [ ] **hyprpm plugins: hyprbars (riced profile), hy3 deferred** (MH, 2026-10-23; branch `wayland/hy3-hyprbars`,

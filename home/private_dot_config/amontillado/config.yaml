@@ -38,8 +38,9 @@ theme:
     # Our template: today's kitty palette keys only (see the template's header). Always dark (MH
     # 2026-11-21): CLI tools with fixed dark-only colours (256-colour cube and grey ramp,
     # truecolour) are unreadable on a light background. chz-djc and the amontillado tickets are
-    # done (v0.11.0: palette_generate, vivid); under light-soft term-contrast is clean except
-    # ls, whose LS_COLORS stay trapd00r's fixed 256 colours until chz-n6i: lift after it.
+    # done (v0.11.0: palette_generate, vivid), and since chz-n6i (vivid LS_COLORS) term-contrast
+    # is clean under light-soft on every source. Still dark until MH checks the tools with fixed
+    # truecolour, e.g. bd show's accents (~1.5:1 on cream unless they adapt). Lift with vivid's.
     kitty:
       variant: dark
       source: path
@@ -98,5 +99,8 @@ theme:
     libadwaita:
       reload: gtk3-theme-reload
     # LS_COLORS (chz-lfs, amontillado v0.10.0's built-in vivid template): vivid.yml for
-    # `vivid generate`. amo never runs vivid; the zsh hook that re-exports LS_COLORS is chz-n6i.
-    vivid: {}
+    # `vivid generate`. amo never runs vivid; the zsh snippet ls-colors.zsh re-exports LS_COLORS
+    # at the next prompt (chz-n6i). LS_COLORS are drawn on kitty's background: keep this variant
+    # the same as kitty's, and lift the two pins together.
+    vivid:
+      variant: dark

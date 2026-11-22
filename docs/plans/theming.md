@@ -247,8 +247,15 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    `apps.vivid` renders `vivid.yml` for LS_COLORS (the zsh hook is chz-n6i). Kitty's dark pin under light-soft,
    `term-contrast` (palette, fsh, autosuggest, less, git, p10k): 2 failures, both text on blue (fsh's paired
    bracket 1.78:1, less's prompt 2.55:1), fixed in `fsh-styles.zsh` (`bg=8`) and `LESS` (`-DPkb`); 0 after.
-   vivid's light LS_COLORS: lowest 3.07:1 (dim files). Still open: `ls` reads trapd00r's fixed 256 colours until
-   chz-n6i.
+   vivid's light LS_COLORS: lowest 3.07:1 (dim files).
+   **LS_COLORS hook (chz-n6i, 2026-11-21):** the snippet `ls-colors.zsh` (zinit turbo, replaces trapd00r) re-exports
+   LS_COLORS and completion's list-colors at the first prompt after `current` points at a new generation (`:A`, no
+   fork), from `vivid generate` on its `vivid.yml`, cached per generation in `~/.cache/zsh/ls-colors/`; fallbacks
+   vivid's `ansi`, then dircolors. `apps.vivid` is pinned dark with kitty (LS_COLORS draw on kitty's background):
+   lift the two together. `term-contrast` (all sources, `--vivid` with each render): 0 failures on 3qz176 dark,
+   3qz176 light-soft (pins removed in a scratch config) and Blazer. Before lifting kitty's pin: MH checks the tools
+   with fixed truecolour in a light kitty; `bd show`'s accents (#ffb454, #e6b450, #59c2ff, #d2a6ff) measure
+   1.4-1.6:1 on cream when bd assumes a dark background (lipgloss may detect a light one; not checked).
 3. Switcher + theme picker (switcher: amontillado; picker UI: here).
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.
