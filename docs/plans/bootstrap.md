@@ -1,6 +1,6 @@
 ---
 summary: Bootstrap of a fresh or lost Linux host (the old MacBook Pro first, D49) up to the bd-track restore hand-off; prior-art entry (D81), facts checked, open decisions for MH
-status: draft, awaiting MH's decisions (chz-pc5), 2026-11-21
+status: decided (D83), 2026-11-21; building (chz-pc5)
 updated: 2026-11-21
 ---
 
@@ -58,40 +58,26 @@ restic, hand-off). The candidates are judged on the second half.
 **Conclusion:** chezmoi for the machine half (no new tool); the ordered interactive half is a
 **runbook**, optionally with a small read-only **check script** that says which step a host is at.
 
-## Open decisions (MH)
+## Decisions (MH, 2026-11-21: D83)
 
-1. **Script, runbook, or runbook + check.** Recommended: runbook `docs/runbooks/new-host.md` as
-   the single source, plus `bootstrap-check` (deployed, read-only: chezmoi applied, YubiKey/GPG
-   usable, private clones present, registry and host config parse, lingering; ends by printing the
-   hand-off). The drill runs the check. A full bootstrap script would automate PIN, sudo and
-   hardware steps a human must be present for anyway.
-2. **Hand-off target and the done criterion**, since `bd-track restore` does not exist (fact 1).
-   Recommended: the bootstrap ends at "registry, host config and private clones in place", the
-   check prints `bd-track restore --all --dry-run` *if the subcommand exists*, otherwise points at
-   bd-track's restore runbook (`bd-timew-q9o.4`) / the manual steps. The drill's pass condition
-   becomes: `pproj list` and `bd-track config` read the registry and host config from the scratch
-   HOME, and the private clones exist. Alternative: block chz-pc5 on q9o.3 (delays the MacBook).
-3. **The state repo and D71** (fact 2). There is nothing to clone today. Options:
-   (a) leave it a placeholder step ("clone the state repo once D71 creates it") and drop it from
-   the drill; (b) decide D71 Q1/Q7 now and create `project-data` first (a session of its own,
-   chz-2fk); (c) use `claude-state` as the beads state repo meanwhile. Recommended: **(a)**; (c)
-   puts non-Claude folders into `~/.claude/projects` (untested with Claude Code).
-4. **Is the MacBook a second working host for beads?** If you will work chezmoi beads on both
-   machines, that is **sync**, not restore: a one-off import diverges at the first edit on either
-   side. Recommended for now: beads are worked on zbook only; the MacBook runs the desktop and
-   Claude sessions without bead writes. Otherwise this pulls in D71 Q3/Q4 and D80 (kata federation).
-5. **Host-only registry entries** (fact 4). Recommended: move the 5 with a remote into the
-   every-machine seed (they resolve by remote and scan roots; `path` only where it is outside the
-   scan roots, e.g. resume-builder), and accept that a no-remote project (baduk) is not restorable
-   until it gets a remote. Alternatives: a per-host seed in chezmoi data (public repo: future
-   client project names would leak), or back the live file up into `project-data` once D71 lands.
-6. **bd-track config.yaml**: nothing to decide (fact 3); the runbook says so.
-7. **MacBook host keys** (fact 7): make `enable_user_lingering` true on the MacBook too (timers
-   for sync-repos and bd-track), or keep it zbook-only? Recommended: true, keyed by hostname once
-   the MacBook's hostname is chosen. Also: transcript backups on the MacBook (needs its own
-   `backup/restic-<host>` pass entry and repos), or not for now? Recommended: not for now.
+1. **Runbook + read-only check**: [runbooks/new-host.md](../runbooks/new-host.md) is the single
+   source; `bootstrap-check` (deployed) reports which step a host has reached and ends with the
+   hand-off.
+2. **Done criterion redefined**: the bootstrap ends when the registry, bd-track's host config and
+   the private clones are in place. The check prints `bd-track restore --all --dry-run` once the
+   subcommand exists, otherwise the manual route (bd-track's restore runbook, `bd-timew-q9o.4`).
+3. **State repo: a placeholder** until D71 creates `project-data`; not part of the drill.
+4. **Beads are worked on zbook only.** The MacBook runs the desktop and Claude sessions without
+   bead writes; multi-host beads would be sync (D71 Q3/Q4, D80), not restore.
+5. **The registry is host state** (MH): the seed keeps only the tooling repos (chezmoi, bd-track,
+   project-registry, claude-state; amontillado as a chezmoi dependency and ticket target). Other
+   projects are registered per host; a lost host's entries are re-registered by hand until D71's
+   repo backs up the live file.
+6. **bd-track config.yaml**: rendered by chezmoi, nothing to back up.
+7. Still open, not blocking: `enable_user_lingering` and transcript backups on the MacBook (both
+   need its hostname; recommended: lingering yes, backups later).
 
-## Drill (once decided)
+## Drill
 
 Scratch HOME (`HOME=$(mktemp -d)`; `chezmoi init --source <worktree> --apply` with
 `--exclude scripts` for the drill, since installers need sudo and are covered by the live MacBook
