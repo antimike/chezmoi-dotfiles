@@ -26,8 +26,8 @@
 .jupyter/migrated
 .jupyter/certs
 # kitty tab bar on the built-in powerline style since 2026-11-21 (chz-8bg.12): the
-# links to the custom tab theme (tab_bar.py drew a date/time status), and tab-themes/
-# (rounded, plus capsule, square and template.conf, unused since 2023).
+# tab_bar.conf link to the old custom tab theme, and tab-themes/ (rounded, plus
+# capsule, square and template.conf, unused since 2023). tab_bar.py is managed again
+# (a regular file: the left-cap wrapper).
 .config/kitty/tab_bar.conf
-.config/kitty/tab_bar.py
 .config/kitty/tab-themes
