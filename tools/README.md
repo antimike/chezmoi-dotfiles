@@ -118,9 +118,10 @@ Exit 1 on a hit (term or gitleaks), 2 if the pattern file is missing. Red-tested
 tools/term-contrast/term-contrast.py                         # live kitty config, failures only
 tools/term-contrast/term-contrast.py --theme Blazer --theme "Tokyo Night" --sources palette,fsh,autosuggest
 tools/term-contrast/term-contrast.py --conf ~/.config/kitty/current-theme.conf --all
+tools/term-contrast/term-contrast.py --conf "$R/kitty.conf" --vivid "$R/vivid.yml"  # R: an `amo theme apply --dry-run` render
 ```
 
-Resolves the palette through kitty itself (`kitty +runpy`, so includes and defaults count as kitty sees them; `--theme` dumps one of kitty's built-in themes), collects the colour styles the shell and CLI tools use, and lists every foreground/background pair below `--min` (WCAG ratio, default 3.0). Exits 1 on any failure. The rule it enforces for a dark theme: colour 8 must be legible on the background (comments and autosuggestions use it), and no text style may use colour 0. Needs `uv`, `kitty` and `zsh`; the `fsh` source sources the plugin from your zinit tree plus `~/.config/zsh/fsh-styles.zsh`. Known noise: trapd00r's `LS_COLORS` uses fixed 256-colour dims that fail on any dark background (`--sources` without `ls` to hide them).
+Resolves the palette through kitty itself (`kitty +runpy`, so includes and defaults count as kitty sees them; `--theme` dumps one of kitty's built-in themes), collects the colour styles the shell and CLI tools use, and lists every foreground/background pair below `--min` (WCAG ratio, default 3.0). Exits 1 on any failure. The rule it enforces for a dark theme: colour 8 must be legible on the background (comments and autosuggestions use it), and no text style may use colour 0. Needs `uv`, `kitty` and `zsh`; the `fsh` source sources the plugin from your zinit tree plus `~/.config/zsh/fsh-styles.zsh`. The `ls` source takes `LS_COLORS` from an interactive zsh after sourcing the `ls-colors.zsh` snippet (vivid on the current theme; chz-n6i), or with `--vivid FILE` from `vivid generate FILE`: pass a render's `vivid.yml` with its `kitty.conf` to check a theme that is not applied. The `less` source reads `$LESS` from the calling environment, which a turbo plugin (zcolors) sets: run it from a shell started after the last change, or set `LESS` to a live shell's value.
 
 ## palette-compare
 

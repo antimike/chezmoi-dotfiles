@@ -16,7 +16,10 @@ Style sources:
   fsh          fast-syntax-highlighting styles: the plugin is sourced in a clean zsh, then the
                deployed override file (~/.config/zsh/fsh-styles.zsh) if present
   autosuggest  zsh-autosuggestions (ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE, plugin default fg=8)
-  ls           LS_COLORS and EZA_COLORS from an interactive zsh
+  ls           LS_COLORS as a live shell has them (an interactive zsh with the ls-colors.zsh
+               snippet run: vivid on the current amontillado theme), or `vivid generate` on
+               --vivid's file (a render's vivid.yml, to check it with that render's kitty.conf);
+               EZA_COLORS from the interactive zsh
   less         the -D colour options in $LESS
   git          git's colour defaults, overridden by `git config color.*`
   p10k         *_FOREGROUND / *_BACKGROUND from ~/.p10k.zsh
@@ -28,6 +31,7 @@ Usage:
   tools/term-contrast/term-contrast.py                      # live kitty config
   tools/term-contrast/term-contrast.py --theme Blazer --theme "Tokyo Night"
   tools/term-contrast/term-contrast.py --conf ~/.config/kitty/current-theme.conf --all
+  tools/term-contrast/term-contrast.py --conf RENDER/kitty.conf --vivid RENDER/vivid.yml
 Exits 1 if any pair fails.
 """
 
@@ -60,6 +64,7 @@ FSH_DIR = (
 )
 FSH_OVERRIDES = HOME / ".config/zsh/fsh-styles.zsh"
 P10K = HOME / ".p10k.zsh"
+LS_COLORS_SNIPPET = HOME / ".local/share/zsh/snippets/ls-colors.zsh"
 
 NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
 LESS_LETTERS = {"k": 0, "r": 1, "g": 2, "y": 3, "b": 4, "m": 5, "c": 6, "w": 7}
@@ -183,6 +188,11 @@ def get_cli_arguments() -> argparse.Namespace:
         "--sources",
         default="palette,fsh,autosuggest,ls,less,git,p10k",
         help="comma-separated style sources to check",
+    )
+    parser.add_argument(
+        "--vivid",
+        type=Path,
+        help="vivid theme file for the ls source's LS_COLORS (default: the live shell's)",
     )
     parser.add_argument(
         "--loglevel",
@@ -363,10 +373,16 @@ def autosuggest_styles() -> list[Style]:
     return [parse_zsh_style("autosuggest", "suggestion", out or "fg=8")]
 
 
-def ls_styles() -> list[Style]:
-    out = run(
-        ["zsh", "-ic", 'print -r -- "$LS_COLORS"; print -r -- "${EZA_COLORS-}"']
-    ).splitlines()
+def ls_styles(vivid: Path | None = None) -> list[Style]:
+    # The snippet loads in zinit's turbo mode, which `zsh -ic` never reaches: source it here.
+    snippet = shlex.quote(str(LS_COLORS_SNIPPET))
+    script = (
+        f"[[ -r {snippet} ]] && source {snippet}; "
+        'print -r -- "$LS_COLORS"; print -r -- "${EZA_COLORS-}"'
+    )
+    out = run(["zsh", "-ic", script]).splitlines()
+    if vivid:
+        out[:1] = [run(["vivid", "generate", str(vivid.expanduser())]).strip()]
     styles = []
     for var, value in zip(("LS_COLORS", "EZA_COLORS"), out + ["", ""]):
         for entry in value.split(":"):
@@ -534,7 +550,8 @@ def main() -> None:
     styles: list[Style] = []
     for name in args.sources.split(","):
         try:
-            found = SOURCES[name.strip()]()
+            name = name.strip()
+            found = SOURCES[name](args.vivid) if name == "ls" else SOURCES[name]()
         except subprocess.CalledProcessError as e:
             logger.error("%s: %s failed: %s", name, shlex.join(e.cmd), e.stderr.strip())
             continue
