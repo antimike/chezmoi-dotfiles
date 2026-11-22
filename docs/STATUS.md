@@ -19,7 +19,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 - MH's untracked `ricing.md` stays unmodified at the repo root for MH's review; never commit it.
 
 ## Next actions
-**Latest (2026-11-21, night): chz-8bg.5 closed (merge `5a2060e`, `main` not pushed):** floating riced waybar with pills, bar opacity per variant (amo template), dunst restyled to the pickers (our `dunst.mustache`, blurred in riced), Papirus icons per variant (review chz-w95), `tools/variant-shots`. Parked: **chz-50g** (work/riced login check, MH). **Next:** `/clear`, then the kitty tab bar restyle (Sonnet); chz-pc5 in its own session (Opus); chz-n6i when amontillado tags the vivid template. Detail: [open-items.md](open-items.md), "Closed recently".
+**Latest (2026-11-21, night): chz-8bg.5 closed (merge `5a2060e`, `main` not pushed):** floating riced waybar with pills, bar opacity per variant (amo template), dunst restyled to the pickers (our `dunst.mustache`, blurred in riced), Papirus icons per variant (review chz-w95), `tools/variant-shots`. Parked: **chz-50g** (work/riced login check, MH). **Next:** `/clear`, then **chz-8bg.12** kitty tab bar (Sonnet); chz-pc5 in its own session (Opus); chz-n6i when amontillado tags the vivid template. Detail: [open-items.md](open-items.md), "Closed recently".
 
 Standing items (in order):
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
