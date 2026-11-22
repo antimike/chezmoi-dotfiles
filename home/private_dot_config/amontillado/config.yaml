@@ -35,14 +35,12 @@ theme:
   # wins; reload hooks see AMO_TONE; apps with render_with: matugen stay full (none here).
   tone: {light: soft, dark: full}
   apps:
-    # Our template: today's kitty palette keys only (see the template's header). Always dark (MH
-    # 2026-11-21): CLI tools with fixed dark-only colours (256-colour cube and grey ramp,
-    # truecolour) are unreadable on a light background. chz-djc and the amontillado tickets are
-    # done (v0.11.0: palette_generate, vivid), and since chz-n6i (vivid LS_COLORS) term-contrast
-    # is clean under light-soft on every source. Still dark until MH checks the tools with fixed
-    # truecolour, e.g. bd show's accents (~1.5:1 on cream unless they adapt). Lift with vivid's.
+    # Our template: today's kitty palette keys only (see the template's header). Follows the
+    # variant (dark pin lifted 2026-11-22, chz-8bg.13): term-contrast is clean under light-soft on
+    # every source, and MH checked glow, ls, git log and bd show in a light kitty. Accepted: bd
+    # show's fixed truecolour tags (EPIC, priority; ~1.5:1 on cream). To pin again, set
+    # `variant: dark` here and on vivid together.
     kitty:
-      variant: dark
       source: path
       path: ~/.config/amontillado/templates/kitty.mustache
       format: mustache
@@ -101,6 +99,5 @@ theme:
     # LS_COLORS (chz-lfs, amontillado v0.10.0's built-in vivid template): vivid.yml for
     # `vivid generate`. amo never runs vivid; the zsh snippet ls-colors.zsh re-exports LS_COLORS
     # at the next prompt (chz-n6i). LS_COLORS are drawn on kitty's background: keep this variant
-    # the same as kitty's, and lift the two pins together.
-    vivid:
-      variant: dark
+    # the same as kitty's (both follow the theme since chz-8bg.13).
+    vivid: {}
