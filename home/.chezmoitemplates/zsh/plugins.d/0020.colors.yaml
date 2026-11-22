@@ -1,13 +1,5 @@
 plugins:
-  - args:
-      - light
-    url: trapd00r/LS_COLORS
-    ice:
-      - atclone"dircolors -b LS_COLORS > clrs.zsh"
-      - atpull"%atclone"
-      - atload'zstyle ":completion:*" list-colors "${(s.:.)LS_COLORS}"'
-    comment: |
-      From https://zdharma-continuum.github.io/zinit/wiki/LS_COLORS-explanation/
+  # LS_COLORS: the ls-colors.zsh snippet (vivid on amontillado's theme; chz-n6i), not a plugin.
   - args: ["wait", "lucid", "light-mode"]
     for:
       - url: marlonrichert/zcolors.git
