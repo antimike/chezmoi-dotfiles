@@ -257,6 +257,11 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    **Pins lifted (chz-8bg.13, 2026-11-22):** kitty and vivid follow the variant. MH checked glow, ls, git log and
    `bd show` in a light-soft kitty: all palette-driven colours read well; bd does not detect the light background,
    so its fixed truecolour tags (`(EPIC)` #d2a6ff, priority #ffb454; 1.4-1.6:1 on cream) are faint. Accepted.
+   **Claude Code follows it (2026-11-22):** `"theme": "auto"` (set if absent by `modify_settings.json.tmpl`) picks
+   dark/light from kitty's background (OSC 11) and re-queries on a DEC 2031 colour-scheme report. Tested in a scratch
+   kitty 0.47.1 (probe: mode 2031 on, OSC 11 polled): a `SIGUSR1` reload that flips the background sends `CSI ?997;2n`
+   (light) or `;1n` (dark) at once; a reload without a flip sends nothing. Claude Code 2.1.330 enables mode 2031
+   (`THEME_NOTIFY`), so running sessions switch at the next amo apply.
 3. Switcher + theme picker (switcher: amontillado; picker UI: here).
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.
