@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# variant-shots — screenshot a screen region in the dark and the light theme variant, for
+# styling reviews (chz-8bg.5: the riced bar, dunst).
+#
+#   variant-shots [-g GEOMETRY] [-o DIR] [-l LABEL] [-p PREPARE] [-w SECONDS] [-v VARIANTS]
+#
+#   -g GEOMETRY  grim region, "X,Y WxH" in layout coordinates (default: the top 42 px of
+#                the focused monitor, i.e. the bar)
+#   -o DIR       output directory (default: $XDG_RUNTIME_DIR/variant-shots)
+#   -l LABEL     file name stem and caption (default: shot)
+#   -p PREPARE   shell command run after each variant switch, before the shot (e.g. send
+#                a test notification); the wait (-w) follows it
+#   -w SECONDS   settle time after the switch and PREPARE (default: 3)
+#   -v VARIANTS  space-separated, in order (default: "dark light")
+#
+# Writes DIR/LABEL-<variant>.png per variant and DIR/LABEL.png (all stacked, captioned).
+# Prints that last path.
+#
+# Switches with `amo theme apply --variant V`, which re-renders the current theme without
+# picking a new wallpaper (unlike theme-variant, whose switch runs `wallpaper next`), so
+# every variant is shot over the same backdrop; gsettings' color-scheme is left alone.
+# The variant in effect before the run (from the theme cache's colors.css) is restored on
+# exit, also on failure or Ctrl-C. Needs a Hyprland session, amo, grim, jq and magick.
+# Comparing style settings: change and apply them between runs, one LABEL per setting.
+set -euo pipefail
+
+geometry='' out=${XDG_RUNTIME_DIR:?}/variant-shots label=shot prepare='' wait=3 variants="dark light"
+while getopts g:o:l:p:w:v:h opt; do
+  case $opt in
+    g) geometry=$OPTARG ;;
+    o) out=$OPTARG ;;
+    l) label=$OPTARG ;;
+    p) prepare=$OPTARG ;;
+    w) wait=$OPTARG ;;
+    v) variants=$OPTARG ;;
+    *) sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 2 ;;
+  esac
+done
+
+colors=${XDG_CACHE_HOME:-$HOME/.cache}/theme/current/colors.css
+current_variant() { grep -m1 -o '(\(dark\|light\))' "$colors" | tr -d '()'; }
+orig=$(current_variant)
+[[ -n $orig ]] || { echo "variant-shots: no variant in $colors" >&2; exit 1; }
+
+if [[ -z $geometry ]]; then
+  geometry=$(hyprctl monitors -j | jq -r '.[] | select(.focused) |
+    "\(.x),\(.y) \((.width / .scale) | floor)x42"')
+fi
+
+restore() {
+  [[ $(current_variant) == "$orig" ]] || amo theme apply --variant "$orig" >/dev/null 2>&1 || true
+}
+trap restore EXIT
+
+mkdir -p "$out"
+stack=()
+for v in $variants; do
+  [[ $(current_variant) == "$v" ]] || amo theme apply --variant "$v" >/dev/null
+  [[ -z $prepare ]] || bash -c "$prepare"
+  sleep "$wait"
+  shot=$out/$label-$v.png
+  grim -g "$geometry" "$shot"
+  width=$(magick identify -format %w "$shot")
+  magick -size "${width}x30" -background '#333' -fill white -pointsize 20 label:"$label: $v" \
+    "$shot" -append "$out/.$label-$v-captioned.png"
+  stack+=("$out/.$label-$v-captioned.png")
+done
+magick "${stack[@]}" -append "$out/$label.png"
+rm -f "${stack[@]}"
+echo "$out/$label.png"

@@ -1,0 +1,35 @@
+# amontillado {{scheme-slug}} ({{scheme-variant}}): a dunstrc.d drop-in (chz-8bg.5).
+# ~/.config/dunst/dunstrc.d/50-theme.conf links here; `dunstctl reload` re-reads it.
+# Colours as the pickers' (rofi-colors.mustache): a translucent base00 background
+# (Hyprland blurs behind it), accent frame, accent progress bar; low urgency dimmed,
+# critical framed in the error colour. Icons: Papirus status icons are drawn as they are
+# (not recoloured), so the variant picks the set whose glyphs suit the background.
+
+[global]
+    highlight = "#{{accent-hex}}"
+    separator_color = "frame"
+{{#scheme-is-dark-variant}}
+    icon_theme = "Papirus-Dark, Adwaita"
+{{/scheme-is-dark-variant}}
+{{#scheme-is-light-variant}}
+    icon_theme = "Papirus, Adwaita"
+{{/scheme-is-light-variant}}
+
+[urgency_low]
+    background = "#{{base00-hex}}cc"
+    foreground = "#{{base04-hex}}"
+    frame_color = "#{{base03-hex}}"
+    # Accent, not dimmed: the volume/brightness OSDs (the progress bars) are low urgency.
+    highlight = "#{{accent-hex}}"
+
+[urgency_normal]
+    background = "#{{base00-hex}}cc"
+    foreground = "#{{base05-hex}}"
+    frame_color = "#{{accent-hex}}"
+    highlight = "#{{accent-hex}}"
+
+[urgency_critical]
+    background = "#{{base00-hex}}cc"
+    foreground = "#{{base05-hex}}"
+    frame_color = "#{{error-hex}}"
+    highlight = "#{{error-hex}}"

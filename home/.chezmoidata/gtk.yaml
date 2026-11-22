@@ -2,7 +2,9 @@ gtk:
   theme:
     name: "Adwaita-dark"
   icon_theme:
-    name: "Adwaita"
+    # X11 sessions (gtkrc-2.0, xsettingsd); under Wayland gtk3-theme-reload sets gsettings'
+    # icon-theme per variant. Papirus: chz-8bg.5 (MH 2026-11-21), review after a week or two.
+    name: "Papirus-Dark"
     fallback: "gnome"
   cursor_theme:
     name: "Adwaita"

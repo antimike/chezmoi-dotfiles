@@ -45,6 +45,13 @@ theme:
     # @define-color per colour: waybar's style.css @imports colors.css (a link to this file).
     gtk:
       reload: pkill -USR2 -x waybar
+    # The riced bar's per-variant settings (chz-8bg.5): ~/.config/waybar/variant.css links here.
+    # No reload of its own: amo renders every app before running reloads, so gtk's covers it.
+    waybar:
+      source: path
+      path: ~/.config/amontillado/templates/waybar-variant.mustache
+      format: mustache
+      output: waybar-variant.css
     # A Lua table: hyprland.lua dofile()s it for borders and hyprbars (Blazer if it fails).
     hyprland:
       reload: hyprctl reload
@@ -62,8 +69,13 @@ theme:
       path: ~/.config/amontillado/templates/fuzzel-colors.mustache
       format: mustache
       output: fuzzel-colors.ini
-    # A dunstrc.d drop-in (urgency colours): ~/.config/dunst/dunstrc.d/50-theme.conf links here.
+    # A dunstrc.d drop-in (urgency colours, translucent background, icon theme per variant; ours,
+    # chz-8bg.5): ~/.config/dunst/dunstrc.d/50-theme.conf links here.
     dunst:
+      source: path
+      path: ~/.config/amontillado/templates/dunst.mustache
+      format: mustache
+      output: dunst.conf
       reload: dunstctl reload
     # GTK4/libadwaita (chz-ht9): libadwaita's named colours plus the standalone text colours as CSS
     # variables, so accent/success/warning/error text follows the palette, not the scheme.

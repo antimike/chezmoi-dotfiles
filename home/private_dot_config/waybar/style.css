@@ -1,13 +1,19 @@
-/* waybar. Colours are the theme's (chz-8bg.4): colors.css links to amontillado's
-   ~/.cache/theme/current/colors.css (@define-color per base24 colour and role);
-   `amo theme apply` reloads the style with SIGUSR2. Function first: state colours
-   (submap, battery, paused) are the only styling beyond the base. Text on a coloured
-   state background is base00: the roles are accents at the accent's lightness. */
+/* waybar, both profiles (the work login uses this file as is). Colours are the theme's
+   (chz-8bg.4): colors.css links to amontillado's ~/.cache/theme/current/colors.css
+   (@define-color per base24 colour and role); `amo theme apply` reloads the style with
+   SIGUSR2. The riced login loads style-riced.css, which imports this file and adds the
+   floating bar and the pills (waybar-launch picks the file by HYPR_PROFILE; chz-8bg.5).
+   Each module's text takes one palette accent (base08-base0E); state colours (submap,
+   battery, paused, recording) override it. Text on a coloured state background is
+   base00: the roles are accents at the accent's lightness. */
 @import url("colors.css");
 
 * {
-    font-family: "Source Code Pro", "FiraCode Nerd Font";
+    /* JetBrainsMono Nerd Font Propo: monospaced digits, icons at their natural width
+       (the Mono variant squeezes them into one cell). */
+    font-family: "JetBrainsMono Nerd Font Propo", "Symbols Nerd Font";
     font-size: 13px;
+    font-weight: 500;
     min-height: 0;
     border: none;
     border-radius: 0;
@@ -18,15 +24,20 @@ window#waybar {
     color: @base05;
 }
 
+/* Tooltips as the pickers and dunst: accent frame, 10px radius, translucent (Hyprland blurs
+   popups, blur.popups), the bar's font. */
 tooltip {
-    background: @base00;
-    border: 1px solid @accent;
+    background: alpha(@base00, 0.88);
+    border: 2px solid @accent;
+    border-radius: 10px;
 }
+tooltip label { color: @base05; padding: 6px 8px; }
 
 #workspaces button {
     padding: 0 7px;
     color: @base04;
     background: transparent;
+    font-weight: 700;
 }
 #workspaces button.active { color: @on_accent; background: @accent; }
 #workspaces button.urgent { color: @base00; background: @error; }
@@ -39,8 +50,20 @@ tooltip {
 #disk, #backlight, #custom-weather, #custom-recording, #custom-idle, #custom-dunst,
 #custom-sunset { padding: 0 8px; }
 
-/* Drawer contents (group/system, group/audio), revealed on hover. */
-.drawer-child { color: @base04; }
+/* One accent per module, pulled 30% toward the text colour (base05): darker on light themes,
+   lighter on dark ones, so the accents keep reading over a see-through bar (chz-8bg.5). */
+#window          { color: @base05; }
+#clock           { color: mix(@base0D, @base05, 0.3); }
+#custom-weather  { color: mix(@base0C, @base05, 0.3); }
+#custom-sunset   { color: mix(@base09, @base05, 0.3); }
+#cpu             { color: mix(@base08, @base05, 0.3); }
+#memory          { color: mix(@base0E, @base05, 0.3); }
+#disk            { color: mix(@base0A, @base05, 0.3); }
+#pulseaudio      { color: mix(@base0B, @base05, 0.3); }
+#backlight       { color: mix(@base0A, @base05, 0.3); }
+#network         { color: mix(@base0C, @base05, 0.3); }
+#bluetooth       { color: mix(@base0D, @base05, 0.3); }
+#battery         { color: mix(@base0B, @base05, 0.3); }
 
 #pulseaudio.muted, #network.disconnected, #bluetooth.off, #bluetooth.disabled { color: @base03; }
 #battery.warning:not(.charging) { color: @warning; }

@@ -1,0 +1,49 @@
+/* waybar, riced login only (HYPR_PROFILE=riced; waybar-launch passes this file with -s).
+   A floating, rounded, see-through bar (waybar-launch adds the layer margins; Hyprland
+   blurs behind it, hyprland.lua "blur-waybar") with standalone pills for the module
+   groups: workspaces, window, group/when (clock, weather, sunset), group/hw (system and
+   audio drawers), group/conn (network, bluetooth, battery), tray. The state indicators
+   (recording, idle, dunst, submap) are pills of their own when shown. Radii follow the
+   pickers (rofi/picker.rasi: 10px frame, 6px rows). chz-8bg.5. */
+@import url("style.css");
+@import url("variant.css");   /* bar_bg per variant: amontillado templates/waybar-variant.mustache */
+
+/* Knobs (MH's pick, 2026-11-21, from screenshots of both variants). Built from base00/base05,
+   which swap lightness between the dark and light variants, so one rule suits both: a pill
+   is a foreground veil (lightens in dark, darkens in light) pulled halfway to the accent for
+   a tint. The bar's own veil, bar_bg, differs by variant: variant.css. */
+@define-color pill_bg alpha(mix(@base05, @accent, 0.5), 0.16);
+
+window#waybar {
+    background: @bar_bg;
+    border-radius: 12px;
+}
+
+/* Pills. The extra bars' clock is ungrouped: only a direct child of the centre box. */
+#workspaces, #window, #when, #hw, #conn, #tray,
+.modules-center > widget > #clock,
+#submap, #custom-recording, #custom-idle, #custom-dunst {
+    background: @pill_bg;
+    border-radius: 9px;
+    margin: 3px 5px;   /* pill-gap */
+    padding: 0 6px;
+}
+.modules-left > widget:first-child > #workspaces { margin-left: 3px; }
+.modules-right > widget:last-child > * { margin-right: 3px; }
+
+/* Grouped modules sit inside the pill: no padding of their own beyond the gap between them. */
+#when > widget > *, #hw > widget > *, #conn > widget > * { padding: 0 6px; }
+
+#workspaces { padding: 0 3px; }
+#workspaces button { border-radius: 7px; margin: 3px 1px; padding: 0 8px; }
+/* Inactive numbers: the text colour at 60%, not base04, which is too pale on a light veil. */
+#workspaces button:not(.active):not(.urgent) { color: alpha(@base05, 0.6); }
+
+/* State pills keep their state backgrounds (style.css) over the pill background. */
+#submap { background: @warning; }
+#submap.passthrough { background: @error; }
+#custom-idle.paused, #custom-dunst.paused { background: @warning; }
+#custom-recording.recording { background: @error; }
+
+/* The window title pill disappears with the title (waybar hides an empty label, not its pill). */
+window#waybar.empty #window { background: transparent; }

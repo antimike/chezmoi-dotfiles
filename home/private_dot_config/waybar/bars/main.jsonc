@@ -15,19 +15,14 @@
         "hyprland/window"
     ],
     "modules-center": [
-        "clock",
-        "custom/weather",
-        "custom/sunset"
+        "group/when"
     ],
     "modules-right": [
         "custom/recording",
         "custom/idle",
         "custom/dunst",
-        "group/system",
-        "group/audio",
-        "network",
-        "bluetooth",
-        "battery",
+        "group/hw",
+        "group/conn",
         "tray"
     ]
 }

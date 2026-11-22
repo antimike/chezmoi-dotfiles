@@ -233,6 +233,8 @@ if profile == "riced" then
     hl.layer_rule({ name = "blur-rofi",   match = { namespace = "^rofi$" },   blur = true, ignore_alpha = 0 })
     -- fuzzel's pickers match rofi's (chz-8bg.9); its layer namespace is "launcher".
     hl.layer_rule({ name = "blur-fuzzel", match = { namespace = "^launcher$" }, blur = true, ignore_alpha = 0 })
+    -- dunst (chz-8bg.5): its translucent bubbles; the gaps between them are clear, so not blurred.
+    hl.layer_rule({ name = "blur-dunst",  match = { namespace = "^notifications$" }, blur = true, ignore_alpha = 0 })
     -- Video and images stay opaque when unfocused.
     hl.window_rule({ name = "opaque-media", match = { class = "^(mpv|vlc|swayimg)$" }, opaque = true })
 end

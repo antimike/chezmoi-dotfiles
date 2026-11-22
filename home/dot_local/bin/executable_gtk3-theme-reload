@@ -9,6 +9,10 @@
 #   - a variant change sets gtk-theme to amontillado-<variant>: running GTK3 apps re-read it;
 #   - the same variant again (a new palette, same scheme) flips gtk-theme to Adwaita and back,
 #     since setting an unchanged value notifies nobody (a brief flash in open GTK3 apps).
+#   - the icon theme follows the variant too: Papirus-Dark or Papirus (chz-8bg.5, MH 2026-11-21,
+#     to review after a week or two of use), as dunst's (amontillado templates/dunst.mustache).
+#     GTK recolours symbolic icons either way; the variant matters for full-colour panel and
+#     tray icons. Left alone when Papirus is not installed.
 # Run by the `libadwaita` app's reload in the amontillado config. Exits 2 on a bad variant,
 # 1 if the theme dir or adw-gtk3 is missing (gtk-theme is then left alone).
 set -eu
@@ -38,3 +42,11 @@ if [ "$(gsettings get "$key" gtk-theme)" = "'$theme'" ]; then
   gsettings set "$key" gtk-theme Adwaita
 fi
 gsettings set "$key" gtk-theme "$theme"
+
+case $variant in
+  dark) icons=Papirus-Dark ;;
+  light) icons=Papirus ;;
+esac
+if [ -d "/usr/share/icons/$icons" ]; then
+  gsettings set "$key" icon-theme "$icons"
+fi
