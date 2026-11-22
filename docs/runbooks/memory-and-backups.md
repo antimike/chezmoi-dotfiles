@@ -77,6 +77,8 @@ drives are still backed up). To retire a drive, remove it from the list; its rep
 
 ## New machine
 
+The whole bootstrap, in order, is [new-host.md](new-host.md) (D83); these are the Claude-data details it points to.
+
 1. Clone `claude-state` into `~/.claude/projects` **before** the first Claude session (private repo; needs the YubiKey for SSH), then run `pre-commit install` there (hooks are per clone; or `mani-discover && mani run install-hooks --all`). chezmoi does not clone it yet (open item).
 2. If the username or home path differs, rename each folder: `-home-<olduser>-…` → `-home-<newuser>-…` (the folder name encodes the path with non-alphanumerics replaced by `-`).
 3. Apply chezmoi (installs the scripts and timers; needs lingering, `enable_user_lingering`), plug in the SSD, and restore transcripts from restic if wanted.
