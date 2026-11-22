@@ -241,6 +241,14 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
    and hyprbars and dunst used the i3 palette before; they follow the theme now. `run_onchange_after_theme-render`
    re-renders when the config, the preset or a template changes, and renders Blazer on a fresh machine. The wallpaper
    comes from the `wallpaper` helper, which themes from the primary monitor's picture.
+   **amontillado v0.11.0 (chz-lfs, 2026-11-21):** `theme.tone: {light: soft, dark: full}` (MH: light as cream paper
+   with dark-grey text; review after a while of use; per app `theme.apps.<app>.tone`, `AMO_TONE` in reload hooks).
+   Our kitty template sets `palette_generate semantic` (kitty 0.47: colours 22-255 follow the palette), and
+   `apps.vivid` renders `vivid.yml` for LS_COLORS (the zsh hook is chz-n6i). Kitty's dark pin under light-soft,
+   `term-contrast` (palette, fsh, autosuggest, less, git, p10k): 2 failures, both text on blue (fsh's paired
+   bracket 1.78:1, less's prompt 2.55:1), fixed in `fsh-styles.zsh` (`bg=8`) and `LESS` (`-DPkb`); 0 after.
+   vivid's light LS_COLORS: lowest 3.07:1 (dim files). Still open: `ls` reads trapd00r's fixed 256 colours until
+   chz-n6i.
 3. Switcher + theme picker (switcher: amontillado; picker UI: here).
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.

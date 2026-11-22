@@ -13,3 +13,6 @@ plugins:
       - url: marlonrichert/zcolors.git
         ice:
           - autoload'color; lscolor; zcolors;'
+          # less's prompt: zcolors' white on blue (-DPWb) is 2.55:1 under amontillado's light-soft
+          # tone (colour 15 is dark there); colour 0 on blue reads on both variants (chz-lfs).
+          - atload'less=( ${less:#-DSkY*} -DSkY\$DPkb )'

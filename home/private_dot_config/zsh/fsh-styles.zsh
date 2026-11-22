@@ -13,3 +13,7 @@ FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}variable]='fg=10'
 FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}subtle-bg]='bg=8'
 FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}here-string-text]='bg=8'
 FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}here-string-var]='fg=6,bg=8'
+
+# The matching bracket under the cursor: the default bg=blue under the default foreground is
+# 1.78:1 under light-soft (amontillado v0.11.0 tone, chz-lfs); bg=8 like subtle-bg reads on both.
+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}paired-bracket]='bg=8'
