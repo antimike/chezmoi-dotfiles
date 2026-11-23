@@ -172,8 +172,11 @@ variant; D73). The nvim config's `lua/amo-theme.lua` feeds it to tinted-nvim (v1
 `base24-amontillado`, through modules vendored unchanged from amontillado's `docs/examples/nvim/` (`lua/amontillado/`:
 `palette`, `tinted`, `watch`), and is LazyVim's `colorscheme` function (chz-8bg.17; MH chose tinted-nvim over a lush
 spec, 2026-11-23: D73(5) amended). The watcher watches `~/.cache/theme/` (the `current` symlink is swapped, not the
-file rewritten), so every running nvim re-applies after each `amo theme apply`; `background` follows the palette's
-`variant`. Our overrides: the accent on the interface (amontillado's module) and the four Diff groups (tinted-nvim's
+file rewritten), so every running nvim re-applies after each `amo theme apply` while amo is its colorscheme (a
+scheme picked by hand stays); `background` follows the palette's `variant`. `colors/base24-amontillado.lua` makes the
+name tinted-nvim sets a real `:colorscheme`: without it, fzf-lua's picker (`<leader>uC`) failed with E185 restoring
+its starting scheme, so no pick applied. `palette.lua` holds one variant, so a manual `background` toggle
+(`<leader>ub`) only warns and restores it: switch variants with `amo theme apply --variant`. Our overrides: the accent on the interface (amontillado's module) and the four Diff groups (tinted-nvim's
 DiffAdd is background-coloured text on a darkened blue, unreadable here; ours tint the background with the hue and
 keep the text colour). Without a palette or tinted-nvim it falls back to gruvbox with one warning, and the watch still
 starts, so a first apply switches over. The kitty-scrollback config (ksb-nvim, chz-8bg.18) shares `amo-theme.lua`.
