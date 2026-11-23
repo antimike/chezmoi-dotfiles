@@ -25,6 +25,7 @@ spago = "0.21.0"
 terraform = "1.8.2"
 # LS_COLORS generator: vivid on amontillado's vivid.yml, via the ls-colors.zsh snippet (chz-7ty, chz-n6i)
 vivid = "0.11.1"
+"github:walles/moor" = "2.19.7"
 
 [settings]
 experimental = true
