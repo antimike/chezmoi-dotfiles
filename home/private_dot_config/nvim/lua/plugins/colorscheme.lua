@@ -545,11 +545,14 @@ return {
 			},
 		},
 	},
-	-- Configure LazyVim to load gruvbox
+	-- The amontillado palette through tinted-nvim, live on theme change (chz-8bg.17,
+	-- lua/amo-theme.lua); gruvbox when the palette or tinted-nvim is missing.
 	{
 		"LazyVim/LazyVim",
 		opts = {
-			colorscheme = "gruvbox",
+			colorscheme = function()
+				require("amo-theme").setup()
+			end,
 		},
 	},
 }
