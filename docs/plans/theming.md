@@ -1,5 +1,5 @@
 ---
-summary: Long-running theming project: switchable theme bundles kept uniform across apps, wallpaper fetching and palette-aware selection, palette generation, fonts, pickers, nvim via lush
+summary: Long-running theming project: switchable theme bundles kept uniform across apps, wallpaper fetching and palette-aware selection, palette generation, fonts, pickers, nvim via tinted-nvim
 status: in progress; library and theme engine in the standalone project amontillado (D70, D73), pinned at v0.9.0; step 2 queued (`theming`, 2026-11-20)
 updated: 2026-11-20
 ---
@@ -37,7 +37,7 @@ lines, hyprpaper and one theme end to end → riced styling.
 - Wallpapers per output, from a curated set, chosen automatically (random or deterministic, undecided) or by a picker.
 - Colorschemes generated from the chosen wallpapers, optionally.
 - Nerd Fonts installed by chezmoi; pickers for fonts per app.
-- nvim's colorscheme follows the system palette (lush.nvim).
+- nvim's colorscheme follows the system palette (tinted-nvim; lush.nvim until D73(5) was amended).
 
 ## Core pattern: chezmoi manages configs, the switcher writes a cache
 
@@ -64,7 +64,7 @@ A runtime switcher must never edit chezmoi-managed files: the next `chezmoi appl
 | rofi | `@import` in the theme | read at each launch |
 | GTK3 | `gsettings` (theme, icons, cursor, font); colours in a theme dir (adw-gtk3 style, `@import`ing the generated file) or in `~/.config/gtk-3.0/gtk.css` | gsettings keys live; a `gtk-theme` toggle re-reads the named theme's files and their `@import`s; user `gtk.css` only at app start |
 | GTK4 / libadwaita | `~/.config/gtk-4.0/gtk.css` color overrides only | `gtk.css` at app start; `color-scheme` and `accent-color` live via gsettings and the settings portal |
-| nvim | lush spec reads `current/palette.lua` (D73) | watcher on `~/.cache/theme/` (not on the file), or a signal |
+| nvim | tinted-nvim scheme from `current/palette.lua` (D73, amended) | fs_event watcher on `~/.cache/theme/` (not on the file) |
 
 **Limit:** libadwaita apps ignore `gtk-theme`; only colors can be overridden. "Uniform" means GTK3 fully, libadwaita
 colors only.
@@ -167,10 +167,20 @@ amontillado's own `theme.variant` must follow the clock too, or a wallpaper chan
 
 ## nvim
 
-A lush.nvim spec in the nvim config reads `~/.cache/theme/current/palette.lua`, written by amontillado's built-in
-`nvim` template (base24, roles, variant; D73), and rebuilds the colorscheme on change. The watcher watches
-`~/.cache/theme/` (the `current` symlink is swapped, not the file rewritten); amontillado's docs carry an example
-spec and watcher, not a plugin. The existing LazyVim colorscheme stays the fallback when no palette file exists.
+amontillado's built-in `nvim` template (`theme.apps.nvim`) writes `~/.cache/theme/current/palette.lua` (base24, roles,
+variant; D73). The nvim config's `lua/amo-theme.lua` feeds it to tinted-nvim (v1) as the base24 scheme
+`base24-amontillado`, through modules vendored unchanged from amontillado's `docs/examples/nvim/` (`lua/amontillado/`:
+`palette`, `tinted`, `watch`), and is LazyVim's `colorscheme` function (chz-8bg.17; MH chose tinted-nvim over a lush
+spec, 2026-11-23: D73(5) amended). The watcher watches `~/.cache/theme/` (the `current` symlink is swapped, not the
+file rewritten), so every running nvim re-applies after each `amo theme apply` while amo is its colorscheme (a
+scheme picked by hand stays); `background` follows the palette's `variant`. `colors/base24-amontillado.lua` makes the
+name tinted-nvim sets a real `:colorscheme`: without it, fzf-lua's picker (`<leader>uC`) failed with E185 restoring
+its starting scheme, so no pick applied. `palette.lua` holds one variant, so a manual `background` toggle
+(`<leader>ub`) only warns and restores it: switch variants with `amo theme apply --variant`. Our overrides: the accent on the interface (amontillado's module) and the four Diff groups (tinted-nvim's
+DiffAdd is background-coloured text on a darkened blue, unreadable here; ours tint the background with the hue and
+keep the text colour). Without a palette or tinted-nvim it falls back to gruvbox with one warning, and the watch still
+starts, so a first apply switches over. The kitty-scrollback config (ksb-nvim, chz-8bg.18) shares `amo-theme.lua`.
+Review tinted-nvim vs lush after use: chz-8bg.19.
 
 ## Steps (not scheduled)
 
@@ -266,7 +276,7 @@ Steps 1-4 are re-sequenced by D70 (see "Where it fits"); what moved to amontilla
 4. Wallpaper fetcher and index: **amontillado v0.1**. Clustering and per-output selection: amontillado later. Timer on
    Wayland and the picker UI: here.
 5. Fonts: chezmoi subset + nerd-fonts-installer; font pickers.
-6. lush.nvim spec reading `palette.lua` (D73).
+6. ~~lush.nvim spec reading `palette.lua` (D73).~~ tinted-nvim fed `palette.lua`, live (D73(5) amended; chz-8bg.17).
 7. Greeter theme sync (see the greeter section in [wayland-desktop.md](wayland-desktop.md)).
 
 ## Open questions
