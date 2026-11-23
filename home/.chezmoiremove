@@ -31,3 +31,7 @@
 # (a regular file: the left-cap wrapper).
 .config/kitty/tab_bar.conf
 .config/kitty/tab-themes
+# kitty_grab kitten and its grab.conf, replaced by kitty-scrollback.nvim on 2026-11-23
+# (chz-8bg.15; kitty_mod+y).
+.config/kitty/kitty_grab
+.config/kitty/grab.conf
