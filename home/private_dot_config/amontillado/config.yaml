@@ -101,3 +101,8 @@ theme:
     # at the next prompt (chz-n6i). LS_COLORS are drawn on kitty's background: keep this variant
     # the same as kitty's (both follow the theme since chz-8bg.13).
     vivid: {}
+    # Neovim (chz-8bg.17): the built-in template's palette.lua (every base24 key and role, and
+    # `variant`). nvim's lua/amo-theme.lua feeds it to tinted-nvim as a base24 scheme, and every
+    # running nvim re-applies it from an fs_event watch on ~/.cache/theme/: no reload command.
+    # Follows the variant, like kitty.
+    nvim: {}
