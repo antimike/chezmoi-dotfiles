@@ -1,4 +1,4 @@
--- kitty's scrollback in Neovim (chz-8bg.15, trial): kitty's vim copy mode, replacing the
+-- kitty's scrollback in Neovim (chz-8bg.15, adopted 2026-11-23): kitty's vim copy mode, replacing the
 -- kitty_grab kitten. kitty starts it through the kitten in this plugin's python/ directory
 -- (the action_alias in kitty.conf); `:KittyScrollbackCheckHealth` checks the setup.
 return {
