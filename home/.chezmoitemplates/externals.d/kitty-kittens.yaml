@@ -1,13 +1,7 @@
-# kitty kittens behind kitty.conf keys: kitty_grab (Alt+Shift+c) and
-# kitty_search (kitty_mod+/). Pinned to commits as archives, since a git-repo
+# kitty kittens behind kitty.conf keys: kitty_search (kitty_mod+/; kitty_grab was dropped
+# for kitty-scrollback.nvim on 2026-11-23, chz-8bg.15). Pinned to commits as archives, since a git-repo
 # external cannot pin one; both broke once on a kitty rename (kitty.typing).
 # Bump the SHA after checking the kitten against the installed kitty.
-kitty_grab:
-  dest: .config/kitty/kitty_grab
-  type: archive
-  url: https://github.com/yurikhan/kitty_grab/archive/e115f369bcc928fa56a4f9fe935c16a2b140e43e.tar.gz
-  stripComponents: 1
-  exact: true
 kitty_search:
   dest: .config/kitty/kitty_search
   type: archive
