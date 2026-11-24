@@ -1,7 +1,7 @@
 ---
 summary: Session-by-session history moved out of STATUS.md (newest first); search it for when and how something was done
 status: append-only
-updated: 2026-11-21
+updated: 2026-11-23
 ---
 
 # Session log
@@ -9,6 +9,8 @@ updated: 2026-11-21
 STATUS.md keeps only the latest session; each new session moves the previous "Latest" entry here, at the top.
 
 ## 2026-11 sessions (from STATUS "Next actions")
+
+- **2026-11-22: kitty and vivid follow the theme variant** (chz-8bg.13 closed, `d48adaa`): MH checked a light-soft kitty; bd show's fixed tags stay faint on cream (accepted). chz-n6i done the night before (LS_COLORS from vivid via `ls-colors.zsh`, merge `72c57f6`, pushed). chz-mfq closed won't-fix (MH: menu usable, bar occludes it only in edge cases). **Next:** **`/triage`** (2 tickets: MH's chz-97j response, GTK3 hook); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
 
 - **Earlier (2026-11-21, late night): `/work-queue theming` done** (queue empty; `main` pushed by MH). chz-n6i closed (merge `72c57f6`): LS_COLORS now come from vivid on amontillado's theme via the `ls-colors.zsh` snippet, refreshed at the next prompt after a theme change (trapd00r removed); `apps.vivid` pinned dark with kitty. term-contrast clean on light-soft for every source; kitty's pin waits on MH's check of fixed-truecolour tools (**chz-8bg.13**). Still parked for MH: **chz-97j**, **chz-mfq** (`triage.operator`). **Next:** MH's checks on 97j/mfq/8bg.13; **chz-hbu** live MacBook run; **`/triage`** (1 open ticket). Detail: [open-items.md](open-items.md).
 - **Earlier (2026-11-21, late night): `/work-queue triage` done** (queue empty; `main` not pushed). chz-lfs closed (merge `c9163e3`): amontillado **v0.11.0** pinned, kitty `palette_generate`, vivid rendered, tone `{light: soft, dark: full}`, fsh and less fixes for light-soft; kitty's dark pin now waits only on **chz-n6i** (ready; reassess the pin when it lands). Parked for MH (`triage.operator`): **chz-97j** (hyprbars f2 + blur, live: check light after 7:00, work login, busy-window case) and **chz-mfq** (Hyprland already fits popups below the bar per code and log; repro steps in the bead). **Next:** MH's checks on 97j/mfq; **chz-hbu** live MacBook run; **`/work-queue theming`** (chz-n6i). Detail: [open-items.md](open-items.md).
