@@ -7,11 +7,13 @@
 --
 -- Scrollback can hold secrets (`pass` output), so nothing from here is kept on disk:
 -- no ShaDa (registers and search history), no swap or undo files. Plain `y` stays in nvim's
--- unnamed register; only the keys below reach the clipboard.
+-- unnamed register and opens ksb's paste window; only the keys below reach the clipboard.
 --   <leader>y{motion}, visual <leader>y   copy to the clipboard (cliphist keeps it)  [ksb default]
 --   <leader>s{motion}, visual <leader>s,  copy as sensitive: `wl-copy --sensitive`, which cliphist
 --   <leader>ss                            skips; cleared after 45 s unless replaced (like pass -c)
--- Both close the overlay. Shift+Enter pastes at the prompt, Ctrl+Enter runs it, q quits.
+-- Both copy without trailing line breaks, flash the text, show a desktop toast (counts only) and
+-- close the overlay. Shift+Enter pastes at the prompt, Ctrl+Enter runs it, q quits. which-key
+-- lists the <leader> keys (ksb's paste-window footer shows only its own, hard-coded).
 
 local data = vim.env.XDG_DATA_HOME
 if data == nil or data == "" then
@@ -43,13 +45,73 @@ for _, au in ipairs(vim.api.nvim_get_autocmds({ group = "nvim.terminal", event =
   end
 end
 
+-- Clipboard: wl-copy without trailing line breaks. `v$` and `V` yank the line's end, and a
+-- trailing newline pasted at a shell prompt runs the command. Plain `y` keeps vim's register
+-- semantics; only what reaches the system clipboard is trimmed.
+local function trim(lines)
+  return (table.concat(lines, "\n"):gsub("\n+$", ""))
+end
+
+vim.g.clipboard = {
+  name = "wl-copy (ksb-nvim, trimmed)",
+  copy = {
+    ["+"] = function(lines)
+      vim.system({ "wl-copy", "--type", "text/plain" }, { stdin = trim(lines) }):wait()
+    end,
+    ["*"] = function(lines)
+      vim.system({ "wl-copy", "--primary", "--type", "text/plain" }, { stdin = trim(lines) }):wait()
+    end,
+  },
+  paste = {
+    ["+"] = { "wl-paste", "--no-newline" },
+    ["*"] = { "wl-paste", "--no-newline", "--primary" },
+  },
+}
+
 -- Plugins and theme ----------------------------------------------------------------------------
 vim.opt.runtimepath:prepend(vim.fs.joinpath(lazy, "kitty-scrollback.nvim"))
 vim.opt.runtimepath:prepend(vim.fs.joinpath(lazy, "tinted-nvim"))
+vim.opt.runtimepath:prepend(vim.fs.joinpath(lazy, "which-key.nvim"))
 vim.opt.runtimepath:append(vim.fs.joinpath(config, "nvim"))
 
 require("amo-theme").setup({ fallback = "default" })
-require("kitty-scrollback").setup()
+-- Global options (the first, keyless entry). We close after a clipboard yank ourselves, below,
+-- so the copy is confirmed instead of the overlay vanishing silently.
+require("kitty-scrollback").setup({ { close_after_yank = false } })
+require("which-key").setup({ preset = "helix" })
+require("which-key").add({
+  { "<leader>y", desc = "Copy to clipboard (cliphist)" },
+  { "<leader>yy", desc = "Copy line to clipboard" },
+  { "<leader>Y", desc = "Copy to end of line / lines" },
+  { "<leader>s", desc = "Copy as sensitive (no cliphist, 45 s)" },
+  { "<leader>ss", desc = "Copy line as sensitive" },
+})
+
+-- Copy confirmation ----------------------------------------------------------------------------
+-- A flash on the copied text, then a desktop toast (counts only, never the text), then quit.
+local function confirm_and_quit(summary)
+  vim.system({ "notify-send", "--app-name=kitty-scrollback", "--expire-time=2500", "Copied", summary })
+  vim.defer_fn(function()
+    require("kitty-scrollback.api").quit_all()
+  end, 200)
+end
+
+local function describe(text)
+  local n = select(2, text:gsub("\n", "")) + 1
+  return n == 1 and ("%d characters"):format(#text) or ("%d lines"):format(n)
+end
+
+vim.api.nvim_create_autocmd("TextYankPost", {
+  group = vim.api.nvim_create_augroup("KsbCopyConfirm", { clear = true }),
+  callback = function()
+    local ev = vim.v.event
+    if ev.operator ~= "y" or ev.regname ~= "+" then
+      return -- a plain `y` goes to ksb's paste window, not the clipboard
+    end
+    vim.hl.on_yank({ higroup = "IncSearch", timeout = 200 })
+    confirm_and_quit(describe(trim(ev.regcontents)) .. " to the clipboard")
+  end,
+})
 
 -- Sensitive copy -------------------------------------------------------------------------------
 local CLEAR_AFTER = 45 -- seconds, as pass -c (PASSWORD_STORE_CLIP_TIME)
@@ -64,8 +126,12 @@ sleep "$1"
 exit 0
 ]]
 
-local function copy_sensitive(lines)
-  local text = table.concat(lines, "\n")
+local function region(from, to, regtype)
+  return vim.fn.getregion(vim.fn.getpos(from), vim.fn.getpos(to), { type = regtype })
+end
+
+local function copy_sensitive(lines, from, to, regtype)
+  local text = trim(lines)
   if text == "" then
     return
   end
@@ -73,19 +139,14 @@ local function copy_sensitive(lines)
     stdin = text,
     detach = true,
   })
-  -- ksb closes after a clipboard yank (close_after_yank); do the same.
-  vim.defer_fn(function()
-    require("kitty-scrollback.api").quit_all()
-  end, 100)
-end
-
-local function region(from, to, regtype)
-  return vim.fn.getregion(vim.fn.getpos(from), vim.fn.getpos(to), { type = regtype })
+  local ns = vim.api.nvim_create_namespace("ksb-sensitive-flash")
+  vim.hl.range(0, ns, "IncSearch", from, to, { regtype = regtype })
+  confirm_and_quit(("%s as sensitive: not in cliphist, cleared in %d s"):format(describe(text), CLEAR_AFTER))
 end
 
 function _G.ksb_sensitive_operator(kind)
   local regtype = ({ line = "V", block = "\22" })[kind] or "v"
-  copy_sensitive(region("'[", "']", regtype))
+  copy_sensitive(region("'[", "']", regtype), "'[", "']", regtype)
 end
 
 vim.keymap.set("n", "<leader>s", function()
@@ -97,7 +158,8 @@ vim.keymap.set("n", "<leader>ss", function()
   return "g@_"
 end, { expr = true, desc = "Copy line as sensitive" })
 vim.keymap.set("x", "<leader>s", function()
-  local lines = region("v", ".", vim.fn.mode())
+  local mode = vim.fn.mode()
+  local lines = region("v", ".", mode)
   vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "nx", false)
-  copy_sensitive(lines)
+  copy_sensitive(lines, "'<", "'>", mode)
 end, { desc = "Copy selection as sensitive (no cliphist; cleared after 45 s)" })
