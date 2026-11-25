@@ -1,6 +1,6 @@
 # Design gates: prior art, scope, decide before building
 
-Always loaded (no `paths:`): these gates apply before any design work, in every project. Source: chezmoi D81 (2026-11-19), from the 2026-11 repo reviews. Why: implementation is cheap with an assistant, so effort no longer brakes scope; the reviews found subsystems with no client, home-built tools where existing ones fit, and decisions confirmed after they were built.
+Always loaded (no `paths:`): these gates apply before any design work, in every project. Source: chezmoi D81 (2026-11-19; client rule amended 2026-11-25), from the 2026-11 repo reviews. Why: implementation is cheap with an assistant, so effort no longer brakes scope; the reviews found subsystems with no client, home-built tools where existing ones fit, and decisions confirmed after they were built.
 
 ## Prior-art gate
 
@@ -10,7 +10,10 @@ Always loaded (no `paths:`): these gates apply before any design work, in every 
 
 ## Scope-creep rule
 
-- **No subsystem ships without a real client in the same release**: a caller that exists and is used, not a planned one. Frameworks are extracted from two or three concrete uses, not designed ahead of them.
+- **No subsystem ships without a real client in the same release**: a caller that exists and is used, or a **named use**: MH, or another project's ticket, saying "I would use this for X", or a named person (usually MH) who says they will run the command at the terminal. A hypothetical user is not a client.
+- **A feature shipped for a named use is experimental, with a review date** (in its help or docs, and in its bead), and is kept or removed after real use (model: amontillado amo-0k6.8). Named uses must not pile up unused features.
+- **Announce before building**: when a feature's consumer lives in another project, put the interface in the design doc and file it to the consumer as a ticket (`triage-file`) before the build. The consumer commits to the same release, or the consumer-facing part waits.
+- **Infrastructure keeps the strict rule**: generic runners, plugin systems, engines and abstractions over one case are extracted from two or three concrete uses, not designed ahead of them. A named use does not count for them.
 - **Flag unrequested infrastructure aggressively**: plugin systems, engines, generic runners, logs, caches, abstractions over one case. Say so before writing it, and weigh it against the current priorities (chezmoi D50: job search first). Directness over diplomacy.
 - Prefer the smallest change that serves today's client; note the generalisation as an open item instead of building it.
 
