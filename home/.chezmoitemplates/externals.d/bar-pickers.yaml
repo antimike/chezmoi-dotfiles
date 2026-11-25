@@ -11,3 +11,19 @@ rofi-bluetooth:
   type: file
   url: https://raw.githubusercontent.com/nickclyde/rofi-bluetooth/0cca4d4aa1c82c9373ce5da781d73683a29484c6/rofi-bluetooth
   executable: true
+  # chz-3iv (2026-11-25): bluez 5.86 prints a device that advertises without the LE discoverable
+  # flags in bold grey (ESC[1;30m ... ESC[0m, client/main.c print_device), and the script passes
+  # the codes into rofi (a tofu box and '[0' after the name). bluetoothctl has no switch to turn
+  # colour off, and upstream has no fix (0cca4d4 is master; PR #45 rewrites every call through
+  # stdin, unmerged), so the filter adds a bluetoothctl() function after the shebang that strips
+  # the codes from every call. Backslashes are halved twice (YAML's "\\\\" is sed's \\, and
+  # GNU sed's `a` text makes that \ in the script). Re-check the filter when bumping the SHA.
+  filter:
+    command: sed
+    args:
+      - "-e"
+      - "1a # Added by chezmoi (chz-3iv): bluez 5.86 prints some `bluetoothctl devices` lines in colour;"
+      - "-e"
+      - "1a # strip the ANSI codes from every bluetoothctl call so rofi gets plain text."
+      - "-e"
+      - "1a bluetoothctl() { command bluetoothctl \"$@\" | sed 's/\\\\x1b\\\\[[0-9;]*m//g'; }"
