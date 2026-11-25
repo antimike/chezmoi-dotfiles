@@ -19,7 +19,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 - MH's untracked `ricing.md` stays unmodified at the repo root for MH's review; never commit it.
 
 ## Next actions
-**Latest (2026-11-23): `/work-queue theming` emptied** (MH live): **chz-8bg.17** (merge `4d5061b`): nvim's colorscheme is tinted-nvim over amo's `palette.lua`, live on theme change (`lua/amo-theme.lua`, D73(5) amended; fzf-lua picker E185 fixed with `colors/base24-amontillado.lua`). **chz-8bg.18** (merge `85efe5b`): kitty-scrollback runs in `ksb-nvim` (NVIM_APPNAME; no greeter, nothing on disk, which-key, `<leader>s` sensitive copy kept out of cliphist). chz-8bg.16 (moor) and 8bg.19 (tinted vs lush review) wait on MH. **Next:** **`/triage`** (9 tickets); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
+**Latest (2026-11-25): `/triage`, inbox empty** (11 items → 10 beads + 3 from MH's answers; chz-97j closed). MH's calls: D81 amendment (chz-psd), theme picker + save key (chz-rr4), wallpaper hold (chz-64x), SGF → Sabaki Tsumego (chz-bno). **Next:** **chz-0bb** (pin amo v0.13.0; unblocks 1lm, rr4, 64x), **chz-3iv** (rofi-bluetooth ANSI), **chz-psd**; **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
 
 Standing items (in order):
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
