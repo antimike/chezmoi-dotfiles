@@ -14,15 +14,11 @@
       "refreshPeriod"
       "stripComponents"
       "url"
-      "checksum.sha256"
-      "checksum.sha384"
-      "checksum.sha512"
-      "checksum.size"
-      "clone.args"
-      "filter.command"
-      "filter.args"
-      "pull.args"
-      "archive.extractAppleDouble"
+      "checksum"
+      "clone"
+      "filter"
+      "pull"
+      "archive"
   | dict (get $data "dest") | toToml
 }}
 {{- end }}
