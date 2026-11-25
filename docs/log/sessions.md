@@ -1,7 +1,7 @@
 ---
 summary: Session-by-session history moved out of STATUS.md (newest first); search it for when and how something was done
 status: append-only
-updated: 2026-11-23
+updated: 2026-11-25
 ---
 
 # Session log
@@ -10,6 +10,7 @@ STATUS.md keeps only the latest session; each new session moves the previous "La
 
 ## 2026-11 sessions (from STATUS "Next actions")
 
+- **2026-11-25: `/triage`, inbox empty** (11 items → 10 beads + 3 from MH's answers; chz-97j closed). MH's calls: D81 amendment (chz-psd), theme picker + save key (chz-rr4), wallpaper hold (chz-64x), SGF → Sabaki Tsumego (chz-bno). **Next:** **chz-0bb** (pin amo v0.13.0; unblocks 1lm, rr4, 64x), **chz-3iv** (rofi-bluetooth ANSI), **chz-psd**; **chz-hbu** live MacBook run.
 - **2026-11-23: `/work-queue theming` emptied** (MH live): **chz-8bg.17** (merge `4d5061b`): nvim's colorscheme is tinted-nvim over amo's `palette.lua`, live on theme change (`lua/amo-theme.lua`, D73(5) amended; fzf-lua picker E185 fixed with `colors/base24-amontillado.lua`). **chz-8bg.18** (merge `85efe5b`): kitty-scrollback runs in `ksb-nvim` (NVIM_APPNAME; no greeter, nothing on disk, which-key, `<leader>s` sensitive copy kept out of cliphist). chz-8bg.16 (moor) and 8bg.19 (tinted vs lush review) wait on MH. **Next:** **`/triage`** (9 tickets); **chz-hbu** live MacBook run.
 
 - **2026-11-22: kitty and vivid follow the theme variant** (chz-8bg.13 closed, `d48adaa`): MH checked a light-soft kitty; bd show's fixed tags stay faint on cream (accepted). chz-n6i done the night before (LS_COLORS from vivid via `ls-colors.zsh`, merge `72c57f6`, pushed). chz-mfq closed won't-fix (MH: menu usable, bar occludes it only in edge cases). **Next:** **`/triage`** (2 tickets: MH's chz-97j response, GTK3 hook); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).

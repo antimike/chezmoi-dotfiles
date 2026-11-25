@@ -11,7 +11,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 ## Where we are
 - **Priority (D50, 2026-10-18): functional daily driver first**; MH is job searching. Ricing, the keybinding manifest and other compositors are spare-time side quests ([plans/ricing-backlog.md](plans/ricing-backlog.md)).
 - **Desktop: Hyprland is the daily driver (D62)**, SwayFX the fallback; "work" and "riced" logins (D66). Daily-driver checklist done except 2.9 (i3 off zbook) ([plans/wayland-desktop.md](plans/wayland-desktop.md), "Functional daily driver"). NVIDIA 615.78.08 installed; D61 (no docked suspend) still in force.
-- **Theming: done through amontillado v0.9.0** (pinned, D70/D73): every app's colours come from amontillado's theme cache; GTK3/GTK4 live (D82); riced bar/dunst/blur (chz-8bg.5) and kitty tab bar (chz-8bg.12) done; LS_COLORS from vivid (chz-n6i); kitty and vivid follow the variant (pins lifted, chz-8bg.13; amontillado v0.11.0, light tone soft).
+- **Theming: done through amontillado v0.9.0** (pinned, D70/D73): every app's colours come from amontillado's theme cache; GTK3/GTK4 live (D82); riced bar/dunst/blur (chz-8bg.5) and kitty tab bar (chz-8bg.12) done; LS_COLORS from vivid (chz-n6i); kitty and vivid follow the variant (pins lifted, chz-8bg.13; light tone soft; amontillado pinned at v0.13.0).
 - **Work tracking:** beads (prefix `chz`, D80 keep beads); ticket inboxes (D72) with `/triage`; work queues via `/work-queue <scope>`. Design gates (D81) in `~/.claude/rules/design-gates.md`.
 - **Infrastructure:** project registry via `pproj` (D76); `sync-repos` and transcript backups run on systemd credentials (D74), backups to every drive in `.chezmoidata/backups.yaml`; package map (D32) with `add-package`.
 - **Git:** `main` is trunk, pushed 2026-11-21. Finished branches are archived as `refs/archive/<name>` or deleted (D65, `git retire-branch`; [conventions.md](conventions.md)).
@@ -19,7 +19,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 - MH's untracked `ricing.md` stays unmodified at the repo root for MH's review; never commit it.
 
 ## Next actions
-**Latest (2026-11-25): `/triage`, inbox empty** (11 items → 10 beads + 3 from MH's answers; chz-97j closed). MH's calls: D81 amendment (chz-psd), theme picker + save key (chz-rr4), wallpaper hold (chz-64x), SGF → Sabaki Tsumego (chz-bno). **Next:** **chz-0bb** (pin amo v0.13.0; unblocks 1lm, rr4, 64x), **chz-3iv** (rofi-bluetooth ANSI), **chz-psd**; **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
+**Latest (2026-11-25 evening): amo v0.13.0 pinned (chz-0bb), D81 client rule amended (chz-psd), rofi pickers smart-case (chz-3h5); Bluetooth picker fixed and restyled** (chz-3iv ANSI strip, chz-lx8 connected rows in the accent + unique duplicate names; merged, **awaiting MH live check**). Not pushed. **Next:** MH's Bluetooth picker check (then close 3iv/lx8, retire branches); **chz-1lm**, **chz-rr4**, **chz-64x** (unblocked); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
 
 Standing items (in order):
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
