@@ -64,8 +64,13 @@ reader would.
    "after" ones. Also count decisions recorded as "Claude's call(s), confirmed".
 5. **Subsystems without a client**: list each subsystem (module, command group, service, plugin
    point, hook, log, cache). For each, find a real caller: code in this or another registry repo,
-   a timer, a skill, or a documented daily use. Report the ones with **no caller** and the ones
-   whose only caller is a test or a planned feature.
+   a timer, a skill, a documented daily use, or a **named use** (MH or another project's ticket
+   stating the use, or a named person who says they will run it at the terminal; D81 as
+   amended 2026-11-25). Report
+   the ones with **no caller** and the ones whose only caller is a test or a planned feature.
+   For named-use features, report whether each is marked experimental with a review date, and
+   list those past the date with no recorded use. Infrastructure (plugin points, engines,
+   generic runners, abstractions over one case) counts only concrete callers, never a named use.
 
 ## 4. Judgment
 
