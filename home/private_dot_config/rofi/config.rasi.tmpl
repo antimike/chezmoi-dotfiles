@@ -3,6 +3,11 @@
 {{- else }}
 configuration {
 	modi: {{ join "," .rofi.modi | quote }};
+	/* Smart case (chz-3h5): lowercase input matches any case, an uppercase letter makes the
+	   search case-sensitive. rofi -dmenu forces case-sensitive unless the caller passes -i
+	   (rofi 2.0.0 dmenu.c), overriding case-sensitive here, but it honours case-smart, so
+	   this fixes every dmenu picker (rofi-bluetooth, pick-path, ticket-picker, wallpaper). */
+	case-smart: true;
 }
 {{ if eq .rofi.theme "pywal" -}}
 @import {{ fail "PyWal is not yet configured!" }}
