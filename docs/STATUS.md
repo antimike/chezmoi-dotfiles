@@ -19,7 +19,7 @@ History (every earlier session, with merges, SHAs and test results): [log/sessio
 - MH's untracked `ricing.md` stays unmodified at the repo root for MH's review; never commit it.
 
 ## Next actions
-**Latest (2026-11-25 evening): amo v0.13.0 pinned (chz-0bb), D81 client rule amended (chz-psd), rofi pickers smart-case (chz-3h5); Bluetooth picker fixed and restyled** (chz-3iv ANSI strip, chz-lx8 connected rows in the accent + unique duplicate names; merged, **awaiting MH live check**). Not pushed. **Next:** MH's Bluetooth picker check (then close 3iv/lx8, retire branches); **chz-1lm**, **chz-rr4**, **chz-64x** (unblocked); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
+**Latest (2026-11-25 evening): amo v0.13.0 pinned (chz-0bb), D81 client rule amended (chz-psd), rofi pickers smart-case (chz-3h5); Bluetooth picker fixed and restyled** (chz-3iv ANSI strip, chz-lx8 connected rows in the accent + unique duplicate names; MH live, closed). Pushed. **Next:** **chz-1lm**, **chz-rr4**, **chz-64x** (unblocked); **chz-hbu** live MacBook run. Detail: [open-items.md](open-items.md).
 
 Standing items (in order):
 1. **GitHub Support request (MH)** to purge cached views / stale refs of the old (pre-rewrite) SHAs on `antimike/chezmoi-dotfiles`. The force-push is done; this is the last step that keeps the old client terms reachable until GitHub acts.
